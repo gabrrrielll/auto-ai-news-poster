@@ -61,7 +61,9 @@ class Auto_Ai_News_Poster_Settings {
         // Inițializează $options['categories'] ca array dacă este null
         $selected_categories = isset($options['categories']) ? (array) $options['categories'] : [];
 
-        $categories = get_categories();
+        $categories = get_categories([
+            'hide_empty' => false,
+        ]);
         ?>
         <select name="auto_ai_news_poster_settings[categories][]" multiple>
             <?php foreach ($categories as $category) : ?>
