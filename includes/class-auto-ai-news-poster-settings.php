@@ -57,17 +57,22 @@ class Auto_Ai_News_Poster_Settings {
 
     public static function categories_callback() {
         $options = get_option('auto_ai_news_poster_settings');
+
+        // Inițializează $options['categories'] ca array dacă este null
+        $selected_categories = isset($options['categories']) ? (array) $options['categories'] : [];
+
         $categories = get_categories();
         ?>
         <select name="auto_ai_news_poster_settings[categories][]" multiple>
             <?php foreach ($categories as $category) : ?>
-                <option value="<?php echo esc_attr($category->term_id); ?>" <?php if (in_array($category->term_id, $options['categories'])) echo 'selected'; ?>>
+                <option value="<?php echo esc_attr($category->term_id); ?>" <?php if (in_array($category->term_id, $selected_categories)) echo 'selected'; ?>>
                     <?php echo esc_html($category->name); ?>
                 </option>
             <?php endforeach; ?>
         </select>
         <?php
     }
+
 
     public static function news_sources_callback() {
         $options = get_option('auto_ai_news_poster_settings');
