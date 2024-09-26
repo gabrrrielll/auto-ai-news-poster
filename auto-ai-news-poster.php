@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-settings.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-parser.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-cron.php';
-require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-articles-view.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-metabox.php';
 
 
 // Include CSS-ul Bootstrap doar pentru paginile pluginului
