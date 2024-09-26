@@ -1,23 +1,26 @@
 <?php
 
-class Auto_Ai_News_Poster_Settings {
+class Auto_Ai_News_Poster_Settings
+{
 
-    public static function display_settings_page() {
+    public static function display_settings_page()
+    {
         ?>
         <div class="wrap">
             <h1>Auto AI News Poster Settings</h1>
-            <form method="post" action="options.php">
+            <form method="post" action="options.php" class="form-horizontal">
                 <?php
                 settings_fields('auto_ai_news_poster_settings_group');
                 do_settings_sections('auto_ai_news_poster_settings_page');
-                submit_button();
+                submit_button('Salvează setările', 'primary', '', true, ['class' => 'btn btn-primary']);
                 ?>
             </form>
         </div>
         <?php
     }
 
-    public static function register_settings() {
+    public static function register_settings()
+    {
         register_setting('auto_ai_news_poster_settings_group', 'auto_ai_news_poster_settings');
 
         add_settings_section('main_section', 'Main Settings', null, 'auto_ai_news_poster_settings_page');
@@ -43,44 +46,100 @@ class Auto_Ai_News_Poster_Settings {
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
+        add_settings_field(
+            'chatgpt_api_key',
+            'Cheia API ChatGPT',
+            [self::class, 'chatgpt_api_key_callback'],
+            'auto_ai_news_poster_settings_page',
+            'main_section'
+        );
+        add_settings_field(
+            'cron_interval',
+            'Intervalul pentru cron job',
+            [self::class, 'cron_interval_callback'],
+            'auto_ai_news_poster_settings_page',
+            'main_section'
+        );
     }
 
-    public static function mode_callback() {
+    public static function mode_callback()
+    {
         $options = get_option('auto_ai_news_poster_settings');
         ?>
-        <select name="auto_ai_news_poster_settings[mode]">
-            <option value="manual" <?php selected($options['mode'], 'manual'); ?>>Manual</option>
-            <option value="auto" <?php selected($options['mode'], 'auto'); ?>>Automat</option>
-        </select>
+        <div class="form-group">
+            <label for="mode" class="control-label">Mod de publicare</label>
+            <select name="auto_ai_news_poster_settings[mode]" class="form-control" id="mode">
+                <option value="manual" <?php selected($options['mode'], 'manual'); ?>>Manual</option>
+                <option value="auto" <?php selected($options['mode'], 'auto'); ?>>Automat</option>
+            </select>
+        </div>
         <?php
     }
 
-    public static function categories_callback() {
+    public static function categories_callback()
+    {
         $options = get_option('auto_ai_news_poster_settings');
+        $selected_categories = isset($options['categories']) ? (array)$options['categories'] : [];
 
-        // Inițializează $options['categories'] ca array dacă este null
-        $selected_categories = isset($options['categories']) ? (array) $options['categories'] : [];
-
-        $categories = get_categories([
-            'hide_empty' => false,
-        ]);
+        $categories = get_categories(['hide_empty' => false]);
         ?>
-        <select name="auto_ai_news_poster_settings[categories][]" multiple>
-            <?php foreach ($categories as $category) : ?>
-                <option value="<?php echo esc_attr($category->term_id); ?>" <?php if (in_array($category->term_id, $selected_categories)) echo 'selected'; ?>>
-                    <?php echo esc_html($category->name); ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
+        <div class="form-group">
+            <label for="categories" class="control-label">Categorii de publicare</label>
+            <select name="auto_ai_news_poster_settings[categories][]" multiple class="form-control" id="categories">
+                <?php foreach ($categories as $category) : ?>
+                    <option value="<?php echo esc_attr($category->term_id); ?>" <?php if (in_array($category->term_id, $selected_categories)) echo 'selected'; ?>>
+                        <?php echo esc_html($category->name); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
         <?php
     }
 
-
-    public static function news_sources_callback() {
+    public static function news_sources_callback()
+    {
         $options = get_option('auto_ai_news_poster_settings');
         ?>
-        <textarea name="auto_ai_news_poster_settings[news_sources]" rows="10" cols="50"><?php echo esc_textarea($options['news_sources']); ?></textarea>
-        <p>Adăugați câte un URL de sursă pe fiecare linie.</p>
+        <div class="form-group">
+            <label for="news_sources" class="control-label">Surse de știri</label>
+            <textarea name="auto_ai_news_poster_settings[news_sources]" class="form-control" id="news_sources"
+                      rows="6"><?php echo esc_textarea($options['news_sources']); ?></textarea>
+            <small class="form-text text-muted">Adăugați câte un URL de sursă pe fiecare linie.</small>
+        </div>
+        <?php
+    }
+
+    public static function chatgpt_api_key_callback()
+    {
+        $options = get_option('auto_ai_news_poster_settings');
+        ?>
+        <div class="form-group">
+            <label for="chatgpt_api_key" class="control-label">Cheia API ChatGPT</label>
+            <input type="text" name="auto_ai_news_poster_settings[chatgpt_api_key]"
+                   value="<?php echo esc_attr($options['chatgpt_api_key']); ?>" class="form-control"
+                   id="chatgpt_api_key">
+            <small class="form-text text-muted">Introduceți cheia API pentru ChatGPT.</small>
+        </div>
+        <?php
+    }
+
+    public static function cron_interval_callback()
+    {
+        $options = get_option('auto_ai_news_poster_settings');
+        $intervals = [
+            'hourly' => 'O dată pe oră',
+            'twicedaily' => 'De două ori pe zi',
+            'daily' => 'O dată pe zi',
+        ];
+        ?>
+        <div class="form-group">
+            <label for="cron_interval" class="control-label">Intervalul pentru cron job</label>
+            <select name="auto_ai_news_poster_settings[cron_interval]" class="form-control" id="cron_interval">
+                <?php foreach ($intervals as $key => $label) : ?>
+                    <option value="<?php echo esc_attr($key); ?>" <?php selected($options['cron_interval'], $key); ?>><?php echo esc_html($label); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
         <?php
     }
 }

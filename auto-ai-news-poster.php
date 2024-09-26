@@ -3,7 +3,7 @@
  * Plugin Name: Auto AI News Poster
  * Description: Un plugin care preia știri de pe minim trei surse, le analizează și publică un articol obiectiv în mod automat sau manual.
  * Version: 1.0
- * Author: Numele tău
+ * Author: Gabriel Sandu
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -54,3 +54,10 @@ function auto_ai_news_poster_menu() {
 function auto_ai_news_poster_settings_page() {
     Auto_Ai_News_Poster_Settings::display_settings_page();
 }
+
+// Include CSS-ul pentru panoul de admin (doar Bootstrap)
+add_action('admin_enqueue_scripts', 'auto_ai_news_poster_admin_styles');
+function auto_ai_news_poster_admin_styles() {
+    wp_enqueue_style('auto-ai-news-poster-bootstrap', 'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css');
+}
+
