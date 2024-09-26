@@ -55,9 +55,11 @@ function auto_ai_news_poster_settings_page() {
     Auto_Ai_News_Poster_Settings::display_settings_page();
 }
 
-// Include CSS-ul pentru panoul de admin (doar Bootstrap)
+// Add Bootstrap Library styles
 add_action('admin_enqueue_scripts', 'auto_ai_news_poster_admin_styles');
-function auto_ai_news_poster_admin_styles() {
-    wp_enqueue_style('auto-ai-news-poster-bootstrap', 'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css');
+function auto_ai_news_poster_admin_styles($hook_suffix) {
+    if ($hook_suffix == 'edit.php' || strpos($hook_suffix, 'auto-ai-news-poster') !== false) {
+        wp_enqueue_style('auto-ai-news-poster-bootstrap', 'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css');
+    }
 }
 
