@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/r48312maga/ai24stiri.ro/diswp/wp-content/plugins/auto-ai-news-poster/
+    - /bin/cp -r * $DEPLOYPATH
