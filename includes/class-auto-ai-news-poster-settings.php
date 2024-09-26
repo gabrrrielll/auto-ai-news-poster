@@ -3,6 +3,32 @@
 class Auto_Ai_News_Poster_Settings
 {
 
+    public static function init()
+    {
+        // Înregistrăm setările și meniul
+        add_action('admin_menu', [self::class, 'add_menu']);
+        add_action('admin_init', [self::class, 'register_settings']);
+    }
+
+    // Adăugare meniu în zona articolelor din admin
+    public static function add_menu()
+    {
+        add_submenu_page(
+            'edit.php',
+            'Auto AI News Poster Settings',
+            'Auto AI News Poster',
+            'manage_options',
+            'auto-ai-news-poster',
+            [self::class, 'settings_page']
+        );
+    }
+
+    // Afișare pagina de setări
+    public static function settings_page()
+    {
+        self::display_settings_page();
+    }
+
     public static function display_settings_page()
     {
         ?>
@@ -126,22 +152,31 @@ class Auto_Ai_News_Poster_Settings
     public static function cron_interval_callback()
     {
         $options = get_option('auto_ai_news_poster_settings');
-        $intervals = [
-            'hourly' => 'O dată pe oră',
-            'twicedaily' => 'De două ori pe zi',
-            'daily' => 'O dată pe zi',
-        ];
+        $hours = isset($options['cron_interval_hours']) ? $options['cron_interval_hours'] : 1;
+        $minutes = isset($options['cron_interval_minutes']) ? $options['cron_interval_minutes'] : 0;
         ?>
         <div class="form-group">
-            <label for="cron_interval" class="control-label">Intervalul pentru cron job</label>
-            <select name="auto_ai_news_poster_settings[cron_interval]" class="form-control" id="cron_interval">
-                <?php foreach ($intervals as $key => $label) : ?>
-                    <option value="<?php echo esc_attr($key); ?>" <?php selected($options['cron_interval'], $key); ?>><?php echo esc_html($label); ?></option>
-                <?php endforeach; ?>
+            <label for="cron_interval_hours" class="control-label">Ore</label>
+            <select name="auto_ai_news_poster_settings[cron_interval_hours]" class="form-control">
+                <?php for ($i = 0; $i <= 23; $i++) : ?>
+                    <option value="<?php echo $i; ?>" <?php selected($hours, $i); ?>>
+                        <?php echo $i; ?> ore
+                    </option>
+                <?php endfor; ?>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="cron_interval_minutes" class="control-label">Minute</label>
+            <select name="auto_ai_news_poster_settings[cron_interval_minutes]" class="form-control">
+                <?php for ($i = 0; $i <= 59; $i++) : ?>
+                    <option value="<?php echo $i; ?>" <?php selected($minutes, $i); ?>>
+                        <?php echo $i; ?> minute
+                    </option>
+                <?php endfor; ?>
             </select>
         </div>
         <?php
     }
 }
 
-add_action('admin_init', [Auto_Ai_News_Poster_Settings::class, 'register_settings']);
+Auto_Ai_News_Poster_Settings::init();
