@@ -24,10 +24,12 @@ class Auto_Ai_News_Poster_Metabox
 
     public static function render_get_article_metabox($post)
     {
-        // Afișează butonul „Get article from sources”
         ?>
         <div class="inside">
-            <button id="get-article-button" type="button" class="button button-primary" style="width: 100%;">
+            <textarea id="additional-instructions" class="widefat"
+                      placeholder="Introduceți instrucțiuni suplimentare pentru AI..."></textarea>
+            <button id="get-article-button" type="button" class="button button-primary"
+                    style="width: 100%; margin-top: 10px;">
                 Get Article from Sources
             </button>
         </div>

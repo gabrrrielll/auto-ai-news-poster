@@ -10,19 +10,28 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
 
-// Include files
+// Include fișierele necesare
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-settings.php';
-require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-parser.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-cron.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-metabox.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-api.php'; // Include noul fișier pentru apeluri API
 
-
-// Include CSS-ul Bootstrap doar pentru paginile pluginului
-add_action('admin_enqueue_scripts', 'auto_ai_news_poster_admin_styles');
-function auto_ai_news_poster_admin_styles($hook_suffix)
+// Funcția pentru înregistrarea scripturilor și stilurilor
+add_action('admin_enqueue_scripts', 'auto_ai_news_poster_enqueue_scripts');
+function auto_ai_news_poster_enqueue_scripts($hook_suffix)
 {
-    // Verifică dacă ne aflăm în pagina setărilor acestui plugin
-    if ($hook_suffix == 'edit.php' || strpos($hook_suffix, 'auto-ai-news-poster') !== false) {
-        wp_enqueue_style('auto-ai-news-poster-bootstrap', 'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css');
-    }
+    // Scriptul nostru JavaScript
+    wp_enqueue_script(
+        'auto-ai-news-poster-ajax',
+        plugin_dir_url(__FILE__) . 'includes/js/auto-ai-news-poster.js',
+        ['jquery'], // jQuery este deja inclus implicit în WordPress
+        null,
+        true
+    );
+
+    // Localizare variabile pentru AJAX
+    wp_localize_script('auto-ai-news-poster-ajax', 'autoAiNewsPosterAjax', [
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('get_article_from_sources_nonce'),
+    ]);
 }

@@ -144,6 +144,8 @@ class Auto_Ai_News_Poster_Settings
             <input type="text" name="auto_ai_news_poster_settings[chatgpt_api_key]"
                    value="<?php echo esc_attr($options['chatgpt_api_key']); ?>" class="form-control"
                    id="chatgpt_api_key">
+            <span class="info-icon dashicons dashicons-info"
+                  title="Pentru a obține cheia API OpenAI, accesați https://beta.openai.com/signup/. După ce v-ați înregistrat și ați confirmat contul, accesați pagina de API Keys și generați o cheie nouă. Această cheie trebuie introdusă aici pentru a permite generarea automată a articolelor."></span>
             <small class="form-text text-muted">Introduceți cheia API pentru ChatGPT.</small>
         </div>
         <?php
