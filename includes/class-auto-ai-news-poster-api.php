@@ -2,14 +2,17 @@
 require_once 'constants/config.php';
 require_once 'class-auto-ai-news-post_manager.php';
 
-class Auto_Ai_News_Poster_Api {
+class Auto_Ai_News_Poster_Api
+{
 
-    public static function init() {
+    public static function init()
+    {
         // Înregistrăm funcția AJAX pentru apelul API
         add_action('wp_ajax_get_article_from_sources', [self::class, 'get_article_from_sources']);
     }
 
-    public static function get_article_from_sources() {
+    public static function get_article_from_sources()
+    {
         // Verificăm nonce-ul pentru securitate
         global $prompt;
         check_ajax_referer('get_article_from_sources_nonce', 'security');
@@ -52,6 +55,7 @@ class Auto_Ai_News_Poster_Api {
                 $title = $content_json['title'] ?? '';
                 $content = wp_kses_post($content_json['content'] ?? '');
                 $summary = wp_kses_post($content_json['summary'] ?? '');
+                $category = $content_json['$category'] ?? [];
                 $tags = $content_json['tags'] ?? [];
                 $images = $content_json['images'] ?? [];
 
@@ -76,7 +80,15 @@ class Auto_Ai_News_Poster_Api {
                 }
 
                 // Returnăm succes și facem refresh la pagina
-                wp_send_json_success(['post_id' => $post_id]);
+                wp_send_json_success([
+                    'post_id' => $post_id,
+                    'article_content' => $content,
+                    'title' => $title,
+                    'tags' => $tags,
+                    'category' => $category,
+                    'images' => $images,
+                    'summary' => $summary,
+                ]);
             } else {
                 wp_send_json_error(['message' => 'Datele primite nu sunt în format JSON structurat.']);
             }
