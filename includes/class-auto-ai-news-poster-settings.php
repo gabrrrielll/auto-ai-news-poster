@@ -51,6 +51,7 @@ class Auto_Ai_News_Poster_Settings
 
         add_settings_section('main_section', 'Main Settings', null, 'auto_ai_news_poster_settings_page');
 
+        // Camp pentru selectarea modului de publicare
         add_settings_field(
             'mode',
             'Mod de publicare',
@@ -58,6 +59,8 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
+
+        // Camp pentru selectarea categoriilor de publicare
         add_settings_field(
             'categories',
             'Categorii de publicare',
@@ -65,6 +68,8 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
+
+        // Camp pentru sursele de stiri
         add_settings_field(
             'news_sources',
             'Surse de știri',
@@ -72,6 +77,8 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
+
+        // Camp pentru cheia API OpenAI
         add_settings_field(
             'chatgpt_api_key',
             'Cheia API ChatGPT',
@@ -79,6 +86,8 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
+
+        // Camp pentru setarea intervalului cron
         add_settings_field(
             'cron_interval',
             'Intervalul pentru cron job',
@@ -86,8 +95,36 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
+
+        // Camp pentru numele autorului de articole generate
+        add_settings_field(
+            'author_name',
+            'Nume autor articole generate',
+            [self::class, 'author_name_callback'],
+            'auto_ai_news_poster_settings_page',
+            'main_section'
+        );
+
+        // Camp pentru instructiuni AI (textarea)
+        add_settings_field(
+            'default_ai_instructions',
+            'Instrucțiuni AI pentru generarea articolelor',
+            [self::class, 'ai_instructions_callback'],
+            'auto_ai_news_poster_settings_page',
+            'main_section'
+        );
+
+        // Camp pentru numarul maxim de caractere al rezumatului
+        add_settings_field(
+            'max_summary_length',
+            'Numărul maxim de caractere al rezumatului',
+            [self::class, 'max_summary_length_callback'],
+            'auto_ai_news_poster_settings_page',
+            'main_section'
+        );
     }
 
+    // Callback pentru campul Mod de publicare
     public static function mode_callback()
     {
         $options = get_option('auto_ai_news_poster_settings');
@@ -102,6 +139,7 @@ class Auto_Ai_News_Poster_Settings
         <?php
     }
 
+    // Callback pentru categoriile de publicare
     public static function categories_callback()
     {
         $options = get_option('auto_ai_news_poster_settings');
@@ -122,6 +160,7 @@ class Auto_Ai_News_Poster_Settings
         <?php
     }
 
+    // Callback pentru sursele de stiri
     public static function news_sources_callback()
     {
         $options = get_option('auto_ai_news_poster_settings');
@@ -135,6 +174,7 @@ class Auto_Ai_News_Poster_Settings
         <?php
     }
 
+    // Callback pentru cheia API
     public static function chatgpt_api_key_callback()
     {
         $options = get_option('auto_ai_news_poster_settings');
@@ -145,17 +185,18 @@ class Auto_Ai_News_Poster_Settings
                    value="<?php echo esc_attr($options['chatgpt_api_key']); ?>" class="form-control"
                    id="chatgpt_api_key">
             <span class="info-icon dashicons dashicons-info"
-                  title="Pentru a obține cheia API OpenAI, accesați https://beta.openai.com/signup/. După ce v-ați înregistrat și ați confirmat contul, accesați pagina de API Keys și generați o cheie nouă. Această cheie trebuie introdusă aici pentru a permite generarea automată a articolelor."></span>
+                  title="Pentru a obține cheia API OpenAI, accesați https://beta.openai.com/signup/. După ce v-ați înregistrat și ați confirmat contul, accesați pagina de API Keys și generați o cheie nouă."></span>
             <small class="form-text text-muted">Introduceți cheia API pentru ChatGPT.</small>
         </div>
         <?php
     }
 
+    // Callback pentru setarea intervalului cron
     public static function cron_interval_callback()
     {
         $options = get_option('auto_ai_news_poster_settings');
-        $hours = isset($options['cron_interval_hours']) ? $options['cron_interval_hours'] : 1;
-        $minutes = isset($options['cron_interval_minutes']) ? $options['cron_interval_minutes'] : 0;
+        $hours = $options['cron_interval_hours'] ?? 1;
+        $minutes = $options['cron_interval_minutes'] ?? 0;
         ?>
         <div class="form-group">
             <label for="cron_interval_hours" class="control-label">Ore</label>
@@ -176,6 +217,44 @@ class Auto_Ai_News_Poster_Settings
                     </option>
                 <?php endfor; ?>
             </select>
+        </div>
+        <?php
+    }
+
+    // Callback pentru numele autorului
+    public static function author_name_callback() {
+        $options = get_option('auto_ai_news_poster_settings');
+        $current_user = wp_get_current_user(); // Preluăm numele utilizatorului curent (admin)
+        $author_name = $options['author_name'] ?? $current_user->display_name;
+        ?>
+        <div class="form-group">
+            <input type="text" name="auto_ai_news_poster_settings[author_name]"
+                   value="<?php echo esc_attr($author_name); ?>" class="form-control" placeholder="Introdu numele autorului">
+        </div>
+        <?php
+    }
+
+    // Callback pentru instrucțiunile AI (textarea)
+    public static function ai_instructions_callback() {
+        $options = get_option('auto_ai_news_poster_settings');
+        $default_instructions = $options['default_ai_instructions'] ?? "Creează un articol unic pe baza următoarelor surse de știri, respectă structura titlu, etichete și conținut. Sugerează imagini și include rezumatul.";
+
+        ?>
+        <div class="form-group">
+            <textarea name="auto_ai_news_poster_settings[default_ai_instructions]" class="form-control" rows="6"
+                      placeholder="Introdu instrucțiunile implicite pentru AI"><?php echo esc_textarea($default_instructions); ?></textarea>
+        </div>
+        <?php
+    }
+
+    // Callback pentru numărul maxim de caractere pentru rezumat
+    public static function max_summary_length_callback() {
+        $options = get_option('auto_ai_news_poster_settings');
+        $max_summary_length = $options['max_summary_length'] ?? 100;
+        ?>
+        <div class="form-group">
+            <input type="number" name="auto_ai_news_poster_settings[max_summary_length]"
+                   value="<?php echo esc_attr($max_summary_length); ?>" class="form-control" placeholder="Maxim 100 caractere">
         </div>
         <?php
     }
