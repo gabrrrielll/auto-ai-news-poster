@@ -2,28 +2,32 @@
 require_once 'constants/config.php';
 require_once 'class-auto-ai-news-post_manager.php';
 
-class Auto_Ai_News_Poster_Api
-{
+class Auto_Ai_News_Poster_Api {
 
-    public static function init()
-    {
+    public static function init() {
         // Înregistrăm funcția AJAX pentru apelul API
         add_action('wp_ajax_get_article_from_sources', [self::class, 'get_article_from_sources']);
+        add_action('auto_ai_news_poster_cron', [self::class, 'auto_generate_article']); // Cron job action
     }
 
-    public static function get_article_from_sources()
-    {
+    public static function get_article_from_sources() {
+        $options = get_option('auto_ai_news_poster_settings');
+        $publication_mode = $options['mode']; // Verificăm dacă este 'manual' sau 'auto'
 
-        // Verificăm nonce-ul pentru securitate
-        global $prompt;
-        check_ajax_referer('get_article_from_sources_nonce', 'security');
-
-        // Verificăm dacă toate datele necesare sunt trimise
-        if (!isset($_POST['instructions'])) {
-            wp_send_json_error(['message' => 'Date incomplete']);
+        if ($publication_mode === 'manual') {
+            check_ajax_referer('get_article_from_sources_nonce', 'security');
         }
 
-        // Preluăm datele din cererea AJAX
+        return self::process_article_generation();
+    }
+
+    public static function auto_generate_article() {
+        // Folosit pentru apelurile cron (automate)
+        self::process_article_generation();
+    }
+
+    public static function process_article_generation() {
+        // Preluăm datele
         $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : null;
         error_log('get_article_from_sources() triggered for post ID: ' . $post_id);
         $additional_instructions = sanitize_text_field($_POST['instructions']);
@@ -35,10 +39,10 @@ class Auto_Ai_News_Poster_Api
             wp_send_json_error(['message' => 'Cheia API sau sursele lipsesc']);
         }
 
-        // Pregătim promptul pentru API-ul OpenAI
+        // Generăm promptul din config.php
         $prompt = generate_prompt($sources, $additional_instructions, []);
 
-        // Apelăm OpenAI API
+        // Apelăm OpenAI API din config.php
         $response = call_openai_api($api_key, $prompt);
         error_log('call_openai_api() $response: ' . print_r($response, true));
 
@@ -62,7 +66,7 @@ class Auto_Ai_News_Poster_Api
                 $tags = $content_json['tags'] ?? [];
                 $images = $content_json['images'] ?? [];
 
-                // Inserăm sau actualizăm articolul
+                // Folosim Post_Manager pentru a crea sau actualiza articolul
                 $post_id = Post_Manager::insert_or_update_post($post_id, $title, $content, $summary);
 
                 if (isset($post_id['error'])) {
