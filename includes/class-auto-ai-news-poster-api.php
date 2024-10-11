@@ -13,6 +13,7 @@ class Auto_Ai_News_Poster_Api
 
     public static function get_article_from_sources()
     {
+        error_log('get_article_from_sources() triggered.');
         // Verificăm nonce-ul pentru securitate
         global $prompt;
         check_ajax_referer('get_article_from_sources_nonce', 'security');
@@ -38,6 +39,7 @@ class Auto_Ai_News_Poster_Api
 
         // Apelăm OpenAI API
         $response = call_openai_api($api_key, $prompt);
+        error_log('call_openai_api() $response: ' . print_r($response, true));
 
         if (is_wp_error($response)) {
             error_log('Eroare API: ' . $response->get_error_message());
@@ -70,7 +72,7 @@ class Auto_Ai_News_Poster_Api
                 Post_Manager::set_post_tags($post_id, $tags);
 
                 // Inserăm imaginea reprezentativă, dacă există
-                if (!empty($images)) {
+                if (!empty($images) && !empty($images[0])) {
                     $image_url = $images[0]; // Presupunem că prima imagine este corectă
                     $image_result = Post_Manager::set_featured_image($post_id, $image_url);
 
