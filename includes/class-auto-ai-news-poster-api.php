@@ -76,15 +76,15 @@ class Auto_Ai_News_Poster_Api {
                 // Setăm etichetele articolului
                 Post_Manager::set_post_tags($post_id, $tags);
 
-                // Inserăm imaginea reprezentativă, dacă există
-                if (!empty($images) && !empty($images[0])) {
-                    $image_url = $images[0]; // Presupunem că prima imagine este corectă
-                    $image_result = Post_Manager::set_featured_image($post_id, $image_url);
-
-                    if (isset($image_result['error'])) {
-                        wp_send_json_error(['message' => $image_result['error']]);
-                    }
-                }
+                // Imaginile extrase de AI sunt incorecte momentan
+//                if (!empty($images) && !empty($images[0])) {
+//                    $image_url = $images[0]; // Presupunem că prima imagine este corectă
+//                    $image_result = Post_Manager::set_featured_image($post_id, $image_url);
+//
+//                    if (isset($image_result['error'])) {
+//                        wp_send_json_error(['message' => $image_result['error']]);
+//                    }
+//                }
 
                 // Returnăm succes și facem refresh la pagina
                 wp_send_json_success([
