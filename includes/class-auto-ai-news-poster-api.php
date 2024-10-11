@@ -13,7 +13,7 @@ class Auto_Ai_News_Poster_Api
 
     public static function get_article_from_sources()
     {
-        error_log('get_article_from_sources() triggered.');
+
         // Verificăm nonce-ul pentru securitate
         global $prompt;
         check_ajax_referer('get_article_from_sources_nonce', 'security');
@@ -25,6 +25,7 @@ class Auto_Ai_News_Poster_Api
 
         // Preluăm datele din cererea AJAX
         $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : null;
+        error_log('get_article_from_sources() triggered for post ID: ' . $post_id);
         $additional_instructions = sanitize_text_field($_POST['instructions']);
         $options = get_option('auto_ai_news_poster_settings');
         $api_key = $options['chatgpt_api_key'];
