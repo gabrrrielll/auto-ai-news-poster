@@ -3,6 +3,10 @@
 class Post_Manager {
 
     public static function insert_or_update_post($post_id, $title, $content, $summary) {
+
+        $options = get_option('auto_ai_news_poster_settings');
+        $current_user = wp_get_current_user(); // Preluăm numele utilizatorului curent (admin)
+        $author_name = $options['author_name'] ?? $current_user->display_name;
         // Dacă post_id este gol, creăm un articol nou în modul draft
         if (empty($post_id)) {
             $new_post = array(
@@ -10,6 +14,9 @@ class Post_Manager {
                 'post_content'  => $content,
                 'post_status'   => 'draft',
                 'post_type'     => 'post',
+                'post_excerpt'  => $summary,
+                'post_author'   => $author_name,
+                'post_category' => $options['default_category'] ?? [],
             );
 
             // Inserăm articolul nou și obținem ID-ul acestuia
