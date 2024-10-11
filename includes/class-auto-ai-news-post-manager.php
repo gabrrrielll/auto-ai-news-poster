@@ -33,6 +33,8 @@ class Post_Manager {
                 'post_title' => $title,
                 'post_content' => $content,
                 'post_excerpt' => $summary, // Rezumatul este salvat în câmpul post_excerpt
+                'post_author'   => $author_name,
+                'post_category' => $options['default_category'] ?? [],
             ]);
         }
 

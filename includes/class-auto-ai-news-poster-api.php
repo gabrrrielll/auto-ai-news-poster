@@ -1,6 +1,6 @@
 <?php
 require_once 'constants/config.php';
-require_once 'class-auto-ai-news-post_manager.php';
+require_once 'class-auto-ai-news-post-manager.php';
 
 class Auto_Ai_News_Poster_Api {
 
