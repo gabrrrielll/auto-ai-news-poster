@@ -35,3 +35,15 @@ function auto_ai_news_poster_enqueue_scripts($hook_suffix)
         'nonce' => wp_create_nonce('get_article_from_sources_nonce'),
     ]);
 }
+
+function display_external_image_source($content) {
+    global $post;
+    $external_image_source = get_post_meta($post->ID, '_external_image_source', true);
+
+    if (!empty($external_image_source)) {
+        $content .= '<p class="image-source">Sursa foto: ' . esc_html($external_image_source) . '</p>';
+    }
+
+    return $content;
+}
+add_filter('the_content', 'display_external_image_source');

@@ -61,12 +61,17 @@ class Auto_Ai_News_Poster_Metabox
     {
         // Preluăm URL-ul imaginii reprezentative externe dacă există
         $external_image_url = get_post_meta($post->ID, '_external_image_url', true);
+        $external_image_source = get_post_meta($post->ID, '_external_image_source', true);
         ?>
         <div class="inside">
             <label for="external_image_url">URL imagine reprezentativă externă</label>
             <input type="text" name="external_image_url" id="external_image_url" class="widefat"
                    value="<?php echo esc_url($external_image_url); ?>" placeholder="Introduceți URL-ul imaginii..."/>
             <p class="description">Dacă adăugați un URL, acesta va fi folosit ca imagine reprezentativă pentru acest articol.</p>
+
+            <label for="external_image_source">Sursa imaginii</label>
+            <input type="text" id="external_image_source" name="external_image_source" value="<?php echo esc_attr($external_image_source); ?>" class="widefat" placeholder="Sursa imaginii (de ex: Digi24)">
+            <p>Introduceți sursa imaginii (ex: Sursa foto: Digi24).</p>
         </div>
         <?php
     }
@@ -124,6 +129,10 @@ class Auto_Ai_News_Poster_Metabox
             $image_url = esc_url_raw($_POST['external_image_url']);
             if (!empty($image_url)) {
                 Post_Manager::set_featured_image($post_id, $image_url);
+            }
+
+            if (isset($_POST['external_image_source'])) {
+                update_post_meta($post_id, '_external_image_source', sanitize_text_field($_POST['external_image_source']));
             }
         }
     }
