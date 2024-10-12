@@ -38,12 +38,18 @@ function auto_ai_news_poster_enqueue_scripts($hook_suffix)
 
 function display_external_image_source($content) {
     global $post;
+
+    // Preluăm sursa imaginii din meta
     $external_image_source = get_post_meta($post->ID, '_external_image_source', true);
 
+    // Dacă există o sursă a imaginii, o adăugăm la începutul conținutului
     if (!empty($external_image_source)) {
-        $content .= '<p class="image-source">Sursa foto: ' . esc_html($external_image_source) . '</p>';
+        $source_html = '<p><em>Sursa foto: ' . esc_html($external_image_source) . '</em></p>';
+        // Adăugăm sursa înaintea conținutului articolului
+        $content = $source_html . $content;
     }
 
     return $content;
 }
 add_filter('the_content', 'display_external_image_source');
+
