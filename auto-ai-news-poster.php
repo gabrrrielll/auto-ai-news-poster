@@ -53,3 +53,19 @@ function display_external_image_source($content) {
 }
 add_filter('the_content', 'display_external_image_source');
 
+add_filter('post_thumbnail_html', 'display_external_image_or_featured', 10, 5);
+
+function display_external_image_or_featured($html, $post_id, $post_thumbnail_id, $size, $attr)
+{
+    $external_image_url = get_post_meta($post_id, '_external_image_url', true);
+
+    if ($external_image_url) {
+        // Dacă este setată o imagine externă, o afișăm
+        return '<img src="' . esc_url($external_image_url) . '" alt="' . esc_attr(get_the_title($post_id)) . '" />';
+    }
+
+    // Dacă nu există imagine externă, afișăm imaginea reprezentativă standard
+    return $html;
+}
+
+
