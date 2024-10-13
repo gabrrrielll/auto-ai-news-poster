@@ -46,15 +46,23 @@ class Post_Manager {
         wp_set_post_tags($post_id, $tags);
     }
 
-    public static function set_featured_image($post_id, $image_url) {
-        // Descărcăm imaginea din Freepik ca imagine reprezentativă
-        $image_id = media_sideload_image($image_url, $post_id, null, 'id');
+    public static function set_featured_image($post_id, $image_url)
+    {
+        $options = get_option('auto_ai_news_poster_settings');
+        $image_handling_mode = $options['image_handling_mode'] ?? 'import';
 
-        if (!is_wp_error($image_id)) {
-            // Setăm imaginea ca imagine reprezentativă
-            set_post_thumbnail($post_id, $image_id);
+        if ($image_handling_mode === 'import') {
+            // Importăm imaginea în biblioteca media
+            $image_id = media_sideload_image($image_url, $post_id, null, 'id');
+            if (!is_wp_error($image_id)) {
+                set_post_thumbnail($post_id, $image_id);
+            } else {
+                return ['error' => 'Nu am reușit să descarc imaginea.'];
+            }
         } else {
-            return ['error' => 'Nu am reușit să descarc imaginea.'];
+            // Setăm imaginea reprezentativă externă folosind URL-ul direct
+            update_post_meta($post_id, '_external_image_url', esc_url_raw($image_url));
         }
     }
+
 }

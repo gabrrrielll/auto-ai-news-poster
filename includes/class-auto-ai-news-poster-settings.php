@@ -122,6 +122,16 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
+
+        // Camp pentru importul imaginilor sau folosirea lor externă
+        add_settings_field(
+            'image_handling_mode',
+            'Modul de gestionare a imaginilor',
+            [self::class, 'image_handling_mode_callback'],
+            'auto_ai_news_poster_settings_page',
+            'main_section'
+        );
+
     }
 
     // Callback pentru campul Mod de publicare
@@ -258,6 +268,24 @@ class Auto_Ai_News_Poster_Settings
         </div>
         <?php
     }
+
+    public static function image_handling_mode_callback()
+    {
+        $options = get_option('auto_ai_news_poster_settings');
+        $image_handling_mode = $options['image_handling_mode'] ?? 'import'; // Setare implicită
+
+        ?>
+        <div class="form-group">
+            <label for="image_handling_mode">Alege modul de gestionare a imaginilor:</label>
+            <select name="auto_ai_news_poster_settings[image_handling_mode]" id="image_handling_mode">
+                <option value="import" <?php selected($image_handling_mode, 'import'); ?>>Importă imaginile</option>
+                <option value="external" <?php selected($image_handling_mode, 'external'); ?>>Folosește imagini externe</option>
+            </select>
+            <p class="description">Alege dacă vrei să imporți imaginile în biblioteca media sau să folosești URL-uri externe.</p>
+        </div>
+        <?php
+    }
+
 }
 
 Auto_Ai_News_Poster_Settings::init();
