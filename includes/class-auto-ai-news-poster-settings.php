@@ -123,11 +123,11 @@ class Auto_Ai_News_Poster_Settings
             'main_section'
         );
 
-        // Camp pentru importul imaginilor sau folosirea lor externă
+// Camp pentru selectarea modului de imagine (externă/importată)
         add_settings_field(
-            'image_handling_mode',
-            'Modul de gestionare a imaginilor',
-            [self::class, 'image_handling_mode_callback'],
+            'use_external_images',
+            'Mod imagini',
+            [self::class, 'use_external_images_callback'],
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
@@ -269,19 +269,17 @@ class Auto_Ai_News_Poster_Settings
         <?php
     }
 
-    public static function image_handling_mode_callback()
-    {
+// Callback pentru selectarea modului de imagine (externă/importată)
+    public static function use_external_images_callback() {
         $options = get_option('auto_ai_news_poster_settings');
-        $image_handling_mode = $options['image_handling_mode'] ?? 'import'; // Setare implicită
-
+        $use_external_images = $options['use_external_images'] ?? 'external';
         ?>
         <div class="form-group">
-            <label for="image_handling_mode">Alege modul de gestionare a imaginilor:</label>
-            <select name="auto_ai_news_poster_settings[image_handling_mode]" id="image_handling_mode">
-                <option value="import" <?php selected($image_handling_mode, 'import'); ?>>Importă imaginile</option>
-                <option value="external" <?php selected($image_handling_mode, 'external'); ?>>Folosește imagini externe</option>
+            <label for="use_external_images" class="control-label">Folosire imagini:</label>
+            <select name="auto_ai_news_poster_settings[use_external_images]" class="form-control" id="use_external_images">
+                <option value="external" <?php selected($use_external_images, 'external'); ?>>Folosește imagini externe</option>
+                <option value="import" <?php selected($use_external_images, 'import'); ?>>Importă imagini în WordPress</option>
             </select>
-            <p class="description">Alege dacă vrei să imporți imaginile în biblioteca media sau să folosești URL-uri externe.</p>
         </div>
         <?php
     }

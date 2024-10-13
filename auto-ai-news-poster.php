@@ -53,19 +53,42 @@ function display_external_image_source($content) {
 }
 add_filter('the_content', 'display_external_image_source');
 
-add_filter('post_thumbnail_html', 'display_external_image_or_featured', 10, 5);
+function display_external_image($content) {
+    global $post;
 
-function display_external_image_or_featured($html, $post_id, $post_thumbnail_id, $size, $attr)
-{
-    $external_image_url = get_post_meta($post_id, '_external_image_url', true);
+    // Preluăm opțiunea din setările pluginului
+    $options = get_option('auto_ai_news_poster_settings');
+    $use_external_images = isset($options['use_external_images']) ? $options['use_external_images'] : 'external';
 
-    if ($external_image_url) {
-        // Dacă este setată o imagine externă, o afișăm
-        return '<img src="' . esc_url($external_image_url) . '" alt="' . esc_attr(get_the_title($post_id)) . '" />';
+    // Preluăm URL-ul imaginii externe și sursa
+    $external_image_url = get_post_meta($post->ID, '_external_image_url', true);
+    $external_image_source = get_post_meta($post->ID, '_external_image_source', true);
+
+    // Dacă folosim imagini externe și există un URL extern
+    if ($use_external_images === 'external' && !empty($external_image_url)) {
+        $image_html = '<div class="external-image">';
+        $image_html .= '<img src="' . esc_url($external_image_url) . '" alt="" />';
+
+        // Adăugăm și sursa imaginii dacă există
+        if (!empty($external_image_source)) {
+            $image_html .= '<p><em>Sursa foto: ' . esc_html($external_image_source) . '</em></p>';
+        }
+        $image_html .= '</div>';
+
+        // Adăugăm imaginea externă înainte de conținut
+        $content = $image_html . $content;
+    }
+    // Dacă folosim importul de imagini, afișăm imaginea reprezentativă din WordPress
+    else {
+        if (has_post_thumbnail($post->ID)) {
+            $content = get_the_post_thumbnail($post->ID, 'full') . $content;
+        }
     }
 
-    // Dacă nu există imagine externă, afișăm imaginea reprezentativă standard
-    return $html;
+    return $content;
 }
+// Aplicăm filtrul pentru a adăuga imaginea externă sau importată în funcție de setare
+add_filter('the_content', 'display_external_image');
+
 
 
