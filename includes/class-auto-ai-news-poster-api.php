@@ -28,8 +28,8 @@ class Auto_Ai_News_Poster_Api
     {
         // Preluăm datele
         $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : null;
-        error_log('get_article_from_sources() triggered for post ID: ' . $post_id);
-        $additional_instructions = sanitize_text_field($_POST['instructions']);
+
+        $additional_instructions = sanitize_text_field($_POST['instructions'] ?? '');
         $options = get_option('auto_ai_news_poster_settings');
         $api_key = $options['chatgpt_api_key'];
         $sources = explode("\n", trim($options['news_sources'])); // Sursele din setări
@@ -40,7 +40,7 @@ class Auto_Ai_News_Poster_Api
 
         // Generăm promptul din config.php
         $prompt = generate_prompt($sources, $additional_instructions, []);
-
+        error_log('get_article_from_sources() triggered for post ID: ' . $post_id . ' prompt: ' . $prompt);
         // Apelăm OpenAI API din config.php
         $response = call_openai_api($api_key, $prompt);
 
@@ -60,10 +60,11 @@ class Auto_Ai_News_Poster_Api
                 $title = $content_json['title'] ?? '';
                 $content = wp_kses_post($content_json['content'] ?? '');
                 $summary = wp_kses_post($content_json['summary'] ?? '');
-                $category = $content_json['$category'] ?? '';
+                $category = $content_json['category'] ?? '';
                 $tags = $content_json['tags'] ?? [];
                 $images = $content_json['images'] ?? [];
 
+                // Construim array-ul de post_data
                 $post_data = array(
                     'post_title' => $title,
                     'post_content' => $content,
@@ -82,9 +83,13 @@ class Auto_Ai_News_Poster_Api
                 // Setăm etichetele articolului
                 Post_Manager::set_post_tags($post_id, $tags);
 
-                // Setăm etichetele articolului
+                // Setăm categoriile articolului
                 Post_Manager::set_post_categories($post_id, $category);
 
+                // Setăm imaginea reprezentativă dacă este necesar
+                if (!empty($images)) {
+                    Post_Manager::set_featured_image($post_id, $images[0]);
+                }
 
                 // Returnăm succes și facem refresh la pagina
                 wp_send_json_success([
@@ -95,6 +100,7 @@ class Auto_Ai_News_Poster_Api
                     'images' => $images,
                     'summary' => $summary,
                     'article_content' => $content,
+                    'body' => $body
                 ]);
             } else {
                 wp_send_json_error(['message' => 'Datele primite nu sunt în format JSON structurat.']);
@@ -103,6 +109,7 @@ class Auto_Ai_News_Poster_Api
             wp_send_json_error(['message' => 'A apărut o eroare la generarea articolului.']);
         }
     }
+
 
     public static function auto_generate_article()
     {
