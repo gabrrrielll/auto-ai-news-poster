@@ -14,7 +14,8 @@ if (!defined('ABSPATH')) {
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-settings.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-cron.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-metabox.php';
-require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-api.php'; // Include noul fișier pentru apeluri API
+require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-api.php'; 
+require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-hooks.php';
 
 // Funcția pentru înregistrarea scripturilor și stilurilor
 add_action('admin_enqueue_scripts', 'auto_ai_news_poster_enqueue_scripts');
