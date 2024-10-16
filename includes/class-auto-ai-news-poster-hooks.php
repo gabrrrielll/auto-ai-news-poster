@@ -25,7 +25,6 @@ class Auto_Ai_News_Poster_Hooks
             $image_html .= '<img src="' . esc_url($external_image_url) . '" alt="" style="max-width:100%; height:auto;">';
             $image_html .= '</div>';
             $image_html .= '<p style="margin-top:10px;"><strong>Imagine reprezentativă externă:</strong></p>';
-            $image_html .= '<p>' . esc_url($external_image_url) . '</p>';
 
             // Adăugăm HTML-ul în conținutul original al metabox-ului
             return $content . $image_html;
@@ -63,7 +62,8 @@ class Auto_Ai_News_Poster_Hooks
         } // Dacă folosim importul de imagini, afișăm imaginea reprezentativă din WordPress
         else {
             if (has_post_thumbnail($post->ID)) {
-                $content = get_the_post_thumbnail($post->ID, 'full') . $content;
+//                $content = get_the_post_thumbnail($post->ID, 'full') . $content;
+                $content = '<p><em>Sursa foto: ' . esc_html($external_image_source) . '</em></p>' . $content;
             }
         }
 
