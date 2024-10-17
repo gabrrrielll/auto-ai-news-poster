@@ -1,12 +1,13 @@
 <?php
 // Funcție pentru generarea promptului
 const URL_API_OPENAI = 'https://api.openai.com/v1/chat/completions';
+
 function generate_prompt($sources, $additional_instructions, $tags): string
 {
     // Preluăm categoriile din baza de date și le adăugăm la prompt
     $categories = get_categories([
         'orderby' => 'name',
-        'order'   => 'ASC',
+        'order' => 'ASC',
         'hide_empty' => false,
     ]);
 
@@ -15,31 +16,37 @@ function generate_prompt($sources, $additional_instructions, $tags): string
         $category_names[] = $category->name;
     }
     $category_list = implode(', ', $category_names);
-    $prompt = "Fa browsing pe urmatoarelesurse de știri si descoperă ultima știre care apare in cele trei surse simultan, folsește doar informația pentru a compune un nou articol unic.\n";
+
+    $prompt = "Fa browsing pe urmatoarele surse de știri și descoperă ultima știre care apare în cele trei surse simultan. Folosește doar informația pentru a compune un nou articol unic.\n";
     $prompt .= implode("\n", $sources);
     $prompt .= "\n\nInstrucțiuni suplimentare: " . $additional_instructions;
     $prompt .= "\nInclude următoarele informații în răspunsul tău:\n";
-    $prompt .= "1. Generează un titlu relevant pentru articol.\n";
+    $prompt .= "1. Generează un titlu relevant pentru articol (title).\n";
     $prompt .= "2. Generează 2-3 etichete relevante (tags).\n";
     $prompt .= "3. Numește numele categoriei care se potrivește mai bine din lista: '$category_list'.\n";
-    $prompt .= "4. Dacă găsești imagini relevante în articolele sursă, parsează codul sursa html si extrage URL-urile imaginilor pentru a le include în articol (images).\n";
-    $prompt .= "5. Creează un rezumat al articolului.\n";
-    $prompt .= "6. Generează un articol formatat în HTML. Include titluri, paragrafe și eventuale liste numerotate sau bullet point-uri (in raport de necesități).";
+    $prompt .= "4. Dacă găsești imagini relevante în articolele sursă, parsează codul sursă HTML și extrage URL-urile imaginilor pentru a le include în articol (images).\n";
+    $prompt .= "5. Creează un rezumat al articolului (summary).\n";
+    $prompt .= "6. Generează un articol formatat în HTML astfel încât să aibă un design plăcut.\n";
+    $prompt .= "7. Copiază URL-urile complete ale articolelor pe care le-ai parsat și de unde ai extras informația (sources).\n";
+
+    // Adăugăm instrucțiuni pentru generarea imaginii
+    $prompt .= "8. Generează o imagine care să fie reprezentativă pentru subiectul articolului. Asigură-te că imaginea reflectă elementele principale discutate în articol și oferă un URL pentru descărcarea acesteia.\n";
 
     return $prompt;
 }
 
 // Funcție pentru apelarea API-ului OpenAI
-function call_openai_api($api_key, $prompt) {
+function call_openai_api($api_key, $prompt)
+{
     return wp_remote_post(URL_API_OPENAI, [
         'headers' => [
             'Authorization' => 'Bearer ' . $api_key,
-            'Content-Type'  => 'application/json',
+            'Content-Type' => 'application/json',
         ],
         'body' => json_encode([
             'model' => 'gpt-4o-2024-08-06',  // Model ce suportă ieșiri structurate
             'messages' => [
-                ['role' => 'system', 'content' => 'You are an assistant generating news articles based on provided sources.'],
+                ['role' => 'system', 'content' => 'You are an assistant generating news articles and images based on provided sources.'],
                 ['role' => 'user', 'content' => $prompt],
             ],
             'response_format' => [
@@ -79,15 +86,26 @@ function call_openai_api($api_key, $prompt) {
                                 "items" => [
                                     "type" => "string"
                                 ]
+                            ],
+                            "generated_image" => [
+                                "type" => "string",
+                                "description" => "URL-ul imaginii generate de AI pe baza subiectului articolului"
+                            ],
+                            "sources" => [
+                                "type" => "array",
+                                "description" => "URL-urile complete ale știrilor citite",
+                                "items" => [
+                                    "type" => "string"
+                                ]
                             ]
                         ],
-                        'required' => ['title', 'content', 'summary','category', 'tags', 'images'],
+                        'required' => ['title', 'content', 'summary', 'category', 'tags', 'images', 'generated_image', 'sources'],
                         'additionalProperties' => false
                     ]
                 ],
             ],
-            'max_tokens' => 1500,
+            'max_tokens' => 2500,
         ]),
-        'timeout' => 30,
+        'timeout' => 90,
     ]);
 }
