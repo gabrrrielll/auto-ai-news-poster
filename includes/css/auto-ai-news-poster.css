@@ -1,0 +1,57 @@
+#sursa-foto {
+    position: relative;
+    font-size: 14px;
+    color: #555;
+}
+
+#sursa-foto .info-icon {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    background-color: #0073aa;
+    color: white;
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: bold;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+#sursa-foto .info-icon:hover::after {
+    content: "Aceasta imagine a fost generata de AI pe baza textului din rezumat si nu reprezinta realitatea surprinsa prin intermediul unei camere foto";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 25px;
+    background-color: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    white-space: normal;
+    max-width: 80%; /* Limitează lățimea tooltip-ului */
+    z-index: 9999;
+    opacity: 1;
+    visibility: visible;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+#sursa-foto .info-icon::after {
+    content: "";
+    position: absolute;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+/* Adăugare media query pentru dispozitive mobile */
+@media (max-width: 768px) {
+    #sursa-foto .info-icon:hover::after {
+        max-width: 80%; /* Lățimea maximă limitată pentru mobile */
+        font-size: 12px; /* Font mai mic pentru mobile */
+        word-wrap: break-word; /* Împarte cuvintele dacă sunt prea lungi */
+    }
+}

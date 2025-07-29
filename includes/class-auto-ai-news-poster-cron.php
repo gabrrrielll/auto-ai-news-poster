@@ -2,7 +2,6 @@
 
 class Auto_Ai_News_Poster_Cron
 {
-
     public static function init()
     {
         // Activare cron la activarea pluginului
@@ -47,6 +46,31 @@ class Auto_Ai_News_Poster_Cron
         $settings = get_option('auto_ai_news_poster_settings');
 
         if ($settings['mode'] === 'auto') {
+            // Verificăm dacă opțiunea "Rulează automat doar până la epuizarea listei de linkuri" este activată
+            $run_until_bulk_exhausted = $settings['run_until_bulk_exhausted'] === 'yes';
+
+            if ($run_until_bulk_exhausted) {
+                // Verificăm dacă lista de linkuri este goală
+                $bulk_links = explode("\n", trim($settings['bulk_custom_source_urls'] ?? ''));
+                $bulk_links = array_filter($bulk_links, 'trim'); // Eliminăm rândurile goale
+
+                error_log('CRON DEBUG: $run_until_bulk_exhausted:'.$run_until_bulk_exhausted.' count($bulk_links):'. count($bulk_links).' $bulk_links:'. print_r($bulk_links, true));
+
+                if (empty($bulk_links)) {
+                    // Lista de linkuri s-a epuizat, oprim cron job-ul și schimbăm modul pe manual
+                    error_log('Lista de linkuri personalizate a fost epuizată. Oprirea cron job-ului.');
+
+                    // Dezactivăm cron job-ul
+                    wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
+
+                    // Schimbăm modul din automat pe manual
+                    $settings['mode'] = 'manual';
+                    update_option('auto_ai_news_poster_settings', $settings);
+
+                    return; // Oprim execuția
+                }
+            }
+
             // Log the auto post execution
             error_log('Auto post cron triggered.');
 
@@ -85,10 +109,10 @@ class Auto_Ai_News_Poster_Cron
         }
 
         // Add custom interval
-        $schedules['custom_interval'] = array(
+        $schedules['custom_interval'] = [
             'interval' => $interval,
             'display' => "Once every $hours hours and $minutes minutes",
-        );
+        ];
 
         return $schedules;
     }

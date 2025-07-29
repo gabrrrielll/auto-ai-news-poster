@@ -19,23 +19,49 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-hoo
 
 // Funcția pentru înregistrarea scripturilor și stilurilor
 add_action('admin_enqueue_scripts', 'auto_ai_news_poster_enqueue_scripts');
-function auto_ai_news_poster_enqueue_scripts($hook_suffix)
-{
-    // Scriptul nostru JavaScript
-    wp_enqueue_script(
-        'auto-ai-news-poster-ajax',
-        plugin_dir_url(__FILE__) . 'includes/js/auto-ai-news-poster.js',
-        ['jquery'], // jQuery este deja inclus implicit în WordPress
-        null,
-        true
-    );
-
-    // Localizare variabile pentru AJAX
-    wp_localize_script('auto-ai-news-poster-ajax', 'autoAiNewsPosterAjax', [
-        'ajax_url' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('get_article_from_sources_nonce'),
-    ]);
+    function auto_ai_news_poster_enqueue_scripts($hook_suffix)
+    {
+           // Verificăm dacă ne aflăm pe pagina de setări a pluginului sau pe pagina de editare a unui articol
+        if ($hook_suffix === 'post.php' || $hook_suffix === 'post-new.php' || (isset($_GET['page']) && $_GET['page'] === 'auto-ai-news-poster')) {
+        
+        // Scriptul nostru JavaScript
+        wp_enqueue_script(
+            'auto-ai-news-poster-ajax',
+            plugin_dir_url(__FILE__) . 'includes/js/auto-ai-news-poster.js',
+            ['jquery'], // jQuery este deja inclus implicit în WordPress
+            null,
+            true
+        );
+    
+        // Localizare variabile pentru AJAX
+        wp_localize_script('auto-ai-news-poster-ajax', 'autoAiNewsPosterAjax', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('get_article_from_sources_nonce'),
+        ]);
+        
+        // Include Bootstrap CSS
+        wp_enqueue_style(
+            'bootstrap-css',
+            'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css'
+        );
+    }
 }
+
+// Înregistrăm fișierul CSS doar pentru paginile relevante
+add_action('wp_enqueue_scripts', 'auto_ai_news_poster_enqueue_css');
+function auto_ai_news_poster_enqueue_css() {
+    // Verificăm dacă ne aflăm pe o pagină de articol singular sau pe o pagină unde este utilizat pluginul
+    if (is_singular('post') || is_admin()) {
+        wp_enqueue_style(
+            'auto-ai-news-poster-css',
+            plugin_dir_url(__FILE__) . 'includes/css/auto-ai-news-poster.css',
+            [],
+            '1.0',
+            'all'
+        );
+    }
+}
+
 
 
 
