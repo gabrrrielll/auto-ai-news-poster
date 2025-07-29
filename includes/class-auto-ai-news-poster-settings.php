@@ -76,6 +76,8 @@ class Auto_Ai_News_Poster_Settings
                 <p><strong>Run Until Bulk Exhausted:</strong> <span id="run-until-bulk"><?php echo esc_html($options['run_until_bulk_exhausted'] ?? 'not set'); ?></span></p>
                 <button type="button" id="test-refresh" class="button">Test Refresh Check</button>
                 <button type="button" id="force-refresh" class="button button-secondary">Force Refresh Page</button>
+                <button type="button" id="force-refresh-test" class="button button-primary">Force Refresh Test</button>
+                <button type="button" id="clear-transient" class="button button-secondary">Clear Transient</button>
             </div>
         </div>
         
@@ -124,6 +126,50 @@ class Auto_Ai_News_Poster_Settings
             $('#force-refresh').on('click', function() {
                 console.log('Force refresh clicked');
                 location.reload();
+            });
+            
+            $('#force-refresh-test').on('click', function() {
+                console.log('Force refresh test clicked');
+                $.ajax({
+                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                    type: 'POST',
+                    data: {
+                        action: 'force_refresh_test',
+                        security: '<?php echo wp_create_nonce('force_refresh_test_nonce'); ?>'
+                    },
+                    success: function(response) {
+                        console.log('Force refresh test response:', response);
+                        alert('Force refresh test response: ' + JSON.stringify(response));
+                        if (response.success && response.data.needs_refresh) {
+                            console.log('Force refresh needed, triggering...');
+                            location.reload();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.log('Force refresh test error:', error);
+                        alert('Force refresh test error: ' + error);
+                    }
+                });
+            });
+            
+            $('#clear-transient').on('click', function() {
+                console.log('Clear transient clicked');
+                $.ajax({
+                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                    type: 'POST',
+                    data: {
+                        action: 'clear_transient',
+                        security: '<?php echo wp_create_nonce('clear_transient_nonce'); ?>'
+                    },
+                    success: function(response) {
+                        console.log('Clear transient response:', response);
+                        alert('Transient cleared!');
+                    },
+                    error: function(xhr, status, error) {
+                        console.log('Clear transient error:', error);
+                        alert('Clear transient error: ' + error);
+                    }
+                });
             });
             
             // Verificăm periodic dacă s-au schimbat setările (la fiecare 30 secunde)

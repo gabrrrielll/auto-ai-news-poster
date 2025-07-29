@@ -12,6 +12,8 @@ class Auto_Ai_News_Poster_Api
         add_action('auto_ai_news_poster_cron', [self::class, 'auto_generate_article']); // Cron job action
         add_action('wp_ajax_generate_image_for_article', [self::class, 'generate_image_for_article']);
         add_action('wp_ajax_check_settings_changes', [self::class, 'check_settings_changes']);
+        add_action('wp_ajax_force_refresh_test', [self::class, 'force_refresh_test']);
+        add_action('wp_ajax_clear_transient', [self::class, 'clear_transient']);
 
     }
 
@@ -391,11 +393,93 @@ class Auto_Ai_News_Poster_Api
                 // Salvăm numărul curent de linkuri pentru următoarea verificare
                 set_transient('auto_ai_news_poster_last_bulk_check', $current_count, 300); // 5 minute
             }
+
+            // FORȚARE REFRESH pentru testare - dacă transient-ul nu există, inițializăm și forțăm refresh
+            if ($last_check === false && !empty($bulk_links)) {
+                set_transient('auto_ai_news_poster_last_bulk_check', $current_count, 300);
+                // Forțăm un refresh pentru a inițializa sistemul
+                $needs_refresh = true;
+                error_log('check_settings_changes: FORCED refresh for initialization');
+            }
         }
 
         error_log('check_settings_changes: final needs_refresh = ' . ($needs_refresh ? 'true' : 'false'));
 
         wp_send_json_success(['needs_refresh' => $needs_refresh]);
+    }
+
+    public static function force_refresh_test()
+    {
+        // Verificăm nonce-ul pentru securitate
+        check_ajax_referer('force_refresh_test_nonce', 'security');
+
+        error_log('force_refresh_test() called');
+
+        // Obținem setările curente
+        $current_settings = get_option('auto_ai_news_poster_settings', []);
+
+        // Verificăm dacă opțiunea run_until_bulk_exhausted este activată
+        $run_until_bulk_exhausted = $current_settings['run_until_bulk_exhausted'] === 'yes';
+
+        $needs_refresh = false;
+
+        error_log('force_refresh_test: run_until_bulk_exhausted = ' . ($run_until_bulk_exhausted ? 'yes' : 'no'));
+
+        if ($run_until_bulk_exhausted) {
+            // Verificăm dacă lista de linkuri s-a epuizat
+            $bulk_links = explode("\n", trim($current_settings['bulk_custom_source_urls'] ?? ''));
+            $bulk_links = array_filter($bulk_links, 'trim');
+
+            $current_count = count($bulk_links);
+            $last_check = get_transient('auto_ai_news_poster_last_bulk_check');
+
+            error_log('force_refresh_test: current_count = ' . $current_count . ', last_check = ' . ($last_check !== false ? $last_check : 'false'));
+
+            // Dacă lista este goală și modul este încă automat, trebuie refresh
+            if (empty($bulk_links) && $current_settings['mode'] === 'auto') {
+                $needs_refresh = true;
+                error_log('force_refresh_test: needs_refresh = true (empty list, auto mode)');
+            }
+
+            // Dacă lista nu este goală, verificăm dacă s-a consumat cel puțin un link
+            if (!empty($bulk_links)) {
+                // Comparăm cu ultima verificare (stocată în transient)
+                if ($last_check !== false && $current_count < $last_check) {
+                    $needs_refresh = true;
+                    error_log('force_refresh_test: needs_refresh = true (links consumed: ' . $last_check . ' -> ' . $current_count . ')');
+                }
+
+                // Salvăm numărul curent de linkuri pentru următoarea verificare
+                set_transient('auto_ai_news_poster_last_bulk_check', $current_count, 300); // 5 minute
+            }
+
+            // FORȚARE REFRESH pentru testare - dacă transient-ul nu există, inițializăm și forțăm refresh
+            if ($last_check === false && !empty($bulk_links)) {
+                set_transient('auto_ai_news_poster_last_bulk_check', $current_count, 300);
+                // Forțăm un refresh pentru a inițializa sistemul
+                $needs_refresh = true;
+                error_log('force_refresh_test: FORCED refresh for initialization');
+            }
+        }
+
+        error_log('force_refresh_test: final needs_refresh = ' . ($needs_refresh ? 'true' : 'false'));
+
+        wp_send_json_success(['needs_refresh' => $needs_refresh]);
+    }
+
+    public static function clear_transient()
+    {
+        // Verificăm nonce-ul pentru securitate
+        check_ajax_referer('clear_transient_nonce', 'security');
+
+        error_log('clear_transient() called');
+
+        // Ștergem transient-ul
+        delete_transient('auto_ai_news_poster_last_bulk_check');
+
+        error_log('clear_transient: transient deleted');
+
+        wp_send_json_success(['message' => 'Transient cleared successfully']);
     }
 }
 
