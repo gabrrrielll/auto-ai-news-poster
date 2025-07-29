@@ -81,7 +81,8 @@ class Auto_Ai_News_Poster_Cron
             error_log('Auto post cron triggered.');
 
             try {
-                Auto_Ai_News_Poster_Api::get_article_from_sources();
+                // Apelează direct process_article_generation() în loc de get_article_from_sources()
+                Auto_Ai_News_Poster_Api::process_article_generation();
             } catch (Exception $e) {
                 // Log any errors that occur during posting
                 error_log('Error during auto post: ' . $e->getMessage());

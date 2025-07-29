@@ -169,8 +169,18 @@ class Auto_Ai_News_Poster_Api
             $options_settings['mode'] = 'manual'; // Setează valoarea pentru 'mode'
             update_option('auto_ai_news_poster_settings', $options_settings); // Salvează toate opțiunile în baza de date
 
+            // Actualizăm transient-ul pentru refresh automat
+            set_transient('auto_ai_news_poster_last_bulk_check', 0, 300);
+
+            // Forțăm un refresh pentru a actualiza interfața
+            set_transient('auto_ai_news_poster_force_refresh', true, 60);
+
             error_log('Lista de linkuri personalizate a fost epuizată. Oprirea generării automate.');
-            wp_send_json_error(['message' => 'Lista de linkuri s-a epuizat. Generarea automată a fost oprită.']);
+
+            // Pentru cron job, nu trimitem răspuns JSON
+            if (isset($_POST['action'])) {
+                wp_send_json_error(['message' => 'Lista de linkuri s-a epuizat. Generarea automată a fost oprită.']);
+            }
             return;
         }
 
@@ -178,6 +188,36 @@ class Auto_Ai_News_Poster_Api
         $custom_source_url = isset($_POST['custom_source_url']) ? sanitize_text_field($_POST['custom_source_url']) : null;
         if (!$custom_source_url && !empty($bulk_links)) {
             $custom_source_url = array_shift($bulk_links); // Preluăm primul link
+        }
+
+        // Verificăm dacă acest link a fost deja folosit pentru a evita duplicatele
+        if ($custom_source_url) {
+            $existing_posts = get_posts([
+                'meta_key' => '_custom_source_url',
+                'meta_value' => $custom_source_url,
+                'post_type' => 'post',
+                'post_status' => ['publish', 'draft'],
+                'numberposts' => 1
+            ]);
+
+            if (!empty($existing_posts)) {
+                error_log('Link already used: ' . $custom_source_url . '. Skipping to next link.');
+
+                // Actualizăm lista de linkuri în opțiuni (eliminăm rândurile goale)
+                $bulk_links = array_filter($bulk_links, 'trim');
+                update_option('auto_ai_news_poster_settings', array_merge($options, ['bulk_custom_source_urls' => implode("\n", $bulk_links)]));
+
+                // Actualizăm transient-ul pentru verificarea schimbărilor
+                if ($run_until_bulk_exhausted) {
+                    set_transient('auto_ai_news_poster_last_bulk_check', count($bulk_links), 300);
+                }
+
+                // Pentru cron job, nu trimitem răspuns JSON
+                if (isset($_POST['action'])) {
+                    wp_send_json_error(['message' => 'Link already used. Skipping to next link.']);
+                }
+                return;
+            }
         }
 
         // Actualizăm lista de linkuri în opțiuni (eliminăm rândurile goale)
@@ -365,6 +405,14 @@ class Auto_Ai_News_Poster_Api
         $needs_refresh = false;
 
         error_log('check_settings_changes: run_until_bulk_exhausted = ' . ($run_until_bulk_exhausted ? 'yes' : 'no'));
+
+        // Verificăm dacă există un transient de forțare a refresh-ului
+        $force_refresh = get_transient('auto_ai_news_poster_force_refresh');
+        if ($force_refresh) {
+            $needs_refresh = true;
+            delete_transient('auto_ai_news_poster_force_refresh');
+            error_log('check_settings_changes: FORCED refresh detected');
+        }
 
         if ($run_until_bulk_exhausted) {
             // Verificăm dacă lista de linkuri s-a epuizat
