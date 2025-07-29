@@ -59,16 +59,22 @@ class Auto_Ai_News_Poster_Cron
                 if (empty($bulk_links)) {
                     // Lista de linkuri s-a epuizat, oprim cron job-ul și schimbăm modul pe manual
                     error_log('Lista de linkuri personalizate a fost epuizată. Oprirea cron job-ului.');
-
+                    
                     // Dezactivăm cron job-ul
                     wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
-
+                    
                     // Schimbăm modul din automat pe manual
                     $settings['mode'] = 'manual';
                     update_option('auto_ai_news_poster_settings', $settings);
-
+                    
+                    // Actualizăm transient-ul pentru refresh automat
+                    set_transient('auto_ai_news_poster_last_bulk_check', 0, 300);
+                    
                     return; // Oprim execuția
                 }
+                
+                // Actualizăm transient-ul pentru verificarea schimbărilor
+                set_transient('auto_ai_news_poster_last_bulk_check', count($bulk_links), 300);
             }
 
             // Log the auto post execution

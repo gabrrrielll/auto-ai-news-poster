@@ -5,4 +5,4 @@ It generates and publishes automatically or manually news articles that have mul
 
 We built [AI24Știri](https://ai24stiri.ro) using this tool to automate publishing of fresh, categorized news content in Romanian.
 
-The platform gathers and organizes information across domains like technology, economy, health, and more. This repo is a simplified version of the system behind it.
+The platform gathers and organizes information across domains like technology, economy, health, and more.

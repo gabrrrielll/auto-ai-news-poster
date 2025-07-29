@@ -11,6 +11,7 @@ class Auto_Ai_News_Poster_Api
         add_action('wp_ajax_get_article_from_sources', [self::class, 'get_article_from_sources']);
         add_action('auto_ai_news_poster_cron', [self::class, 'auto_generate_article']); // Cron job action
         add_action('wp_ajax_generate_image_for_article', [self::class, 'generate_image_for_article']);
+        add_action('wp_ajax_check_settings_changes', [self::class, 'check_settings_changes']);
 
     }
 
@@ -181,6 +182,11 @@ class Auto_Ai_News_Poster_Api
         $bulk_links = array_filter($bulk_links, 'trim');
         update_option('auto_ai_news_poster_settings', array_merge($options, ['bulk_custom_source_urls' => implode("\n", $bulk_links)]));
 
+        // Actualizăm transient-ul pentru verificarea schimbărilor
+        if ($run_until_bulk_exhausted) {
+            set_transient('auto_ai_news_poster_last_bulk_check', count($bulk_links), 300);
+        }
+
         // Generăm promptul din config.php
         if (!empty($custom_source_url)) {
             $prompt = generate_custom_source_prompt($custom_source_url, $additional_instructions);
@@ -339,6 +345,45 @@ class Auto_Ai_News_Poster_Api
     {
         // Folosit pentru apelurile cron (automate)
         self::process_article_generation();
+    }
+
+    public static function check_settings_changes()
+    {
+        // Verificăm nonce-ul pentru securitate
+        check_ajax_referer('check_settings_changes_nonce', 'security');
+
+        // Obținem setările curente
+        $current_settings = get_option('auto_ai_news_poster_settings', []);
+
+        // Verificăm dacă opțiunea run_until_bulk_exhausted este activată
+        $run_until_bulk_exhausted = $current_settings['run_until_bulk_exhausted'] === 'yes';
+
+        $needs_refresh = false;
+
+        if ($run_until_bulk_exhausted) {
+            // Verificăm dacă lista de linkuri s-a epuizat
+            $bulk_links = explode("\n", trim($current_settings['bulk_custom_source_urls'] ?? ''));
+            $bulk_links = array_filter($bulk_links, 'trim');
+
+            // Dacă lista este goală și modul este încă automat, trebuie refresh
+            if (empty($bulk_links) && $current_settings['mode'] === 'auto') {
+                $needs_refresh = true;
+            }
+
+            // Dacă lista nu este goală, verificăm dacă s-a consumat cel puțin un link
+            if (!empty($bulk_links)) {
+                // Comparăm cu ultima verificare (stocată în transient)
+                $last_check = get_transient('auto_ai_news_poster_last_bulk_check');
+                if ($last_check !== false && count($bulk_links) < $last_check) {
+                    $needs_refresh = true;
+                }
+
+                // Salvăm numărul curent de linkuri pentru următoarea verificare
+                set_transient('auto_ai_news_poster_last_bulk_check', count($bulk_links), 300); // 5 minute
+            }
+        }
+
+        wp_send_json_success(['needs_refresh' => $needs_refresh]);
     }
 }
 
