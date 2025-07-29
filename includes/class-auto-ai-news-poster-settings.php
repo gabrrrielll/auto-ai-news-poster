@@ -59,35 +59,92 @@ class Auto_Ai_News_Poster_Settings
         submit_button('Salvează setările', 'primary', '', true, ['class' => 'btn btn-primary']);
         ?>
             </form>
+            
+            <!-- Buton de test pentru refresh automat -->
+            <div style="margin-top: 20px; padding: 10px; background: #f0f0f0; border: 1px solid #ccc;">
+                <h3>Debug Info</h3>
+                <p><strong>Current URL:</strong> <span id="current-url"><?php echo esc_url($_SERVER['REQUEST_URI']); ?></span></p>
+                <p><strong>Bulk Links Count:</strong> <span id="bulk-links-count">
+                    <?php
+            $options = get_option('auto_ai_news_poster_settings', []);
+        $bulk_links = explode("\n", trim($options['bulk_custom_source_urls'] ?? ''));
+        $bulk_links = array_filter($bulk_links, 'trim');
+        echo count($bulk_links);
+        ?>
+                </span></p>
+                <p><strong>Mode:</strong> <span id="current-mode"><?php echo esc_html($options['mode'] ?? 'not set'); ?></span></p>
+                <p><strong>Run Until Bulk Exhausted:</strong> <span id="run-until-bulk"><?php echo esc_html($options['run_until_bulk_exhausted'] ?? 'not set'); ?></span></p>
+                <button type="button" id="test-refresh" class="button">Test Refresh Check</button>
+                <button type="button" id="force-refresh" class="button button-secondary">Force Refresh Page</button>
+            </div>
         </div>
         
         <script>
         jQuery(document).ready(function($) {
+            console.log('Auto refresh script loaded for settings page');
+            console.log('Current URL:', window.location.href);
+            
             // Funcție pentru refresh automat al paginii
             function autoRefreshSettings() {
+                console.log('Auto refresh triggered');
                 // Verificăm dacă suntem pe pagina de setări
-                if (window.location.href.includes('page=auto-ai-news-poster')) {
+                if (window.location.href.includes('auto-ai-news-poster')) {
+                    console.log('Refreshing settings page...');
                     // Refresh la pagină
                     location.reload();
                 }
             }
             
-            // Verificăm periodic dacă s-au schimbat setările (la fiecare 30 secunde)
-            setInterval(function() {
+            // Funcție pentru testarea manuală a verificării
+            function testRefreshCheck() {
+                console.log('Manual test of refresh check...');
                 $.ajax({
-                    url: ajaxurl,
+                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
                     type: 'POST',
                     data: {
                         action: 'check_settings_changes',
                         security: '<?php echo wp_create_nonce('check_settings_changes_nonce'); ?>'
                     },
                     success: function(response) {
+                        console.log('Manual test response:', response);
+                        alert('Test response: ' + JSON.stringify(response));
+                    },
+                    error: function(xhr, status, error) {
+                        console.log('Manual test error:', error);
+                        alert('Test error: ' + error);
+                    }
+                });
+            }
+            
+            // Event handlers pentru butoanele de test
+            $('#test-refresh').on('click', function() {
+                testRefreshCheck();
+            });
+            
+            $('#force-refresh').on('click', function() {
+                console.log('Force refresh clicked');
+                location.reload();
+            });
+            
+            // Verificăm periodic dacă s-au schimbat setările (la fiecare 30 secunde)
+            setInterval(function() {
+                console.log('Checking for settings changes...');
+                $.ajax({
+                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                    type: 'POST',
+                    data: {
+                        action: 'check_settings_changes',
+                        security: '<?php echo wp_create_nonce('check_settings_changes_nonce'); ?>'
+                    },
+                    success: function(response) {
+                        console.log('Settings check response:', response);
                         if (response.success && response.data.needs_refresh) {
+                            console.log('Refresh needed, triggering auto refresh...');
                             autoRefreshSettings();
                         }
                     },
-                    error: function() {
-                        // Ignorăm erorile pentru a nu polua consola
+                    error: function(xhr, status, error) {
+                        console.log('Settings check error:', error);
                     }
                 });
             }, 30000); // Verificăm la fiecare 30 secunde
