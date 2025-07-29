@@ -78,6 +78,7 @@ class Auto_Ai_News_Poster_Settings
                 <button type="button" id="force-refresh" class="button button-secondary">Force Refresh Page</button>
                 <button type="button" id="force-refresh-test" class="button button-primary">Force Refresh Test</button>
                 <button type="button" id="clear-transient" class="button button-secondary">Clear Transient</button>
+                <button type="button" id="force-refresh-now" class="button button-primary" style="background: #d63638; color: white;">Force Refresh Now</button>
             </div>
         </div>
         
@@ -168,6 +169,28 @@ class Auto_Ai_News_Poster_Settings
                     error: function(xhr, status, error) {
                         console.log('Clear transient error:', error);
                         alert('Clear transient error: ' + error);
+                    }
+                });
+            });
+            
+            $('#force-refresh-now').on('click', function() {
+                console.log('Force refresh now clicked');
+                $.ajax({
+                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                    type: 'POST',
+                    data: {
+                        action: 'force_refresh_now',
+                        security: '<?php echo wp_create_nonce('force_refresh_now_nonce'); ?>'
+                    },
+                    success: function(response) {
+                        console.log('Force refresh now response:', response);
+                        alert('Force refresh triggered!');
+                        // Forțăm refresh-ul imediat
+                        location.reload();
+                    },
+                    error: function(xhr, status, error) {
+                        console.log('Force refresh now error:', error);
+                        alert('Force refresh now error: ' + error);
                     }
                 });
             });

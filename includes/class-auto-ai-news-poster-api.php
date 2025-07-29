@@ -14,6 +14,7 @@ class Auto_Ai_News_Poster_Api
         add_action('wp_ajax_check_settings_changes', [self::class, 'check_settings_changes']);
         add_action('wp_ajax_force_refresh_test', [self::class, 'force_refresh_test']);
         add_action('wp_ajax_clear_transient', [self::class, 'clear_transient']);
+        add_action('wp_ajax_force_refresh_now', [self::class, 'force_refresh_now']);
 
     }
 
@@ -164,16 +165,8 @@ class Auto_Ai_News_Poster_Api
                 wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
             }
 
-            // Modificam din automatic pe manual
-            $options_settings = get_option('auto_ai_news_poster_settings', []); // Preia toate opțiunile existente
-            $options_settings['mode'] = 'manual'; // Setează valoarea pentru 'mode'
-            update_option('auto_ai_news_poster_settings', $options_settings); // Salvează toate opțiunile în baza de date
-
-            // Actualizăm transient-ul pentru refresh automat
-            set_transient('auto_ai_news_poster_last_bulk_check', 0, 300);
-
-            // Forțăm un refresh pentru a actualiza interfața
-            set_transient('auto_ai_news_poster_force_refresh', true, 60);
+            // Forțăm schimbarea modului pe manual
+            self::force_mode_change_to_manual();
 
             error_log('Lista de linkuri personalizate a fost epuizată. Oprirea generării automate.');
 
@@ -451,6 +444,12 @@ class Auto_Ai_News_Poster_Api
             }
         }
 
+        // FORȚARE REFRESH când lista este goală și modul este automat
+        if ($run_until_bulk_exhausted && empty($bulk_links) && $current_settings['mode'] === 'auto') {
+            $needs_refresh = true;
+            error_log('check_settings_changes: FORCED refresh - empty list with auto mode');
+        }
+
         error_log('check_settings_changes: final needs_refresh = ' . ($needs_refresh ? 'true' : 'false'));
 
         wp_send_json_success(['needs_refresh' => $needs_refresh]);
@@ -528,6 +527,37 @@ class Auto_Ai_News_Poster_Api
         error_log('clear_transient: transient deleted');
 
         wp_send_json_success(['message' => 'Transient cleared successfully']);
+    }
+
+    private static function force_mode_change_to_manual()
+    {
+        // Modificam din automatic pe manual
+        $options_settings = get_option('auto_ai_news_poster_settings', []); // Preia toate opțiunile existente
+        $options_settings['mode'] = 'manual'; // Setează valoarea pentru 'mode'
+        update_option('auto_ai_news_poster_settings', $options_settings); // Salvează toate opțiunile în baza de date
+
+        // Actualizăm transient-ul pentru refresh automat
+        set_transient('auto_ai_news_poster_last_bulk_check', 0, 300);
+
+        // Forțăm un refresh pentru a actualiza interfața
+        set_transient('auto_ai_news_poster_force_refresh', true, 60);
+
+        error_log('force_mode_change_to_manual: Mode changed to manual, force refresh set');
+    }
+
+    public static function force_refresh_now()
+    {
+        // Verificăm nonce-ul pentru securitate
+        check_ajax_referer('force_refresh_now_nonce', 'security');
+
+        error_log('force_refresh_now() called');
+
+        // Forțăm un refresh imediat
+        set_transient('auto_ai_news_poster_force_refresh', true, 60);
+
+        error_log('force_refresh_now: Force refresh set');
+
+        wp_send_json_success(['message' => 'Force refresh triggered']);
     }
 }
 
