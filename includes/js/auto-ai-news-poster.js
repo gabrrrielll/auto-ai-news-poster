@@ -32,7 +32,7 @@ jQuery(document).ready(function($) {
                     // alert('Articolul a fost generat și salvat.');
                     // Facem refresh automat al paginii pentru a vedea modificările
                     // Redirecționăm către editorul articolului după ce articolul a fost creat/actualizat
-                    window.location.href = '/diswp/wp-admin/post.php?post=' + response.data.post_id + '&action=edit';
+                    window.location.href = autoAiNewsPosterAjax.admin_url + 'post.php?post=' + response.data.post_id + '&action=edit';
                 } else {
                     // alert('A apărut o eroare: ' + response.data.message);
                     console.error('Eroare:', response); // Afișăm eroarea completă în consolă

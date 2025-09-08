@@ -59,11 +59,32 @@ class Post_Manager
         }
 
         if ($image_handling_mode == 'import') {
+            // Validate URL before attempting download
+            if (!filter_var($image_url, FILTER_VALIDATE_URL)) {
+                error_log('Invalid image URL provided: ' . $image_url);
+                return ['error' => 'URL-ul imaginii nu este valid.'];
+            }
+            
             // Descarcă imaginea și redenumește-o
             $temp_file = download_url($image_url);
             if (is_wp_error($temp_file)) {
                 error_log('Eroare la descărcarea imaginii: ' . $temp_file->get_error_message());
                 return ['error' => 'Nu am reușit să descarc imaginea.'];
+            }
+            
+            // Check if the downloaded file exists and has content
+            if (!file_exists($temp_file) || filesize($temp_file) === 0) {
+                error_log('Downloaded image file is empty or does not exist: ' . $temp_file);
+                @unlink($temp_file); // Clean up empty file
+                return ['error' => 'Imaginea descărcată este goală sau nu există.'];
+            }
+            
+            // Check if the file is actually an image by examining its content
+            $file_info = getimagesize($temp_file);
+            if ($file_info === false) {
+                error_log('Downloaded file is not a valid image: ' . $temp_file);
+                @unlink($temp_file); // Clean up invalid file
+                return ['error' => 'Fișierul descărcat nu este o imagine validă.'];
             }
 
 
