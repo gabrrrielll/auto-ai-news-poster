@@ -36,6 +36,7 @@ add_action('admin_enqueue_scripts', 'auto_ai_news_poster_enqueue_scripts');
         // Localizare variabile pentru AJAX
         wp_localize_script('auto-ai-news-poster-ajax', 'autoAiNewsPosterAjax', [
             'ajax_url' => admin_url('admin-ajax.php'),
+            'admin_url' => admin_url(),
             'nonce' => wp_create_nonce('get_article_from_sources_nonce'),
         ]);
         

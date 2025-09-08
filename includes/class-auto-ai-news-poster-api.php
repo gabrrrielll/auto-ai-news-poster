@@ -98,7 +98,15 @@ class Auto_Ai_News_Poster_Api
             }
         } else {
             // Obține ID-ul categoriei pe baza numelui
-            $category = get_category_by_slug(sanitize_title($selected_category_name));
+            $sanitized_category_name = sanitize_title($selected_category_name);
+            
+            // Validate that the sanitized name is not empty and contains only valid characters
+            if (empty($sanitized_category_name) || !preg_match('/^[a-z0-9\-]+$/', $sanitized_category_name)) {
+                error_log('Invalid category name provided: ' . $selected_category_name);
+                return;
+            }
+            
+            $category = get_category_by_slug($sanitized_category_name);
 
             if (!$category) {
                 error_log('Categoria nu există.');
