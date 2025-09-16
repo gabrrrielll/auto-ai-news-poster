@@ -13,9 +13,6 @@ class Auto_Ai_News_Poster_Settings
             add_option('auto_ai_news_poster_current_category_index', 0);
         }
 
-        // Curățăm transient-ul când se salvează setările
-        add_action('update_option_auto_ai_news_poster_settings', [self::class, 'clear_bulk_check_transient']);
-
     }
 
 
@@ -41,184 +38,33 @@ class Auto_Ai_News_Poster_Settings
 
     public static function display_settings_page()
     {
-        // Inițializăm transient-ul pentru verificarea schimbărilor dacă nu există
-        if (!get_transient('auto_ai_news_poster_last_bulk_check')) {
-            $options = get_option('auto_ai_news_poster_settings', []);
-            $bulk_links = explode("\n", trim($options['bulk_custom_source_urls'] ?? ''));
-            $bulk_links = array_filter($bulk_links, 'trim');
-            set_transient('auto_ai_news_poster_last_bulk_check', count($bulk_links), 300);
-        }
-
         ?>
-        <div class="wrap">
-            <h1>Auto AI News Poster Settings</h1>
-            <form method="post" action="options.php" class="form-horizontal">
-                <?php
-                settings_fields('auto_ai_news_poster_settings_group');
+        <div class="auto-ai-news-poster-admin">
+            <div class="wrap">
+                <!-- Header modern -->
+                <div class="auto-ai-news-poster-header">
+                    <h1>🤖 Auto AI News Poster</h1>
+                    <p>Configurează-ți plugin-ul pentru publicarea automată de articole AI</p>
+                </div>
+                
+                <!-- Formular modern -->
+                <div class="auto-ai-news-poster-form">
+                    <form method="post" action="options.php">
+                        <?php
+                        settings_fields('auto_ai_news_poster_settings_group');
         do_settings_sections('auto_ai_news_poster_settings_page');
-        submit_button('Salvează setările', 'primary', '', true, ['class' => 'btn btn-primary']);
         ?>
-            </form>
-            
-            <!-- Buton de test pentru refresh automat -->
-            <div style="margin-top: 20px; padding: 10px; background: #f0f0f0; border: 1px solid #ccc;">
-                <h3>Debug Info</h3>
-                <p><strong>Current URL:</strong> <span id="current-url"><?php echo esc_url($_SERVER['REQUEST_URI']); ?></span></p>
-                <p><strong>Bulk Links Count:</strong> <span id="bulk-links-count">
-                    <?php
-            $options = get_option('auto_ai_news_poster_settings', []);
-        $bulk_links = explode("\n", trim($options['bulk_custom_source_urls'] ?? ''));
-        $bulk_links = array_filter($bulk_links, 'trim');
-        echo count($bulk_links);
-        ?>
-                </span></p>
-                <p><strong>Mode:</strong> <span id="current-mode"><?php echo esc_html($options['mode'] ?? 'not set'); ?></span></p>
-                <p><strong>Run Until Bulk Exhausted:</strong> <span id="run-until-bulk"><?php echo esc_html($options['run_until_bulk_exhausted'] ?? 'not set'); ?></span></p>
-                <button type="button" id="test-refresh" class="button">Test Refresh Check</button>
-                <button type="button" id="force-refresh" class="button button-secondary">Force Refresh Page</button>
-                <button type="button" id="force-refresh-test" class="button button-primary">Force Refresh Test</button>
-                <button type="button" id="clear-transient" class="button button-secondary">Clear Transient</button>
-                <button type="button" id="force-refresh-now" class="button button-primary" style="background: #d63638; color: white;">Force Refresh Now</button>
+                        
+                        <!-- Buton de salvare modern -->
+                        <div style="text-align: center; margin-top: 40px; padding-top: 30px; border-top: 2px solid var(--border-color);">
+                            <button type="submit" class="btn btn-primary">
+                                💾 Salvează setările
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-        
-        <script>
-        jQuery(document).ready(function($) {
-            console.log('Auto refresh script loaded for settings page');
-            console.log('Current URL:', window.location.href);
-            
-            // Funcție pentru refresh automat al paginii
-            function autoRefreshSettings() {
-                console.log('Auto refresh triggered');
-                // Verificăm dacă suntem pe pagina de setări
-                if (window.location.href.includes('auto-ai-news-poster')) {
-                    console.log('Refreshing settings page...');
-                    // Refresh la pagină
-                    location.reload();
-                }
-            }
-            
-            // Funcție pentru testarea manuală a verificării
-            function testRefreshCheck() {
-                console.log('Manual test of refresh check...');
-                $.ajax({
-                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
-                    type: 'POST',
-                    data: {
-                        action: 'check_settings_changes',
-                        security: '<?php echo wp_create_nonce('check_settings_changes_nonce'); ?>'
-                    },
-                    success: function(response) {
-                        console.log('Manual test response:', response);
-                        alert('Test response: ' + JSON.stringify(response));
-                    },
-                    error: function(xhr, status, error) {
-                        console.log('Manual test error:', error);
-                        alert('Test error: ' + error);
-                    }
-                });
-            }
-            
-            // Event handlers pentru butoanele de test
-            $('#test-refresh').on('click', function() {
-                testRefreshCheck();
-            });
-            
-            $('#force-refresh').on('click', function() {
-                console.log('Force refresh clicked');
-                location.reload();
-            });
-            
-            $('#force-refresh-test').on('click', function() {
-                console.log('Force refresh test clicked');
-                $.ajax({
-                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
-                    type: 'POST',
-                    data: {
-                        action: 'force_refresh_test',
-                        security: '<?php echo wp_create_nonce('force_refresh_test_nonce'); ?>'
-                    },
-                    success: function(response) {
-                        console.log('Force refresh test response:', response);
-                        alert('Force refresh test response: ' + JSON.stringify(response));
-                        if (response.success && response.data.needs_refresh) {
-                            console.log('Force refresh needed, triggering...');
-                            location.reload();
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.log('Force refresh test error:', error);
-                        alert('Force refresh test error: ' + error);
-                    }
-                });
-            });
-            
-            $('#clear-transient').on('click', function() {
-                console.log('Clear transient clicked');
-                $.ajax({
-                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
-                    type: 'POST',
-                    data: {
-                        action: 'clear_transient',
-                        security: '<?php echo wp_create_nonce('clear_transient_nonce'); ?>'
-                    },
-                    success: function(response) {
-                        console.log('Clear transient response:', response);
-                        alert('Transient cleared!');
-                    },
-                    error: function(xhr, status, error) {
-                        console.log('Clear transient error:', error);
-                        alert('Clear transient error: ' + error);
-                    }
-                });
-            });
-            
-            $('#force-refresh-now').on('click', function() {
-                console.log('Force refresh now clicked');
-                $.ajax({
-                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
-                    type: 'POST',
-                    data: {
-                        action: 'force_refresh_now',
-                        security: '<?php echo wp_create_nonce('force_refresh_now_nonce'); ?>'
-                    },
-                    success: function(response) {
-                        console.log('Force refresh now response:', response);
-                        alert('Force refresh triggered!');
-                        // Forțăm refresh-ul imediat
-                        location.reload();
-                    },
-                    error: function(xhr, status, error) {
-                        console.log('Force refresh now error:', error);
-                        alert('Force refresh now error: ' + error);
-                    }
-                });
-            });
-            
-            // Verificăm periodic dacă s-au schimbat setările (la fiecare 30 secunde)
-            setInterval(function() {
-                console.log('Checking for settings changes...');
-                $.ajax({
-                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
-                    type: 'POST',
-                    data: {
-                        action: 'check_settings_changes',
-                        security: '<?php echo wp_create_nonce('check_settings_changes_nonce'); ?>'
-                    },
-                    success: function(response) {
-                        console.log('Settings check response:', response);
-                        if (response.success && response.data.needs_refresh) {
-                            console.log('Refresh needed, triggering auto refresh...');
-                            autoRefreshSettings();
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.log('Settings check error:', error);
-                    }
-                });
-            }, 30000); // Verificăm la fiecare 30 secunde
-        });
-        </script>
         <?php
     }
 
@@ -309,15 +155,6 @@ class Auto_Ai_News_Poster_Settings
             'main_section'
         );
 
-        // Camp pentru numarul maxim de caractere al rezumatului
-        add_settings_field(
-            'max_summary_length',
-            'Numărul maxim de caractere al rezumatului',
-            [self::class, 'max_summary_length_callback'],
-            'auto_ai_news_poster_settings_page',
-            'main_section'
-        );
-
         // În funcția register_settings()
         add_settings_field(
             'article_length_option',
@@ -386,27 +223,28 @@ class Auto_Ai_News_Poster_Settings
     {
         $options = get_option('auto_ai_news_poster_settings');
         ?>
-        <div class="form-group">
-            <label for="mode" class="control-label">Mod de publicare</label>
-            <select name="auto_ai_news_poster_settings[mode]" class="form-control" id="mode">
-                <option value="manual" <?php selected($options['mode'], 'manual'); ?>>Manual</option>
-                <option value="auto" <?php selected($options['mode'], 'auto'); ?>>Automat</option>
-            </select>
-        </div>
-        <?php
-    }
-
-    // Callback pentru campul Mod de publicare status
-    public static function post_status_callback()
-    {
-        $options = get_option('auto_ai_news_poster_settings');
-        ?>
-        <div class="form-group">
-            <label for="status" class="control-label">Status publicare articol</label>
-            <select name="auto_ai_news_poster_settings[status]" class="form-control" id="status">
-                <option value="draft" <?php selected($options['status'], 'draft'); ?>>Draft</option>
-                <option value="publish" <?php selected($options['status'], 'publish'); ?>>Publicat</option>
-            </select>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">⚙️</div>
+                <h3 class="settings-card-title">Configurare Publicare</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <label for="mode" class="control-label">Mod de publicare</label>
+                    <select name="auto_ai_news_poster_settings[mode]" class="form-control" id="mode">
+                        <option value="manual" <?php selected($options['mode'], 'manual'); ?>>Manual</option>
+                        <option value="auto" <?php selected($options['mode'], 'auto'); ?>>Automat</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="status" class="control-label">Status publicare articol</label>
+                    <select name="auto_ai_news_poster_settings[status]" class="form-control" id="status">
+                        <option value="draft" <?php selected($options['status'], 'draft'); ?>>Draft</option>
+                        <option value="publish" <?php selected($options['status'], 'publish'); ?>>Publicat</option>
+                    </select>
+                </div>
+            </div>
         </div>
         <?php
     }
@@ -419,16 +257,24 @@ class Auto_Ai_News_Poster_Settings
 
         $categories = get_categories(['hide_empty' => false]);
         ?>
-        <div class="form-group">
-            <label for="specific_search_category" class="control-label">Categorie specifică pentru căutare</label>
-            <select name="auto_ai_news_poster_settings[specific_search_category]" class="form-control" id="specific_search_category">
-                <option value="">Selectează o categorie</option>
-                <?php foreach ($categories as $category) : ?>
-                    <option value="<?php echo esc_attr($category->term_id); ?>" <?php selected($selected_category, $category->term_id); ?>>
-                        <?php echo esc_html($category->name); ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">📂</div>
+                <h3 class="settings-card-title">Configurare Categorii</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <label for="specific_search_category" class="control-label">Categorie specifică pentru căutare</label>
+                    <select name="auto_ai_news_poster_settings[specific_search_category]" class="form-control" id="specific_search_category">
+                        <option value="">Selectează o categorie</option>
+                        <?php foreach ($categories as $category) : ?>
+                            <option value="<?php echo esc_attr($category->term_id); ?>" <?php selected($selected_category, $category->term_id); ?>>
+                                <?php echo esc_html($category->name); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
         </div>
         <?php
     }
@@ -439,10 +285,18 @@ class Auto_Ai_News_Poster_Settings
     {
         $options = get_option('auto_ai_news_poster_settings');
         ?>
-        <label>
-            <input type="checkbox" name="auto_ai_news_poster_settings[auto_rotate_categories]" value="yes" <?php checked($options['auto_rotate_categories'], 'yes'); ?> />
-            Da, rulează automat categoriile în ordine
-        </label>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">🔄</div>
+                <h3 class="settings-card-title">Rotire Automată Categorii</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="checkbox-modern">
+                    <input type="checkbox" name="auto_ai_news_poster_settings[auto_rotate_categories]" value="yes" <?php checked($options['auto_rotate_categories'], 'yes'); ?> />
+                    <label>Da, rulează automat categoriile în ordine</label>
+                </div>
+            </div>
+        </div>
         <?php
     }
 
@@ -452,11 +306,19 @@ class Auto_Ai_News_Poster_Settings
     {
         $options = get_option('auto_ai_news_poster_settings');
         ?>
-        <div class="form-group">
-            <label for="news_sources" class="control-label">Surse de știri</label>
-            <textarea name="auto_ai_news_poster_settings[news_sources]" class="form-control" id="news_sources"
-                      rows="6"><?php echo esc_textarea($options['news_sources']); ?></textarea>
-            <small class="form-text text-muted">Adăugați câte un URL de sursă pe fiecare linie.</small>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">📰</div>
+                <h3 class="settings-card-title">Surse de Știri</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <label for="news_sources" class="control-label">Surse de știri</label>
+                    <textarea name="auto_ai_news_poster_settings[news_sources]" class="form-control" id="news_sources"
+                              rows="6"><?php echo esc_textarea($options['news_sources']); ?></textarea>
+                    <small class="form-text text-muted">Adăugați câte un URL de sursă pe fiecare linie.</small>
+                </div>
+            </div>
         </div>
         <?php
     }
@@ -466,14 +328,24 @@ class Auto_Ai_News_Poster_Settings
     {
         $options = get_option('auto_ai_news_poster_settings');
         ?>
-        <div class="form-group">
-            <label for="chatgpt_api_key" class="control-label">Cheia API ChatGPT</label>
-            <input type="text" name="auto_ai_news_poster_settings[chatgpt_api_key]"
-                   value="<?php echo esc_attr($options['chatgpt_api_key']); ?>" class="form-control"
-                   id="chatgpt_api_key">
-            <span class="info-icon dashicons dashicons-info"
-                  title="Pentru a obține cheia API OpenAI, accesați https://platform.openai.com/settings/organization/api-keys. După ce v-ați înregistrat și ați confirmat contul, accesați pagina de API Keys și generați o cheie nouă."></span>
-            <small class="form-text text-muted">Introduceți cheia API pentru ChatGPT.</small>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">🔑</div>
+                <h3 class="settings-card-title">Configurare API</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <label for="chatgpt_api_key" class="control-label">Cheia API ChatGPT</label>
+                    <input type="text" name="auto_ai_news_poster_settings[chatgpt_api_key]"
+                           value="<?php echo esc_attr($options['chatgpt_api_key']); ?>" class="form-control"
+                           id="chatgpt_api_key">
+                    <span class="info-icon tooltip">
+                        i
+                        <span class="tooltiptext">Pentru a obține cheia API OpenAI, accesați https://platform.openai.com/settings/organization/api-keys</span>
+                    </span>
+                    <small class="form-text text-muted">Introduceți cheia API pentru ChatGPT.</small>
+                </div>
+            </div>
         </div>
         <?php
     }
@@ -485,25 +357,35 @@ class Auto_Ai_News_Poster_Settings
         $hours = $options['cron_interval_hours'] ?? 1;
         $minutes = $options['cron_interval_minutes'] ?? 0;
         ?>
-        <div class="form-group">
-            <label for="cron_interval_hours" class="control-label">Ore</label>
-            <select name="auto_ai_news_poster_settings[cron_interval_hours]" class="form-control">
-                <?php for ($i = 0; $i <= 23; $i++) : ?>
-                    <option value="<?php echo $i; ?>" <?php selected($hours, $i); ?>>
-                        <?php echo $i; ?> ore
-                    </option>
-                <?php endfor; ?>
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="cron_interval_minutes" class="control-label">Minute</label>
-            <select name="auto_ai_news_poster_settings[cron_interval_minutes]" class="form-control">
-                <?php for ($i = 0; $i <= 59; $i++) : ?>
-                    <option value="<?php echo $i; ?>" <?php selected($minutes, $i); ?>>
-                        <?php echo $i; ?> minute
-                    </option>
-                <?php endfor; ?>
-            </select>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">⏰</div>
+                <h3 class="settings-card-title">Configurare Cron Job</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="cron_interval_hours" class="control-label">Ore</label>
+                        <select name="auto_ai_news_poster_settings[cron_interval_hours]" class="form-control">
+                            <?php for ($i = 0; $i <= 23; $i++) : ?>
+                                <option value="<?php echo $i; ?>" <?php selected($hours, $i); ?>>
+                                    <?php echo $i; ?> ore
+                                </option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cron_interval_minutes" class="control-label">Minute</label>
+                        <select name="auto_ai_news_poster_settings[cron_interval_minutes]" class="form-control">
+                            <?php for ($i = 0; $i <= 59; $i++) : ?>
+                                <option value="<?php echo $i; ?>" <?php selected($minutes, $i); ?>>
+                                    <?php echo $i; ?> minute
+                                </option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
         <?php
     }
@@ -520,15 +402,23 @@ class Auto_Ai_News_Poster_Settings
             'orderby' => 'display_name'
         ]);
         ?>
-        <div class="form-group">
-            <label for="author_name" class="control-label">Autor articole generate</label>
-            <select name="auto_ai_news_poster_settings[author_name]" class="form-control" id="author_name">
-                <?php foreach ($users as $user) : ?>
-                    <option value="<?php echo esc_attr($user->ID); ?>" <?php selected($selected_author, $user->ID); ?>>
-                        <?php echo esc_html($user->display_name); ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">👤</div>
+                <h3 class="settings-card-title">Configurare Autor</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <label for="author_name" class="control-label">Autor articole generate</label>
+                    <select name="auto_ai_news_poster_settings[author_name]" class="form-control" id="author_name">
+                        <?php foreach ($users as $user) : ?>
+                            <option value="<?php echo esc_attr($user->ID); ?>" <?php selected($selected_author, $user->ID); ?>>
+                                <?php echo esc_html($user->display_name); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
         </div>
         <?php
     }
@@ -541,62 +431,59 @@ class Auto_Ai_News_Poster_Settings
         $default_instructions = $options['default_ai_instructions'] ?? 'Creează un articol unic pe baza următoarelor surse de știri, respectă structura titlu, etichete și conținut. Sugerează imagini și include rezumatul.';
 
         ?>
-        <div class="form-group">
-            <textarea name="auto_ai_news_poster_settings[default_ai_instructions]" class="form-control" rows="6"
-                      placeholder="Introdu instrucțiunile implicite pentru AI"><?php echo esc_textarea($default_instructions); ?></textarea>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">🤖</div>
+                <h3 class="settings-card-title">Instrucțiuni AI</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <label class="control-label">Instrucțiuni AI pentru generarea articolelor</label>
+                    <textarea name="auto_ai_news_poster_settings[default_ai_instructions]" class="form-control" rows="6"
+                              placeholder="Introdu instrucțiunile implicite pentru AI"><?php echo esc_textarea($default_instructions); ?></textarea>
+                </div>
+            </div>
         </div>
         <?php
     }
-
-    // Callback pentru numărul maxim de caractere pentru rezumat
-    public static function max_summary_length_callback()
-    {
-        $options = get_option('auto_ai_news_poster_settings');
-        $max_summary_length = $options['max_summary_length'] ?? 100;
-        ?>
-        <div class="form-group">
-            <input type="number" name="auto_ai_news_poster_settings[max_summary_length]"
-                   value="<?php echo esc_attr($max_summary_length); ?>" class="form-control" placeholder="Maxim 100 caractere">
-        </div>
-        <?php
-    }
-
 
     // Select pentru dimensiunea articolului
     public static function article_length_option_callback()
     {
         $options = get_option('auto_ai_news_poster_settings');
         $selected_option = $options['article_length_option'] ?? 'same_as_source';
-
-        ?>
-        <select name="auto_ai_news_poster_settings[article_length_option]" class="form-control">
-            <option value="same_as_source" <?php selected($selected_option, 'same_as_source'); ?>>Aceiași dimensiune cu articolul preluat</option>
-            <option value="set_limits" <?php selected($selected_option, 'set_limits'); ?>>Setează limite</option>
-        </select>
-        <?php
-    }
-
-    // Input pentru valoarea minimă
-    public static function min_length_callback()
-    {
-        $options = get_option('auto_ai_news_poster_settings');
         $min_length = $options['min_length'] ?? '';
-
-        ?>
-        <input type="number" name="auto_ai_news_poster_settings[min_length]" class="form-control"
-               value="<?php echo esc_attr($min_length); ?>" placeholder="Valoare minimă">
-        <?php
-    }
-
-    // Input pentru valoarea maximă
-    public static function max_length_callback()
-    {
-        $options = get_option('auto_ai_news_poster_settings');
         $max_length = $options['max_length'] ?? '';
 
         ?>
-        <input type="number" name="auto_ai_news_poster_settings[max_length]" class="form-control"
-               value="<?php echo esc_attr($max_length); ?>" placeholder="Valoare maximă">
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">📏</div>
+                <h3 class="settings-card-title">Configurare Dimensiune Articol</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <label class="control-label">Selectează dimensiunea articolului</label>
+                    <select name="auto_ai_news_poster_settings[article_length_option]" class="form-control">
+                        <option value="same_as_source" <?php selected($selected_option, 'same_as_source'); ?>>Aceiași dimensiune cu articolul preluat</option>
+                        <option value="set_limits" <?php selected($selected_option, 'set_limits'); ?>>Setează limite</option>
+                    </select>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="control-label">Lungime minimă</label>
+                        <input type="number" name="auto_ai_news_poster_settings[min_length]" class="form-control"
+                               value="<?php echo esc_attr($min_length); ?>" placeholder="Minim">
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">Lungime maximă</label>
+                        <input type="number" name="auto_ai_news_poster_settings[max_length]" class="form-control"
+                               value="<?php echo esc_attr($max_length); ?>" placeholder="Maxim">
+                    </div>
+                </div>
+            </div>
+        </div>
         <?php
     }
 
@@ -607,12 +494,20 @@ class Auto_Ai_News_Poster_Settings
         $options = get_option('auto_ai_news_poster_settings');
         $use_external_images = $options['use_external_images'] ?? 'external';
         ?>
-        <div class="form-group">
-            <label for="use_external_images" class="control-label">Folosire imagini:</label>
-            <select name="auto_ai_news_poster_settings[use_external_images]" class="form-control" id="use_external_images">
-                <option value="external" <?php selected($use_external_images, 'external'); ?>>Folosește imagini externe</option>
-                <option value="import" <?php selected($use_external_images, 'import'); ?>>Importă imagini în WordPress</option>
-            </select>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">🖼️</div>
+                <h3 class="settings-card-title">Configurare Imagini</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <label for="use_external_images" class="control-label">Folosire imagini:</label>
+                    <select name="auto_ai_news_poster_settings[use_external_images]" class="form-control" id="use_external_images">
+                        <option value="external" <?php selected($use_external_images, 'external'); ?>>Folosește imagini externe</option>
+                        <option value="import" <?php selected($use_external_images, 'import'); ?>>Importă imagini în WordPress</option>
+                    </select>
+                </div>
+            </div>
         </div>
         <?php
     }
@@ -623,10 +518,18 @@ class Auto_Ai_News_Poster_Settings
     {
         $options = get_option('auto_ai_news_poster_settings');
         ?>
-        <label>
-            <input type="checkbox" name="auto_ai_news_poster_settings[generate_image]" value="yes" <?php checked($options['generate_image'], 'yes'); ?> />
-            Da, generează automat imaginea
-        </label>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">🎨</div>
+                <h3 class="settings-card-title">Generare Automată Imagini</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="checkbox-modern">
+                    <input type="checkbox" name="auto_ai_news_poster_settings[generate_image]" value="yes" <?php checked($options['generate_image'], 'yes'); ?> />
+                    <label>Da, generează automat imaginea</label>
+                </div>
+            </div>
+        </div>
         <?php
     }
 
@@ -635,8 +538,19 @@ class Auto_Ai_News_Poster_Settings
         $options = get_option('auto_ai_news_poster_settings');
         $bulk_links = $options['bulk_custom_source_urls'] ?? '';
         ?>
-        <textarea name="auto_ai_news_poster_settings[bulk_custom_source_urls]" class="widefat" rows="6" placeholder="Introduceți câte un link pe fiecare rând"><?php echo esc_textarea($bulk_links); ?></textarea>
-        <small class="form-text text-muted">Introduceți o listă de linkuri sursă. Acestea vor fi folosite automat sau manual pentru generarea articolelor.</small>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">🔗</div>
+                <h3 class="settings-card-title">Lista de Linkuri Sursă</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <label class="control-label">Lista de linkuri sursă personalizate</label>
+                    <textarea name="auto_ai_news_poster_settings[bulk_custom_source_urls]" class="form-control" rows="6" placeholder="Introduceți câte un link pe fiecare rând"><?php echo esc_textarea($bulk_links); ?></textarea>
+                    <small class="form-text text-muted">Introduceți o listă de linkuri sursă. Acestea vor fi folosite automat sau manual pentru generarea articolelor.</small>
+                </div>
+            </div>
+        </div>
         <?php
     }
 
@@ -646,29 +560,32 @@ class Auto_Ai_News_Poster_Settings
         $is_auto_mode = isset($options['mode']) && $options['mode'] === 'auto'; // Verificăm dacă modul este "auto"
         $run_until_bulk_exhausted = $options['run_until_bulk_exhausted'] ?? ''; // Valoare implicită pentru cheie
         ?>
-        <label>
-            <input type="checkbox" name="auto_ai_news_poster_settings[run_until_bulk_exhausted]" 
-                   value="yes" <?php checked($run_until_bulk_exhausted, 'yes'); ?>
-                   <?php echo $is_auto_mode ? '' : 'disabled'; ?> />
-            Da, rulează doar până la epuizarea listei de linkuri
-        </label>
-        <small class="form-text text-muted">Această opțiune este disponibilă doar în modul automat.</small>
-        <script>
-            // Script JavaScript pentru a dezactiva checkbox-ul dacă modul este schimbat
-            document.getElementById('mode').addEventListener('change', function () {
-                const checkbox = document.querySelector('input[name="auto_ai_news_poster_settings[run_until_bulk_exhausted]"]');
-                checkbox.disabled = this.value !== 'auto';
-            });
-        </script>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">⚡</div>
+                <h3 class="settings-card-title">Configurare Avansată</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="checkbox-modern">
+                    <input type="checkbox" name="auto_ai_news_poster_settings[run_until_bulk_exhausted]" 
+                           value="yes" <?php checked($run_until_bulk_exhausted, 'yes'); ?>
+                           <?php echo $is_auto_mode ? '' : 'disabled'; ?> />
+                    <label>Da, rulează doar până la epuizarea listei de linkuri</label>
+                </div>
+                <small class="form-text text-muted">Această opțiune este disponibilă doar în modul automat.</small>
+                <script>
+                    // Script JavaScript pentru a dezactiva checkbox-ul dacă modul este schimbat
+                    document.getElementById('mode').addEventListener('change', function () {
+                        const checkbox = document.querySelector('input[name="auto_ai_news_poster_settings[run_until_bulk_exhausted]"]');
+                        checkbox.disabled = this.value !== 'auto';
+                    });
+                </script>
+            </div>
+        </div>
         <?php
     }
 
-    public static function clear_bulk_check_transient($option_name)
-    {
-        if ($option_name === 'auto_ai_news_poster_settings') {
-            delete_transient('auto_ai_news_poster_last_bulk_check');
-        }
-    }
+
 
 }
 
