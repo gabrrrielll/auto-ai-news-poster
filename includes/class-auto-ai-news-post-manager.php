@@ -102,14 +102,6 @@ class Post_Manager
             }
 
             // Setăm imaginea reprezentativă și actualizăm atributele alt și description
-            // set_post_thumbnail($post_id, $image_id);
-            // update_post_meta($image_id, '_wp_attachment_image_alt', $title); // Setăm "alt" cu titlul articolului
-            // wp_update_post([
-            //     'ID' => $image_id,
-            //     'post_excerpt' => $summary // Setăm "description" cu rezumatul articolului
-            // ]);
-
-            // Setăm imaginea reprezentativă și actualizăm atributele alt și description
             set_post_thumbnail($post_id, $image_id);
 
             // Actualizăm atributele imaginii: titlu, "alt" și "description"
@@ -118,7 +110,6 @@ class Post_Manager
                 'post_author' => $author_id,  // Setăm autorul imaginii
                 'post_title' => $title, // Setăm titlul imaginii cu titlul articolului
                 'post_content' => $summary, // Nu adăugăm nimic în "Text asociat"
-                // 'post_excerpt' => $summary, // Nu utilizam Text asociat deoarece apare sub imaginea reprezentativa si nu
             ]);
 
             update_post_meta($image_id, '_wp_attachment_image_alt', $title); // Setăm atributul "alt" cu titlul articolului
@@ -133,8 +124,4 @@ class Post_Manager
             error_log('Setăm imaginea reprezentativă externă folosind URL-ul direct. ' . $post_id . ', ' . $image_url);
         }
     }
-
-
-
-
 }

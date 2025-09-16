@@ -39,6 +39,15 @@ add_action('admin_enqueue_scripts', 'auto_ai_news_poster_enqueue_scripts');
             'nonce' => wp_create_nonce('get_article_from_sources_nonce'),
         ]);
         
+        // Include CSS-ul modern pentru admin
+        wp_enqueue_style(
+            'auto-ai-news-poster-admin-css',
+            plugin_dir_url(__FILE__) . 'includes/css/auto-ai-news-poster.css',
+            [],
+            '1.0',
+            'all'
+        );
+        
         // Include Bootstrap CSS
         wp_enqueue_style(
             'bootstrap-css',

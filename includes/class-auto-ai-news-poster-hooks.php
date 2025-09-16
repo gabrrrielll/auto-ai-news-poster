@@ -4,7 +4,7 @@ class Auto_Ai_News_Poster_Hooks
 {
     public static function init()
     {
-        // // Aplicăm filtrul pentru a adăuga imaginea externă sau importată în funcție de setare
+        // Aplicăm filtrul pentru a adăuga imaginea externă sau importată în funcție de setare
         add_filter('the_content', [self::class, 'display_external_image'], 10, 2);
 
         // Adăugăm toate hook-urile și filtrele necesare aici
@@ -35,19 +35,13 @@ class Auto_Ai_News_Poster_Hooks
             $image_html .= '<img src="' . esc_url($external_image_url) . '" alt="" />';
 
             // Adăugăm și sursa imaginii dacă există
-            // if (!empty($external_image_source)) {
-            //     $image_html .= '<p><em>Sursa foto: ' . esc_html($external_image_source) . '</em></p>';
-            // }
             $image_html .= '</div>';
 
             // Adăugăm imaginea externă înainte de conținut
             $content = $image_html . $content;
         } // Dacă folosim importul de imagini, afișăm imaginea reprezentativă din WordPress
 
-
         if (has_post_thumbnail($post->ID)) {
-            // $content = get_the_post_thumbnail($post->ID, 'full') . $content;
-
             $info_icon = '';
             if (str_contains(strtolower($external_image_source), 'imagine generat')) {
                 $info_icon = '<span class="info-icon">i</span>';
@@ -57,8 +51,6 @@ class Auto_Ai_News_Poster_Hooks
 
         return $content;
     }
-
-
 
     // Funcție pentru a afișa imaginea externă în metabox-ul de imagine reprezentativă
     public static function display_external_featured_image_in_metabox($content, $post_id)

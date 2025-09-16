@@ -237,22 +237,6 @@ function call_openai_api($api_key, $prompt)
 }
 
 
-// Funcție pentru filtrarea promptului
-function sanitize_prompt($summary)
-{
-    // Lista cuvintelor potențial sensibile
-    $blacklist = ['sex', 'COVID-19', 'Pandemiei'];  // Adăugați termeni specifici dacă este cazul
-
-    // Înlocuim cuvintele din lista neagră
-    foreach ($blacklist as $word) {
-        $summary = str_ireplace($word, '', $summary);
-    }
-
-    // Eliminăm eventualele spații multiple rămase
-    $summary = preg_replace('/\s+/', ' ', trim($summary));
-
-    return $summary;
-}
 
 
 
