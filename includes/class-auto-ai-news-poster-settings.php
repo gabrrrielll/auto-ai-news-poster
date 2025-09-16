@@ -310,15 +310,35 @@ class Auto_Ai_News_Poster_Settings
             </div>
             <div class="settings-card-content">
                 <div class="form-group">
-                    <label for="chatgpt_api_key" class="control-label">Cheia API ChatGPT</label>
-                    <input type="text" name="auto_ai_news_poster_settings[chatgpt_api_key]"
+                    <label for="chatgpt_api_key" class="control-label">Cheia API OpenAI</label>
+                    <input type="password" name="auto_ai_news_poster_settings[chatgpt_api_key]"
                            value="<?php echo esc_attr($options['chatgpt_api_key']); ?>" class="form-control"
-                           id="chatgpt_api_key">
+                           id="chatgpt_api_key" placeholder="sk-...">
                     <span class="info-icon tooltip">
                         i
                         <span class="tooltiptext">Pentru a obține cheia API OpenAI, accesați https://platform.openai.com/settings/organization/api-keys</span>
                     </span>
-                    <small class="form-text text-muted">Introduceți cheia API pentru ChatGPT.</small>
+                </div>
+                
+                <div class="api-instructions">
+                    <h4>📋 Cum să obțineți cheia API OpenAI:</h4>
+                    <ol>
+                        <li><strong>Accesați</strong> <a href="https://platform.openai.com" target="_blank">https://platform.openai.com</a></li>
+                        <li><strong>Vă înregistrați</strong> sau vă autentificați în contul OpenAI</li>
+                        <li><strong>Navigați</strong> la <a href="https://platform.openai.com/api-keys" target="_blank">API Keys</a></li>
+                        <li><strong>Faceți click</strong> pe "Create new secret key"</li>
+                        <li><strong>Copiați</strong> cheia generată (începe cu "sk-")</li>
+                        <li><strong>Lipiți</strong> cheia în câmpul de mai sus</li>
+                    </ol>
+                    
+                    <div class="api-warning">
+                        <strong>⚠️ Important:</strong>
+                        <ul>
+                            <li>Cheia API este confidențială - nu o partajați cu nimeni</li>
+                            <li>Asigurați-vă că aveți credit disponibil în contul OpenAI</li>
+                            <li>Cheia va fi folosită pentru generarea articolelor și imaginilor</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>

@@ -599,18 +599,87 @@ select.form-control {
     to { transform: rotate(360deg); }
 }
 
-/* Responsive pentru metabox-uri */
-@media (max-width: 768px) {
-    .metabox-field-group {
-        margin-bottom: 15px;
+    /* API Instructions */
+    .api-instructions {
+        margin-top: 20px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: var(--border-radius);
+        border-left: 4px solid var(--primary-color);
     }
-    
-    .metabox-button {
-        padding: 10px 14px;
-        font-size: 0.85rem;
+
+    .api-instructions h4 {
+        margin: 0 0 15px 0;
+        color: var(--text-primary);
+        font-size: 1rem;
+        font-weight: 600;
     }
-    
-    .metabox-label {
-        font-size: 0.85rem;
+
+    .api-instructions ol {
+        margin: 0 0 20px 0;
+        padding-left: 20px;
     }
-}
+
+    .api-instructions li {
+        margin-bottom: 8px;
+        line-height: 1.5;
+        color: var(--text-secondary);
+    }
+
+    .api-instructions a {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .api-instructions a:hover {
+        text-decoration: underline;
+    }
+
+    .api-warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: var(--border-radius);
+        padding: 15px;
+        margin-top: 15px;
+    }
+
+    .api-warning strong {
+        color: #856404;
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    .api-warning ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+
+    .api-warning li {
+        color: #856404;
+        margin-bottom: 5px;
+    }
+
+    /* Responsive pentru metabox-uri */
+    @media (max-width: 768px) {
+        .metabox-field-group {
+            margin-bottom: 15px;
+        }
+        
+        .metabox-button {
+            padding: 10px 14px;
+            font-size: 0.85rem;
+        }
+        
+        .metabox-label {
+            font-size: 0.85rem;
+        }
+        
+        .api-instructions {
+            padding: 15px;
+        }
+        
+        .api-instructions h4 {
+            font-size: 0.9rem;
+        }
+    }
