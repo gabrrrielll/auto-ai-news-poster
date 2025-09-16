@@ -24,6 +24,7 @@ jQuery(document).ready(function($) {
                 post_id: postID,
                 instructions: additionalInstructions,
                 custom_source_url: customSourceUrl,
+                additional_instructions: additionalInstructions, // Salvăm și în baza de date
                 security: autoAiNewsPosterAjax.nonce
             },
             success: function(response) {

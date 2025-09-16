@@ -35,6 +35,7 @@ class Auto_Ai_News_Poster_Metabox
     {
         // Preluăm linkul salvat anterior (dacă există)
         $custom_source_url = get_post_meta($post->ID, '_custom_source_url', true);
+        $additional_instructions = get_post_meta($post->ID, '_additional_instructions', true);
         ?>
         <div class="inside auto-ai-metabox-content">
             <div class="metabox-field-group">
@@ -43,7 +44,7 @@ class Auto_Ai_News_Poster_Metabox
                     Instrucțiuni suplimentare pentru AI
                 </label>
                 <textarea id="additional-instructions" class="metabox-textarea" 
-                          placeholder="Introduceți instrucțiuni suplimentare pentru AI..."></textarea>
+                          placeholder="Introduceți instrucțiuni suplimentare pentru AI..."><?php echo esc_textarea($additional_instructions); ?></textarea>
             </div>
             
             <div class="metabox-field-group">
@@ -166,6 +167,11 @@ class Auto_Ai_News_Poster_Metabox
         // Salvăm URL-ul sursei personalizate
         if (isset($_POST['custom_source_url'])) {
             update_post_meta($post_id, '_custom_source_url', esc_url_raw($_POST['custom_source_url']));
+        }
+
+        // Salvăm instrucțiunile suplimentare pentru AI
+        if (isset($_POST['additional_instructions'])) {
+            update_post_meta($post_id, '_additional_instructions', sanitize_textarea_field($_POST['additional_instructions']));
         }
 
         // Salvăm URL-ul imaginii externe
