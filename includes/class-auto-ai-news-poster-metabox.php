@@ -16,21 +16,6 @@ class Auto_Ai_News_Poster_Metabox
         // Salvăm datele metaboxurilor
         add_action('save_post', [self::class, 'save_article_data']);
 
-        // Adăugăm metabox-ul pentru imaginea reprezentativă
-        add_action('add_meta_boxes', [self::class, 'add_featured_image_metabox']);
-    }
-
-    // Funcție pentru adăugarea metabox-ului imaginii reprezentative
-    public static function add_featured_image_metabox()
-    {
-        add_meta_box(
-            'auto_ai_news_poster_featured_image',
-            'Imagine reprezentativă AI',
-            [self::class, 'render_featured_image_metabox'],
-            'post',
-            'side',
-            'high'
-        );
     }
 
     public static function add_get_article_metabox()
@@ -172,25 +157,6 @@ class Auto_Ai_News_Poster_Metabox
                 update_post_meta($post_id, '_external_image_source', sanitize_text_field($_POST['external_image_source']));
             }
         }
-    }
-
-    public static function render_featured_image_metabox($post)
-    {
-        $image_url = get_post_meta($post->ID, '_external_image_url', true) ?: get_the_post_thumbnail_url($post->ID);
-
-        if (!$image_url) {
-            echo '<p>Nu există o imagine reprezentativă asociată acestui articol.</p>';
-            return;
-        }
-
-        echo '<div style="text-align: center;">';
-        echo '<img src="' . esc_url($image_url) . '" alt="Imagine reprezentativă" style="max-width: 100%; height: auto; margin-bottom: 15px;" />';
-        echo '</div>';
-
-        echo '<textarea id="image_feedback" class="widefat" rows="4" placeholder="Introdu feedback pentru această imagine..."></textarea>';
-        echo '<button id="send-feedback-button" type="button" class="button button-primary" style="margin-top: 10px;">Trimite feedback</button>';
-
-        // Elimin textarea și butonul pentru feedback imagine, plus nonce-ul asociat
     }
 
 }
