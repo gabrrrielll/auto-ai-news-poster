@@ -140,7 +140,7 @@ class Auto_Ai_News_Poster_Settings
         // Camp pentru instructiuni AI (textarea)
         add_settings_field(
             'default_ai_instructions',
-            'Instrucțiuni AI pentru generarea articolelor',
+            'Instrucțiuni suplimentare AI',
             [self::class, 'ai_instructions_callback'],
             'auto_ai_news_poster_settings_page',
             'main_section'
@@ -409,13 +409,13 @@ class Auto_Ai_News_Poster_Settings
         <div class="settings-card">
             <div class="settings-card-header">
                 <div class="settings-card-icon">🤖</div>
-                <h3 class="settings-card-title">Instrucțiuni AI</h3>
+                <h3 class="settings-card-title">Instrucțiuni Suplimentare AI</h3>
             </div>
             <div class="settings-card-content">
                 <div class="form-group">
-                    <label class="control-label">Instrucțiuni AI pentru generarea articolelor</label>
+                    <label class="control-label">Instrucțiuni suplimentare AI pentru generarea articolelor</label>
                     <textarea name="auto_ai_news_poster_settings[default_ai_instructions]" class="form-control" rows="6"
-                              placeholder="Introdu instrucțiunile implicite pentru AI"><?php echo esc_textarea($default_instructions); ?></textarea>
+                              placeholder="Introdu instrucțiunile suplimentare pentru AI"><?php echo esc_textarea($default_instructions); ?></textarea>
                 </div>
             </div>
         </div>
