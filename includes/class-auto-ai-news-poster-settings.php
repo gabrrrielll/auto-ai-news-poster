@@ -83,15 +83,6 @@ class Auto_Ai_News_Poster_Settings
             'main_section'
         );
 
-        // Camp pentru selectarea statusului de publicare
-        add_settings_field(
-            'status',
-            'Satus publicare',
-            [self::class, 'post_status_callback'],
-            'auto_ai_news_poster_settings_page',
-            'main_section'
-        );
-
         // Camp pentru selectarea categoriilor de publicare
         add_settings_field(
             'categories',
@@ -160,22 +151,6 @@ class Auto_Ai_News_Poster_Settings
             'article_length_option',
             'Selectează dimensiunea articolului',
             [self::class, 'article_length_option_callback'],
-            'auto_ai_news_poster_settings_page',
-            'main_section'
-        );
-
-        add_settings_field(
-            'min_length',
-            'Valoare minimă',
-            [self::class, 'min_length_callback'],
-            'auto_ai_news_poster_settings_page',
-            'main_section'
-        );
-
-        add_settings_field(
-            'max_length',
-            'Valoare maximă',
-            [self::class, 'max_length_callback'],
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
