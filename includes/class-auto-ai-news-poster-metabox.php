@@ -36,16 +36,27 @@ class Auto_Ai_News_Poster_Metabox
         // Preluăm linkul salvat anterior (dacă există)
         $custom_source_url = get_post_meta($post->ID, '_custom_source_url', true);
         ?>
-        <div class="inside">
-            <textarea id="additional-instructions" class="widefat" 
-                      placeholder="Introduceți instrucțiuni suplimentare pentru AI..."></textarea>
+        <div class="inside auto-ai-metabox-content">
+            <div class="metabox-field-group">
+                <label for="additional-instructions" class="metabox-label">
+                    <span class="metabox-icon">🤖</span>
+                    Instrucțiuni suplimentare pentru AI
+                </label>
+                <textarea id="additional-instructions" class="metabox-textarea" 
+                          placeholder="Introduceți instrucțiuni suplimentare pentru AI..."></textarea>
+            </div>
             
-            <label for="custom-source-url" style="margin-top: 10px;">Link sursă personalizată</label>
-            <textarea id="custom-source-url" name="custom_source_url" class="widefat" 
-                      placeholder="Introduceți un link sursă pentru a genera articolul..."><?php echo esc_url($custom_source_url); ?></textarea>
+            <div class="metabox-field-group">
+                <label for="custom-source-url" class="metabox-label">
+                    <span class="metabox-icon">🔗</span>
+                    Link sursă personalizată
+                </label>
+                <textarea id="custom-source-url" name="custom_source_url" class="metabox-textarea" 
+                          placeholder="Introduceți un link sursă pentru a genera articolul..."><?php echo esc_url($custom_source_url); ?></textarea>
+            </div>
             
-            <button id="get-article-button" type="button" class="button button-primary"
-                    style="width: 100%; margin-top: 10px;">
+            <button id="get-article-button" type="button" class="metabox-button metabox-button-primary">
+                <span class="button-icon">✨</span>
                 Generează articol
             </button>
         </div>
@@ -72,23 +83,37 @@ class Auto_Ai_News_Poster_Metabox
         $external_image_url = get_post_meta($post->ID, '_external_image_url', true);
         $external_image_source = get_post_meta($post->ID, '_external_image_source', true);
         ?>
-        <div class="inside">
-            <label for="external_image_url">URL imagine reprezentativă externă</label>
-            <input type="text" name="external_image_url" id="external_image_url" class="widefat"
-                   value="<?php echo esc_url($external_image_url); ?>" placeholder="Introduceți URL-ul imaginii..."/>
-            <p class="description">Dacă adăugați un URL, acesta va fi folosit ca imagine reprezentativă pentru acest articol.</p>
+        <div class="inside auto-ai-metabox-content">
+            <div class="metabox-field-group">
+                <label for="external_image_url" class="metabox-label">
+                    <span class="metabox-icon">🖼️</span>
+                    URL imagine reprezentativă externă
+                </label>
+                <input type="text" name="external_image_url" id="external_image_url" class="metabox-input"
+                       value="<?php echo esc_url($external_image_url); ?>" placeholder="Introduceți URL-ul imaginii..."/>
+                <p class="metabox-description">Dacă adăugați un URL, acesta va fi folosit ca imagine reprezentativă pentru acest articol.</p>
+            </div>
 
-            <label for="external_image_source">Sursa imaginii</label>
-            <input type="text" id="external_image_source" name="external_image_source" value="<?php echo esc_attr($external_image_source); ?>" class="widefat" placeholder="Sursa imaginii (de ex: Digi24)">
+            <div class="metabox-field-group">
+                <label for="external_image_source" class="metabox-label">
+                    <span class="metabox-icon">📝</span>
+                    Sursa imaginii
+                </label>
+                <input type="text" id="external_image_source" name="external_image_source" value="<?php echo esc_attr($external_image_source); ?>" class="metabox-input" placeholder="Sursa imaginii (de ex: Digi24)">
+            </div>
             
-            <p></p>
-            
-            <label for="feedback-text">Feedback pentru imaginea generată</label>
-            <textarea type="text" id="feedback-text"  class="widefat" placeholder="Introduceți feedback pentru imaginea generată..."></textarea>
-     
+            <div class="metabox-field-group">
+                <label for="feedback-text" class="metabox-label">
+                    <span class="metabox-icon">💬</span>
+                    Feedback pentru imaginea generată
+                </label>
+                <textarea id="feedback-text" class="metabox-textarea" placeholder="Introduceți feedback pentru imaginea generată..."></textarea>
+            </div>
            
-             <button id="generate-image-button" type="button"  class="button button-primary"
-                    style="width: 100%; margin-top: 10px;">Generează imagine AI</button>
+            <button id="generate-image-button" type="button" class="metabox-button metabox-button-primary">
+                <span class="button-icon">🎨</span>
+                Generează imagine AI
+            </button>
         </div>
         <?php
     }
