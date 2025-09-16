@@ -2,21 +2,20 @@
 
 class Auto_Ai_News_Poster_Settings
 {
-
     public static function init()
     {
         // Înregistrăm setările și meniul
         add_action('admin_menu', [self::class, 'add_menu']);
         add_action('admin_init', [self::class, 'register_settings']);
-        
-                // Setare inițială pentru indexul categoriei curente (dacă nu există deja)
+
+        // Setare inițială pentru indexul categoriei curente (dacă nu există deja)
         if (false === get_option('auto_ai_news_poster_current_category_index')) {
             add_option('auto_ai_news_poster_current_category_index', 0);
         }
 
     }
-    
-    
+
+
 
     // Adăugare meniu în zona articolelor din admin
     public static function add_menu()
@@ -53,8 +52,8 @@ class Auto_Ai_News_Poster_Settings
                     <form method="post" action="options.php">
                         <?php
                         settings_fields('auto_ai_news_poster_settings_group');
-                        do_settings_sections('auto_ai_news_poster_settings_page');
-                        ?>
+        do_settings_sections('auto_ai_news_poster_settings_page');
+        ?>
                         
                         <!-- Buton de salvare modern -->
                         <div style="text-align: center; margin-top: 40px; padding-top: 30px; border-top: 2px solid var(--border-color);">
@@ -83,7 +82,7 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
-        
+
         // Camp pentru selectarea statusului de publicare
         add_settings_field(
             'status',
@@ -101,7 +100,7 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
-        
+
         // In modul automat, se poate seta rularea automata a categoriilor
         add_settings_field(
             'auto_rotate_categories',
@@ -164,7 +163,7 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
-        
+
         add_settings_field(
             'min_length',
             'Valoare minimă',
@@ -172,7 +171,7 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
-        
+
         add_settings_field(
             'max_length',
             'Valoare maximă',
@@ -181,14 +180,14 @@ class Auto_Ai_News_Poster_Settings
             'main_section'
         );
 
-         add_settings_field(
+        add_settings_field(
             'generate_image',
             'Generare automată imagine',
             [self::class, 'generate_image_callback'],
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
-        
+
         // Camp pentru selectarea modului de imagine (externă/importată)
         add_settings_field(
             'use_external_images',
@@ -197,7 +196,7 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
-        
+
         // Înregistrăm un nou câmp în setările pluginului pentru lista de linkuri sursă
         add_settings_field(
             'bulk_custom_source_urls',
@@ -206,7 +205,7 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
-        
+
         // În funcția register_settings()
         add_settings_field(
             'run_until_bulk_exhausted',
@@ -255,7 +254,7 @@ class Auto_Ai_News_Poster_Settings
     {
         $options = get_option('auto_ai_news_poster_settings');
         $selected_category = $options['specific_search_category'] ?? '';
-    
+
         $categories = get_categories(['hide_empty' => false]);
         ?>
         <div class="settings-card">
@@ -279,8 +278,8 @@ class Auto_Ai_News_Poster_Settings
         </div>
         <?php
     }
-    
-    
+
+
     // Callback pentru opțiunea de rulare automată a categoriilor
     public static function auto_rotate_categories_callback()
     {
@@ -392,10 +391,11 @@ class Auto_Ai_News_Poster_Settings
     }
 
     // Callback pentru selectarea autorului
-    public static function author_name_callback() {
+    public static function author_name_callback()
+    {
         $options = get_option('auto_ai_news_poster_settings');
         $selected_author = $options['author_name'] ?? get_current_user_id();
-    
+
         // Obținem lista de utilizatori cu rolul 'Author' sau 'Administrator'
         $users = get_users([
             'role__in' => ['Author', 'Administrator'],
@@ -425,9 +425,10 @@ class Auto_Ai_News_Poster_Settings
 
 
     // Callback pentru instrucțiunile AI (textarea)
-    public static function ai_instructions_callback() {
+    public static function ai_instructions_callback()
+    {
         $options = get_option('auto_ai_news_poster_settings');
-        $default_instructions = $options['default_ai_instructions'] ?? "Creează un articol unic pe baza următoarelor surse de știri, respectă structura titlu, etichete și conținut. Sugerează imagini și include rezumatul.";
+        $default_instructions = $options['default_ai_instructions'] ?? 'Creează un articol unic pe baza următoarelor surse de știri, respectă structura titlu, etichete și conținut. Sugerează imagini și include rezumatul.';
 
         ?>
         <div class="settings-card">
@@ -453,7 +454,7 @@ class Auto_Ai_News_Poster_Settings
         $selected_option = $options['article_length_option'] ?? 'same_as_source';
         $min_length = $options['min_length'] ?? '';
         $max_length = $options['max_length'] ?? '';
-    
+
         ?>
         <div class="settings-card">
             <div class="settings-card-header">
@@ -488,7 +489,8 @@ class Auto_Ai_News_Poster_Settings
 
 
     // Callback pentru selectarea modului de imagine (externă/importată)
-    public static function use_external_images_callback() {
+    public static function use_external_images_callback()
+    {
         $options = get_option('auto_ai_news_poster_settings');
         $use_external_images = $options['use_external_images'] ?? 'external';
         ?>
@@ -509,8 +511,8 @@ class Auto_Ai_News_Poster_Settings
         </div>
         <?php
     }
-    
-    
+
+
     // Callback pentru opțiunea de generare automată a imaginii
     public static function generate_image_callback()
     {
@@ -530,7 +532,7 @@ class Auto_Ai_News_Poster_Settings
         </div>
         <?php
     }
-    
+
     public static function bulk_custom_source_urls_callback()
     {
         $options = get_option('auto_ai_news_poster_settings');
@@ -551,7 +553,7 @@ class Auto_Ai_News_Poster_Settings
         </div>
         <?php
     }
-    
+
     public static function run_until_bulk_exhausted_callback()
     {
         $options = get_option('auto_ai_news_poster_settings');
