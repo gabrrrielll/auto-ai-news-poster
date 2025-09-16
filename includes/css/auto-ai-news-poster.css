@@ -608,11 +608,41 @@ select.form-control {
         border-left: 4px solid var(--primary-color);
     }
 
-    .api-instructions h4 {
+    .api-instructions-toggle {
         margin: 0 0 15px 0;
         color: var(--text-primary);
         font-size: 1rem;
         font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .api-instructions-toggle:hover {
+        color: var(--primary-color);
+    }
+
+    .toggle-icon {
+        font-size: 0.8rem;
+        transition: var(--transition);
+    }
+
+    .api-instructions-content {
+        animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .api-instructions ol {

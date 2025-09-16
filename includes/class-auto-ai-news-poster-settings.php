@@ -321,27 +321,46 @@ class Auto_Ai_News_Poster_Settings
                 </div>
                 
                 <div class="api-instructions">
-                    <h4>📋 Cum să obțineți cheia API OpenAI:</h4>
-                    <ol>
-                        <li><strong>Accesați</strong> <a href="https://platform.openai.com" target="_blank">https://platform.openai.com</a></li>
-                        <li><strong>Vă înregistrați</strong> sau vă autentificați în contul OpenAI</li>
-                        <li><strong>Navigați</strong> la <a href="https://platform.openai.com/api-keys" target="_blank">API Keys</a></li>
-                        <li><strong>Faceți click</strong> pe "Create new secret key"</li>
-                        <li><strong>Copiați</strong> cheia generată (începe cu "sk-")</li>
-                        <li><strong>Lipiți</strong> cheia în câmpul de mai sus</li>
-                    </ol>
-                    
-                    <div class="api-warning">
-                        <strong>⚠️ Important:</strong>
-                        <ul>
-                            <li>Cheia API este confidențială - nu o partajați cu nimeni</li>
-                            <li>Asigurați-vă că aveți credit disponibil în contul OpenAI</li>
-                            <li>Cheia va fi folosită pentru generarea articolelor și imaginilor</li>
-                        </ul>
+                    <h4 class="api-instructions-toggle" onclick="toggleApiInstructions()">
+                        📋 Cum să obțineți cheia API OpenAI: <span class="toggle-icon">▼</span>
+                    </h4>
+                    <div class="api-instructions-content" id="api-instructions-content" style="display: none;">
+                        <ol>
+                            <li><strong>Accesați</strong> <a href="https://platform.openai.com" target="_blank">https://platform.openai.com</a></li>
+                            <li><strong>Vă înregistrați</strong> sau vă autentificați în contul OpenAI</li>
+                            <li><strong>Navigați</strong> la <a href="https://platform.openai.com/api-keys" target="_blank">API Keys</a></li>
+                            <li><strong>Faceți click</strong> pe "Create new secret key"</li>
+                            <li><strong>Copiați</strong> cheia generată (începe cu "sk-")</li>
+                            <li><strong>Lipiți</strong> cheia în câmpul de mai sus</li>
+                        </ol>
+                        
+                        <div class="api-warning">
+                            <strong>⚠️ Important:</strong>
+                            <ul>
+                                <li>Cheia API este confidențială - nu o partajați cu nimeni</li>
+                                <li>Asigurați-vă că aveți credit disponibil în contul OpenAI</li>
+                                <li>Cheia va fi folosită pentru generarea articolelor și imaginilor</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+        
+        <script>
+        function toggleApiInstructions() {
+            const content = document.getElementById('api-instructions-content');
+            const icon = document.querySelector('.toggle-icon');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▼';
+            }
+        }
+        </script>
         <?php
     }
 
