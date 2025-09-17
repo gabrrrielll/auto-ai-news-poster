@@ -329,6 +329,18 @@ class Auto_Ai_News_Poster_Settings
                     </span>
                 </div>
                 
+                <div class="form-group">
+                    <label for="ai_model" class="control-label">Model AI</label>
+                    <select name="auto_ai_news_poster_settings[ai_model]" class="form-control" id="ai_model">
+                        <option value="gpt-4.5" <?php selected($options['ai_model'] ?? 'gpt-4.5', 'gpt-4.5'); ?>>GPT-4.5 - Acuratețe înaltă, cost moderat</option>
+                        <option value="gpt-5" <?php selected($options['ai_model'] ?? 'gpt-4.5', 'gpt-5'); ?>>GPT-5 - Acuratețe maximă, cost ridicat</option>
+                        <option value="o3-mini" <?php selected($options['ai_model'] ?? 'gpt-4.5', 'o3-mini'); ?>>o3-mini - Optimizat pentru precizie, cost redus</option>
+                    </select>
+                    <div class="form-description">
+                        Selectează modelul AI pentru generarea articolelor. GPT-4.5 este recomandat pentru echilibrul între acuratețe și cost.
+                    </div>
+                </div>
+                
                 <div class="api-instructions">
                     <h4 class="api-instructions-toggle" onclick="toggleApiInstructions()">
                         📋 Cum să obțineți cheia API OpenAI: <span class="toggle-icon">▼</span>

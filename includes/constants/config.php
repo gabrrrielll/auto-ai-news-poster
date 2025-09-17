@@ -199,14 +199,18 @@ function generate_prompt($sources, $additional_instructions, $tags): string
 function call_openai_api($api_key, $prompt)
 {
     error_log('call_openai_api()!! ');
+
+    // Obținem modelul selectat din setări
+    $options = get_option('auto_ai_news_poster_settings');
+    $selected_model = $options['ai_model'] ?? 'gpt-4.5';
+
     return wp_remote_post(URL_API_OPENAI, [
         'headers' => [
             'Authorization' => 'Bearer ' . $api_key,
             'Content-Type' => 'application/json',
         ],
         'body' => json_encode([
-            // 'model' => 'gpt-4o-2024-08-06',  // Model ce suportă ieșiri structurate
-             'model' => 'gpt-4o-mini-2024-07-18',  // Model ce suportă ieșiri structurate ??
+            'model' => $selected_model,  // Model selectat din setări
             'temperature' => 0.1,  // Foarte strict, respectă exact sursa (0.0-1.0)
             'messages' => [
                 ['role' => 'system', 'content' => 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.'],
