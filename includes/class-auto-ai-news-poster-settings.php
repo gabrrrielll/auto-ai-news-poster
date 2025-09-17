@@ -146,6 +146,15 @@ class Auto_Ai_News_Poster_Settings
             'main_section'
         );
 
+        // Camp pentru controlul generării etichetelor
+        add_settings_field(
+            'generate_tags',
+            'Generează etichete',
+            [self::class, 'generate_tags_callback'],
+            'auto_ai_news_poster_settings_page',
+            'main_section'
+        );
+
         // În funcția register_settings()
         add_settings_field(
             'article_length_option',
@@ -455,6 +464,37 @@ class Auto_Ai_News_Poster_Settings
                     <label class="control-label">Instrucțiuni suplimentare AI pentru generarea articolelor</label>
                     <textarea name="auto_ai_news_poster_settings[default_ai_instructions]" class="form-control" rows="6"
                               placeholder="Introdu instrucțiunile suplimentare pentru AI"><?php echo esc_textarea($default_instructions); ?></textarea>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    // Callback pentru controlul generării etichetelor
+    public static function generate_tags_callback()
+    {
+        $options = get_option('auto_ai_news_poster_settings');
+        $generate_tags = $options['generate_tags'] ?? 'yes';
+        ?>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">🏷️</div>
+                <h3 class="settings-card-title">Control Etichete</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <div class="custom-checkbox">
+                        <input type="checkbox" name="auto_ai_news_poster_settings[generate_tags]" id="generate_tags" 
+                               value="yes" <?php checked($generate_tags, 'yes'); ?>>
+                        <label for="generate_tags" class="checkbox-label">
+                            <span class="checkbox-icon">🏷️</span>
+                            Generează și utilizează etichete în articole
+                        </label>
+                        <div class="checkbox-description">
+                            Dacă este bifat, AI-ul va genera etichete pentru articole și le va folosi pentru optimizare SEO. 
+                            Dacă nu este bifat, articolele vor fi generate fără etichete.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
