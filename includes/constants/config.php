@@ -53,7 +53,7 @@ function generate_custom_source_prompt($link, $additional_instructions): string
     $prompt .= "3. Numește numele categoriei care se potrivește mai bine din lista: '$category_list'.\n";
     $prompt .= "4. Creează un rezumat al articolului (summary).\n";
     $prompt .= "5. Generează un articol cu respectarea strictă a dimensiunii $length_instruction, detaliat, folosește un stil descriptiv în exprimare, nu include titlul în interiorul acestuia și nu omite nici un aspect din informațiile preluate.";
-    $prompt .= " ATENȚIE: Nu adăuga informații care nu sunt în articolul sursă! Dacă articolul menționează o listă specifică (ex: filme, persoane, evenimente), copiază EXACT aceeași listă, nu o modifica sau nu adăuga alte elemente.";
+    $prompt .= ' ATENȚIE: Nu adăuga informații care nu sunt în articolul sursă! Dacă articolul menționează o listă specifică (ex: filme, persoane, evenimente), copiază EXACT aceeași listă, nu o modifica sau nu adăuga alte elemente.';
     $prompt .= " Structura articolului poate include (dacă consideri necesar!) una, două sau trei subtitluri semantice de tip H2, H3 și să fie formatată în HTML pentru o structură SEO-friendly astfel încât să aibă și un design plăcut (content).\n";
     $prompt .= "6. Copiază adresele URL complete ale articolelor pe care le-ai parsat și de unde ai extras informația (sources).\n";
     $prompt .= "7. Copiază identic titlurile articolelor pe care le-ai parsat și de unde ai extras informația (source_titles).\n";
@@ -154,7 +154,7 @@ function generate_prompt($sources, $additional_instructions, $tags): string
     $prompt .= "3. Numește numele categoriei care se potrivește mai bine din lista: '$category_list'.\n";
     $prompt .= "4. Creează un rezumat al articolului (summary).\n";
     $prompt .= "5. Generează un articol cu respectarea strictă a dimensiunii $length_instruction, detaliat, folosește un stil jurnalistic în exprimare, nu include titlul în interiorul acestuia și nu omite nici un aspect din informația preluată.";
-    $prompt .= " ATENȚIE: Nu adăuga informații care nu sunt în sursele de știri! Dacă sursele menționează o listă specifică (ex: filme, persoane, evenimente), copiază EXACT aceeași listă, nu o modifica sau nu adăuga alte elemente.";
+    $prompt .= ' ATENȚIE: Nu adăuga informații care nu sunt în sursele de știri! Dacă sursele menționează o listă specifică (ex: filme, persoane, evenimente), copiază EXACT aceeași listă, nu o modifica sau nu adăuga alte elemente.';
     $prompt .= " Structura articolului (poate să includă dacă consideri necesar - una, două sau trei subtitluri semantice de tip H2, H3) și să fie formatată în HTML pentru o structură SEO-friendly astfel încât să aibă și un design plăcut (content).\n";
     $prompt .= "6. Copiază adresele URL complete ale articolelor pe care le-ai parsat și de unde ai extras informația (sources).\n";
     $prompt .= "7. Copiază identic titlurile articolelor pe care le-ai parsat și de unde ai extras informația (source_titles).\n";
@@ -175,6 +175,7 @@ function call_openai_api($api_key, $prompt)
         'body' => json_encode([
             // 'model' => 'gpt-4o-2024-08-06',  // Model ce suportă ieșiri structurate
              'model' => 'gpt-4o-mini-2024-07-18',  // Model ce suportă ieșiri structurate ??
+            'temperature' => 0.1,  // Foarte strict, respectă exact sursa (0.0-1.0)
             'messages' => [
                 ['role' => 'system', 'content' => 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.'],
                 ['role' => 'user', 'content' => $prompt],
