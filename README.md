@@ -8,3 +8,9 @@ We built [AI24Știri](https://ai24stiri.ro) using this tool to automate publishi
 The platform gathers and organizes information across domains like technology, economy, health, and more.
 
 ## Version 1.2 - Latest Update
+
+### Recent Fixes:
+- Fixed custom source link generation
+- Fixed checkbox saving for tags
+- Fixed status selector functionality
+- Improved AI model selection
