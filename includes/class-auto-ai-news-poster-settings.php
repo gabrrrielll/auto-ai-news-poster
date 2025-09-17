@@ -70,7 +70,9 @@ class Auto_Ai_News_Poster_Settings
 
     public static function register_settings()
     {
-        register_setting('auto_ai_news_poster_settings_group', 'auto_ai_news_poster_settings');
+        register_setting('auto_ai_news_poster_settings_group', 'auto_ai_news_poster_settings', [
+            'sanitize_callback' => [self::class, 'sanitize_checkbox_settings']
+        ]);
 
         add_settings_section('main_section', 'Main Settings', null, 'auto_ai_news_poster_settings_page');
 
@@ -651,7 +653,31 @@ class Auto_Ai_News_Poster_Settings
         <?php
     }
 
-
+    // Funcție simplă pentru sanitizarea doar a checkbox-urilor
+    public static function sanitize_checkbox_settings($input)
+    {
+        // Obținem setările existente
+        $existing_options = get_option('auto_ai_news_poster_settings', []);
+        
+        // Păstrăm toate setările existente
+        $sanitized = $existing_options;
+        
+        // Actualizăm doar câmpurile din input
+        if (is_array($input)) {
+            foreach ($input as $key => $value) {
+                // Pentru checkbox-uri, setăm 'no' dacă nu sunt bifate
+                if (in_array($key, ['auto_rotate_categories', 'use_external_images', 'generate_image', 
+                                   'run_until_bulk_exhausted', 'generate_tags'])) {
+                    $sanitized[$key] = ($value === 'yes') ? 'yes' : 'no';
+                } else {
+                    // Pentru alte câmpuri, sanitizăm normal
+                    $sanitized[$key] = sanitize_text_field($value);
+                }
+            }
+        }
+        
+        return $sanitized;
+    }
 
 }
 
