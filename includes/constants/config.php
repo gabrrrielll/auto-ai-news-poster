@@ -42,8 +42,9 @@ function generate_custom_source_prompt($link, $additional_instructions): string
     }
 
     $prompt = "Analizează următorul articol furnizat la acest link: $link\n";
-    // $prompt .= "Generează un articol care să respecte strict informațiile din acest link, dar scris într-un mod diferit. Păstrează aceeași lungime, detalii și structura jurnalistică.\n";
-    $prompt .= "Generează un articol care să respecte strict si in totalitate informațiile din acest link, dar scris într-un mod diferit, unic si poate chiar imbogatit in exprimare. Este extrem de important ca articolul sa respecte strict dimensiunea $length_instruction. Nerespectarea acestei cerințe va invalida complet rezultatul generat.\n";
+    $prompt .= "IMPORTANT: NU INVENTA INFORMATII! Folosește DOAR informațiile exacte din articolul sursă. Nu adăuga detalii care nu sunt menționate în articolul original.\n";
+    $prompt .= "Generează un articol care să respecte strict și în totalitate informațiile din acest link, dar scris într-un mod diferit, unic și poate chiar îmbogățit în exprimare. Este extrem de important ca articolul să respecte strict dimensiunea $length_instruction. Nerespectarea acestei cerințe va invalida complet rezultatul generat.\n";
+    $prompt .= "DIMENSIUNE OBLIGATORIE: Articolul trebuie să aibă exact $length_instruction. Nu mai mult, nu mai puțin. Numără cuvintele și respectă această cerință.\n";
     $prompt .= $additional_instructions !== '' ? "\nInstrucțiuni suplimentare: " . $additional_instructions : '';
     $prompt .= "Include următoarele informații în răspunsul tău:\n";
     $prompt .= "1. Generează un titlu relevant pentru articol, intrigant si care să stărnească curiozitatea cititorului in a citi articolul generat (title).\n";
@@ -51,8 +52,9 @@ function generate_custom_source_prompt($link, $additional_instructions): string
     $prompt .= " Etichetele sugerate pot fi din lista existentă de etichete: '$existing_tag_list'. Dacă nu există potriviri relevante, sugerează noi etichete.\n";
     $prompt .= "3. Numește numele categoriei care se potrivește mai bine din lista: '$category_list'.\n";
     $prompt .= "4. Creează un rezumat al articolului (summary).\n";
-    $prompt .= "5. Generează un articol cu respectarea strictă a dimensiunii $length_instruction, detaliat, foloseste un stil descriptiv in exprimare, nu include titlul in interiorul acestuia si nu omite nici un aspect din informatiile preluate.";
-    $prompt .= " Structura articolului poate include (daca consideri necesar!) una, doua sau trei subtitluri semantice de tip H2, H3 și să fie formatată în HTML pentru o structură SEO-friendly astfel încât să aibă și un design plăcut (content).\n";
+    $prompt .= "5. Generează un articol cu respectarea strictă a dimensiunii $length_instruction, detaliat, folosește un stil descriptiv în exprimare, nu include titlul în interiorul acestuia și nu omite nici un aspect din informațiile preluate.";
+    $prompt .= " ATENȚIE: Nu adăuga informații care nu sunt în articolul sursă! Dacă articolul menționează o listă specifică (ex: filme, persoane, evenimente), copiază EXACT aceeași listă, nu o modifica sau nu adăuga alte elemente.";
+    $prompt .= " Structura articolului poate include (dacă consideri necesar!) una, două sau trei subtitluri semantice de tip H2, H3 și să fie formatată în HTML pentru o structură SEO-friendly astfel încât să aibă și un design plăcut (content).\n";
     $prompt .= "6. Copiază adresele URL complete ale articolelor pe care le-ai parsat și de unde ai extras informația (sources).\n";
     $prompt .= "7. Copiază identic titlurile articolelor pe care le-ai parsat și de unde ai extras informația (source_titles).\n";
     $prompt .= "8. Copiază adresele URL complete ale imaginilor reprezentative ale articolelor de unde ai extras informația (images).\n";
@@ -111,9 +113,10 @@ function generate_prompt($sources, $additional_instructions, $tags): string
         }
     }
 
-    $prompt = "Urmează sa generezi un articol optimizat SEO si pentru asta urmează pasii: \n";
+    $prompt = "Urmează să generezi un articol optimizat SEO și pentru asta urmează pașii: \n";
+    $prompt .= "IMPORTANT: NU INVENTA INFORMATII! Folosește DOAR informațiile exacte din sursele de știri. Nu adăuga detalii care nu sunt menționate în articolele originale.\n";
 
-    $prompt .= 'Fă browsing pe urmatoarele surse de știri, descoperă ultimele știri publicate în data curentă (' . date('Y/m/d') . ') și nu căuta infomații publicate inainte de această dată';
+    $prompt .= 'Fă browsing pe următoarele surse de știri, descoperă ultimele știri publicate în data curentă (' . date('Y/m/d') . ') și nu căuta informații publicate înainte de această dată';
 
     if ($options['mode'] === 'auto') { // Daca este modul automat
         if ($options['auto_rotate_categories'] === 'yes') { // Daca se rotesc categoriile
@@ -140,7 +143,9 @@ function generate_prompt($sources, $additional_instructions, $tags): string
     $prompt .= "(Atentie! Nu extrage informatii care contin subiectele existente in aceste ultime articole deja publicate: $last_category_titles )\n";
 
     $prompt .= implode("\n", $sources);
-    $prompt .= "\n Folosește doar informația pentru a compune un nou articol unic care să respecte informatia si să conțină toate detaliile acesteia.\n";
+    $prompt .= "\n Folosește doar informația pentru a compune un nou articol unic care să respecte informația și să conțină toate detaliile acesteia.\n";
+    $prompt .= "DIMENSIUNE OBLIGATORIE: Articolul trebuie să aibă exact $length_instruction. Nu mai mult, nu mai puțin. Numără cuvintele și respectă această cerință.\n";
+    $prompt .= "ATENȚIE: Nu adăuga informații care nu sunt în sursele de știri! Dacă sursele menționează o listă specifică (ex: filme, persoane, evenimente), copiază EXACT aceeași listă, nu o modifica sau nu adăuga alte elemente.\n";
     $prompt .= $additional_instructions !== '' ? "\n Instrucțiuni suplimentare: " . $additional_instructions : '';
     $prompt .= "\n Include următoarele informații în răspunsul tău:\n";
     $prompt .= "1. Generează un titlu relevant pentru articol, intrigant si care să stărnească curiozitatea cititorului in a citi articolul generat (title).\n";
@@ -148,8 +153,9 @@ function generate_prompt($sources, $additional_instructions, $tags): string
     $prompt .= " Etichetele sugerate pot fi din lista existentă de etichete: '$existing_tag_list'. Dacă nu există potriviri relevante, sugerează noi etichete.\n";
     $prompt .= "3. Numește numele categoriei care se potrivește mai bine din lista: '$category_list'.\n";
     $prompt .= "4. Creează un rezumat al articolului (summary).\n";
-    $prompt .= "5. Generează un articol cu respectarea strictă a dimensiunii $length_instruction, detaliat, foloseste un stil jurnalistic in exprimare, nu include titlul in interiorul acestuia si nu omite nici un aspect din informatia preluată.";
-    $prompt .= " Structura articolului (poate să includă daca consideri necesar - una, doua sau trei subtitluri semantice de tip H2, H3) și să fie formatată în HTML pentru o structură SEO-friendly astfel încât să aibă și un design plăcut (content).\n";
+    $prompt .= "5. Generează un articol cu respectarea strictă a dimensiunii $length_instruction, detaliat, folosește un stil jurnalistic în exprimare, nu include titlul în interiorul acestuia și nu omite nici un aspect din informația preluată.";
+    $prompt .= " ATENȚIE: Nu adăuga informații care nu sunt în sursele de știri! Dacă sursele menționează o listă specifică (ex: filme, persoane, evenimente), copiază EXACT aceeași listă, nu o modifica sau nu adăuga alte elemente.";
+    $prompt .= " Structura articolului (poate să includă dacă consideri necesar - una, două sau trei subtitluri semantice de tip H2, H3) și să fie formatată în HTML pentru o structură SEO-friendly astfel încât să aibă și un design plăcut (content).\n";
     $prompt .= "6. Copiază adresele URL complete ale articolelor pe care le-ai parsat și de unde ai extras informația (sources).\n";
     $prompt .= "7. Copiază identic titlurile articolelor pe care le-ai parsat și de unde ai extras informația (source_titles).\n";
     $prompt .= "8. Copiază adresele URL complete ale imaginilor reprezentative ale articolelor de unde ai extras informația (images).\n";
@@ -170,7 +176,7 @@ function call_openai_api($api_key, $prompt)
             // 'model' => 'gpt-4o-2024-08-06',  // Model ce suportă ieșiri structurate
              'model' => 'gpt-4o-mini-2024-07-18',  // Model ce suportă ieșiri structurate ??
             'messages' => [
-                ['role' => 'system', 'content' => 'You are an assistant generating news articles and images based on provided sources.'],
+                ['role' => 'system', 'content' => 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.'],
                 ['role' => 'user', 'content' => $prompt],
             ],
             'response_format' => [
