@@ -148,39 +148,51 @@ class Auto_Ai_News_Poster_Api
         $api_key = $options['chatgpt_api_key'];
         $sources = explode("\n", trim($options['news_sources'])); // Sursele din setări
 
-        if (empty($api_key) || empty($sources)) {
-            wp_send_json_error(['message' => 'Cheia API sau sursele lipsesc']);
-        }
-
-        // Verificăm dacă există opțiunea "Rulează automat doar până la epuizarea listei de linkuri"
-        $run_until_bulk_exhausted = $options['run_until_bulk_exhausted'] === 'yes';
-        $bulk_links = explode("\n", trim($options['bulk_custom_source_urls'] ?? ''));
-        $bulk_links = array_filter($bulk_links, 'trim'); // Eliminăm rândurile goale
-
-        error_log('DEBUG: $run_until_bulk_exhausted:'.$run_until_bulk_exhausted.' count($bulk_links):'. count($bulk_links).' $bulk_links:'. print_r($bulk_links, true));
-        // Dacă este activată opțiunea și lista de linkuri este goală, oprim procesul
-        if ($run_until_bulk_exhausted && empty($bulk_links)) {
-            // Dezactivăm cron job-ul
-            if (wp_next_scheduled('auto_ai_news_poster_cron_hook')) {
-                wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
-            }
-
-            // Forțăm schimbarea modului pe manual
-            self::force_mode_change_to_manual();
-
-            error_log('Lista de linkuri personalizate a fost epuizată. Oprirea generării automate.');
-
-            // Pentru cron job, nu trimitem răspuns JSON
-            if (isset($_POST['action'])) {
-                wp_send_json_error(['message' => 'Lista de linkuri s-a epuizat. Generarea automată a fost oprită.']);
-            }
-            return;
-        }
-
-        // Preluăm primul link din lista bulk dacă nu există un link personalizat trimis prin AJAX
+        // Verificăm dacă există un link personalizat
         $custom_source_url = isset($_POST['custom_source_url']) ? sanitize_text_field($_POST['custom_source_url']) : null;
-        if (!$custom_source_url && !empty($bulk_links)) {
-            $custom_source_url = array_shift($bulk_links); // Preluăm primul link
+        
+        if (empty($api_key)) {
+            wp_send_json_error(['message' => 'Cheia API lipsește']);
+        }
+        
+        // Pentru link personalizat, nu avem nevoie de sursele din setări
+        if (empty($custom_source_url) && empty($sources)) {
+            wp_send_json_error(['message' => 'Sursele lipsesc']);
+        }
+
+        // Dacă avem un link personalizat, îl folosim direct
+        if (!empty($custom_source_url)) {
+            // Link personalizat - continuăm cu procesarea
+        } else {
+            // Verificăm dacă există opțiunea "Rulează automat doar până la epuizarea listei de linkuri"
+            $run_until_bulk_exhausted = $options['run_until_bulk_exhausted'] === 'yes';
+            $bulk_links = explode("\n", trim($options['bulk_custom_source_urls'] ?? ''));
+            $bulk_links = array_filter($bulk_links, 'trim'); // Eliminăm rândurile goale
+
+            error_log('DEBUG: $run_until_bulk_exhausted:'.$run_until_bulk_exhausted.' count($bulk_links):'. count($bulk_links).' $bulk_links:'. print_r($bulk_links, true));
+            // Dacă este activată opțiunea și lista de linkuri este goală, oprim procesul
+            if ($run_until_bulk_exhausted && empty($bulk_links)) {
+                // Dezactivăm cron job-ul
+                if (wp_next_scheduled('auto_ai_news_poster_cron_hook')) {
+                    wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
+                }
+
+                // Forțăm schimbarea modului pe manual
+                self::force_mode_change_to_manual();
+
+                error_log('Lista de linkuri personalizate a fost epuizată. Oprirea generării automate.');
+
+                // Pentru cron job, nu trimitem răspuns JSON
+                if (isset($_POST['action'])) {
+                    wp_send_json_error(['message' => 'Lista de linkuri s-a epuizat. Generarea automată a fost oprită.']);
+                }
+                return;
+            }
+
+            // Preluăm primul link din lista bulk dacă nu există un link personalizat trimis prin AJAX
+            if (!$custom_source_url && !empty($bulk_links)) {
+                $custom_source_url = array_shift($bulk_links); // Preluăm primul link
+            }
         }
 
         // Verificăm dacă acest link a fost deja folosit pentru a evita duplicatele
