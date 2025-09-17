@@ -332,12 +332,12 @@ class Auto_Ai_News_Poster_Settings
                 <div class="form-group">
                     <label for="ai_model" class="control-label">Model AI</label>
                     <select name="auto_ai_news_poster_settings[ai_model]" class="form-control" id="ai_model">
-                        <option value="gpt-4.5" <?php selected($options['ai_model'] ?? 'gpt-4.5', 'gpt-4.5'); ?>>GPT-4.5 - Acuratețe înaltă, cost moderat</option>
-                        <option value="gpt-5" <?php selected($options['ai_model'] ?? 'gpt-4.5', 'gpt-5'); ?>>GPT-5 - Acuratețe maximă, cost ridicat</option>
-                        <option value="o3-mini" <?php selected($options['ai_model'] ?? 'gpt-4.5', 'o3-mini'); ?>>o3-mini - Optimizat pentru precizie, cost redus</option>
+                        <option value="gpt-4o" <?php selected($options['ai_model'] ?? 'gpt-4o', 'gpt-4o'); ?>>GPT-4o - Acuratețe înaltă, cost moderat</option>
+                        <option value="gpt-4-turbo" <?php selected($options['ai_model'] ?? 'gpt-4o', 'gpt-4-turbo'); ?>>GPT-4 Turbo - Acuratețe maximă, cost ridicat</option>
+                        <option value="gpt-4o-mini" <?php selected($options['ai_model'] ?? 'gpt-4o', 'gpt-4o-mini'); ?>>GPT-4o Mini - Optimizat pentru precizie, cost redus</option>
                     </select>
                     <div class="form-description">
-                        Selectează modelul AI pentru generarea articolelor. GPT-4.5 este recomandat pentru echilibrul între acuratețe și cost.
+                        Selectează modelul AI pentru generarea articolelor. GPT-4o este recomandat pentru echilibrul între acuratețe și cost.
                     </div>
                 </div>
                 

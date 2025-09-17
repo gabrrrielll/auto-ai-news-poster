@@ -202,7 +202,7 @@ function call_openai_api($api_key, $prompt)
 
     // Obținem modelul selectat din setări
     $options = get_option('auto_ai_news_poster_settings');
-    $selected_model = $options['ai_model'] ?? 'gpt-4.5';
+    $selected_model = $options['ai_model'] ?? 'gpt-4o';
 
     return wp_remote_post(URL_API_OPENAI, [
         'headers' => [
