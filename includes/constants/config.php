@@ -46,7 +46,7 @@ function generate_custom_source_prompt($link, $additional_instructions): string
     $prompt .= "Generează un articol care să respecte strict și în totalitate informațiile din acest link, dar scris într-un mod diferit, unic și poate chiar îmbogățit în exprimare. Este extrem de important ca articolul să respecte strict dimensiunea $length_instruction. Nerespectarea acestei cerințe va invalida complet rezultatul generat.\n";
     $prompt .= "DIMENSIUNE OBLIGATORIE: Articolul trebuie să aibă exact $length_instruction. Nu mai mult, nu mai puțin. Numără cuvintele și respectă această cerință.\n";
     $prompt .= $additional_instructions !== '' ? "\nInstrucțiuni suplimentare: " . $additional_instructions : '';
-    
+
     // Verificăm dacă trebuie să generăm etichete
     $generate_tags = $options['generate_tags'] ?? 'yes';
 
@@ -269,7 +269,7 @@ function call_openai_api($api_key, $prompt)
                                 ]
                             ]
                         ],
-                        'required' => ['title', 'content', 'summary', 'category', 'tags', 'images', 'sources', 'source_titles'],
+                        'required' => ['title', 'content', 'summary', 'category', 'images', 'sources', 'source_titles'],
                         'additionalProperties' => false
                     ]
                 ],
