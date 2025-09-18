@@ -290,7 +290,7 @@ function call_openai_api($api_key, $prompt)
 function call_openai_image_api($api_key, $summary, $tags = [], $feedback = '')
 {
     error_log('🎨 call_openai_image_api() STARTED');
-    
+
     // Creăm un prompt pentru generarea imaginii
     $prompt = 'Generează o imagine cât mai naturală și realistă, fără a utiliza texte sau cuvinte în interiorul imaginii, având ca temă aceste etichete: ';
     if (!empty($tags)) {
@@ -301,12 +301,12 @@ function call_openai_image_api($api_key, $summary, $tags = [], $feedback = '')
     if (!empty($feedback)) {
         $prompt .= "\n Utilizează următorul feedback de la imaginea generată anterior pentru a îmbunătăți imaginea: " . $feedback;
     }
-    
+
     error_log('🎨 DALL-E API Configuration:');
     error_log('   - API Key length: ' . strlen($api_key));
     error_log('   - Prompt: ' . $prompt);
     error_log('   - Prompt length: ' . strlen($prompt) . ' characters');
-    
+
     $request_body = [
         'model' => 'dall-e-3',  // Modelul DALL-E 3 pentru imagini
         'prompt' => $prompt,
@@ -315,7 +315,7 @@ function call_openai_image_api($api_key, $summary, $tags = [], $feedback = '')
         'n' => 1,
         'style' => 'natural'
     ];
-    
+
     error_log('📤 DALL-E API Request Body: ' . json_encode($request_body));
 
     // Apelăm API-ul OpenAI pentru generarea imaginii
@@ -327,12 +327,12 @@ function call_openai_image_api($api_key, $summary, $tags = [], $feedback = '')
         'body' => json_encode($request_body),
         'timeout' => 90,
     ]);
-    
+
     if (is_wp_error($response)) {
         error_log('❌ DALL-E API Error: ' . $response->get_error_message());
     } else {
         error_log('✅ DALL-E API Response status: ' . wp_remote_retrieve_response_code($response));
     }
-    
+
     return $response;
 }

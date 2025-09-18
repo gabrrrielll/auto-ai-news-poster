@@ -438,7 +438,7 @@ class Auto_Ai_News_Poster_Api
         // Preluăm post_id dacă apelul nu vine dintr-un context în care este deja setat (ex. cron)
         if ($post_id === null) {
             $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-            
+
             // Verificăm nonce-ul pentru securitate doar pentru apelurile AJAX
             try {
                 check_ajax_referer('generate_image_nonce', 'security');
@@ -487,21 +487,21 @@ class Auto_Ai_News_Poster_Api
         error_log('   - Summary: ' . $summary);
         error_log('   - Tags: ' . implode(', ', $tags));
         error_log('   - Feedback: ' . $feedback);
-        
+
         $image_response = call_openai_image_api($api_key, $summary, $tags, $feedback);
-        
+
         if (is_wp_error($image_response)) {
             error_log('❌ DALL-E API WP Error: ' . $image_response->get_error_message());
             wp_send_json_error(['message' => 'Eroare la apelul DALL-E API: ' . $image_response->get_error_message()]);
             return;
         }
-        
+
         $response_code = wp_remote_retrieve_response_code($image_response);
         error_log('📊 DALL-E API Response Code: ' . $response_code);
-        
+
         $image_body = wp_remote_retrieve_body($image_response);
         error_log('📥 DALL-E API RAW RESPONSE BODY: ' . $image_body);
-        
+
         $image_json = json_decode($image_body, true);
         error_log('🔍 DALL-E API DECODED RESPONSE: ' . print_r($image_json, true));
 
