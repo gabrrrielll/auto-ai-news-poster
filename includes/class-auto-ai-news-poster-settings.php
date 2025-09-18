@@ -662,12 +662,20 @@ class Auto_Ai_News_Poster_Settings
         // Păstrăm toate setările existente
         $sanitized = $existing_options;
         
+        // Lista checkbox-urilor care trebuie să fie setate explicit
+        $checkbox_fields = ['auto_rotate_categories', 'use_external_images', 'generate_image', 
+                           'run_until_bulk_exhausted', 'generate_tags'];
+        
+        // Setăm toate checkbox-urile la 'no' înainte de a procesa input-ul
+        foreach ($checkbox_fields as $checkbox_field) {
+            $sanitized[$checkbox_field] = 'no';
+        }
+        
         // Actualizăm doar câmpurile din input
         if (is_array($input)) {
             foreach ($input as $key => $value) {
-                // Pentru checkbox-uri, setăm 'no' dacă nu sunt bifate
-                if (in_array($key, ['auto_rotate_categories', 'use_external_images', 'generate_image', 
-                                   'run_until_bulk_exhausted', 'generate_tags'])) {
+                // Pentru checkbox-uri, setăm 'yes' dacă sunt bifate
+                if (in_array($key, $checkbox_fields)) {
                     $sanitized[$key] = ($value === 'yes') ? 'yes' : 'no';
                 } else {
                     // Pentru alte câmpuri, sanitizăm normal
