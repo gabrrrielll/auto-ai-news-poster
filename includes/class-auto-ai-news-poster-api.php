@@ -432,61 +432,106 @@ class Auto_Ai_News_Poster_Api
 
     public static function generate_image_for_article($post_id)
     {
+        error_log('🖼️ GENERATE_IMAGE_FOR_ARTICLE() STARTED');
 
-        if ($post_id == null) {
-            $post_id = intval($_POST['post_id']);
+        // Verificăm nonce-ul pentru securitate
+        try {
+            check_ajax_referer('generate_image_nonce', 'security');
+            error_log('✅ Nonce verification successful for image generation.');
+        } catch (Exception $e) {
+            error_log('❌ Nonce verification failed for image generation: ' . $e->getMessage());
+            wp_send_json_error(['message' => 'Nonce verification failed for image generation.']);
+            return;
         }
-        $feedback = sanitize_text_field($_POST['feedback'] ?? ''); // Preluăm feedback-ul
+
+        // Preluăm post_id dacă apelul nu vine dintr-un context în care este deja setat (ex. cron)
+        if ($post_id == null) {
+            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+        }
+
+        if ($post_id === 0) {
+            error_log('❌ No valid post ID provided for image generation.');
+            wp_send_json_error(['message' => 'ID-ul postării lipsește sau este invalid.']);
+            return;
+        }
+
+        $feedback = sanitize_text_field($_POST['feedback'] ?? '');
         $post = get_post($post_id);
 
         if (!$post) {
+            error_log('❌ Article not found for ID: ' . $post_id);
             wp_send_json_error(['message' => 'Articolul nu a fost găsit.']);
+            return;
         }
 
         $options = get_option('auto_ai_news_poster_settings');
         $api_key = $options['chatgpt_api_key'];
 
-        // Extragem rezumatul pentru a-l folosi în generarea imaginii
-        // $summary = get_post_meta($post_id, '_wp_excerpt', true) ?: wp_trim_words($post->post_content, 400, '...'); // nu gaseste rezumatul
-        $summary = get_the_excerpt($post_id) ?: wp_trim_words($post->post_content, 100, '...');
-        // Preluăm etichetele postării
-        $tags = wp_get_post_tags($post_id, ['fields' => 'names']); // Extragem doar numele etichetelor
+        if (empty($api_key)) {
+            error_log('❌ API key is empty - cannot generate image.');
+            wp_send_json_error(['message' => 'Cheia API lipsește pentru generarea imaginii.']);
+            return;
+        }
 
+        $summary = get_the_excerpt($post_id) ?: wp_trim_words($post->post_content, 100, '...');
+        $tags = wp_get_post_tags($post_id, ['fields' => 'names']);
+
+        error_log('📋 Image generation input:');
+        error_log('   - Post ID: ' . $post_id);
+        error_log('   - Summary: ' . $summary);
+        error_log('   - Tags: ' . implode(', ', $tags));
+        error_log('   - Feedback: ' . ($feedback ?: 'EMPTY'));
 
         $image_response = call_openai_image_api($api_key, $summary, $tags, $feedback);
-        // $image_response = call_openai_image_api($api_key, "covid-19", $tags, $feedback); // ca sa testam raspuns negativ pt generarea imaginii
         $image_body = wp_remote_retrieve_body($image_response);
         $image_json = json_decode($image_body, true);
+
+        error_log('📥 DALL-E API RAW RESPONSE BODY: ' . $image_body);
+        error_log('🔍 DALL-E API DECODED RESPONSE: ' . print_r($image_json, true));
+
+        if (is_wp_error($image_response)) {
+            error_log('❌ DALL-E API WP Error: ' . $image_response->get_error_message());
+            wp_send_json_error(['message' => 'Eroare la apelul DALL-E API: ' . $image_response->get_error_message()]);
+            return;
+        }
+
         $image_url = $image_json['data'][0]['url'] ?? '';
         $title = get_the_title($post_id);
 
-        error_log('!! --> generate_image_for_article() triggered for post ID: ' . $post_id . '   $summary = ' . $summary . '    $tags:' . implode(', ', $tags) . '   $image_body:'.  $image_body);
+        error_log('🖼️ Generated image URL: ' . ($image_url ?: 'NONE'));
 
         if (!empty($image_url)) {
             Post_Manager::set_featured_image($post_id, $image_url, $title, $summary);
-
-            // Adaugam text cu sursa imaginii
             update_post_meta($post_id, '_external_image_source', 'Imagine generată AI');
 
-            // Folosim Post_Manager pentru a actualiza statusului  articolul
             $post_status = $options['status'];
             if ($post_status == 'publish') {
                 Post_Manager::insert_or_update_post($post_id, ['post_status' => $post_status]);
             }
 
             if (isset($post_id['error'])) {
+                error_log('❌ Error updating post status after image generation: ' . $post_id['error']);
                 wp_send_json_error(['message' => $post_id['error']]);
+                return;
             }
-            // wp_send_json_success(['message' => 'Imaginea a fost generată și setată!.']);
+
+            error_log('✅ Image generated and set successfully for post ID: ' . $post_id);
             wp_send_json_success([
                     'post_id' => $post_id,
                     'tags' => $tags,
                     'summary' => $summary,
-                    'image_json' => $image_json,
-                    'body' => $image_body
+                    'image_url' => $image_url, // Returnăm URL-ul imaginii generate
+                    'message' => 'Imaginea a fost generată și setată!.'
                 ]);
         } else {
-            wp_send_json_error(['message' => $image_json['error']]);
+            $error_message = 'Eroare necunoscută la generarea imaginii.';
+            if (isset($image_json['error']['message'])) {
+                $error_message = $image_json['error']['message'];
+            } else if (isset($image_json['error'])) {
+                $error_message = print_r($image_json['error'], true);
+            }
+            error_log('❌ Failed to generate image for post ID ' . $post_id . ': ' . $error_message);
+            wp_send_json_error(['message' => 'Eroare la generarea imaginii: ' . $error_message]);
         }
     }
 

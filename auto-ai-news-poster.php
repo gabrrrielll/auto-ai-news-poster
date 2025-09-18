@@ -685,7 +685,7 @@ function auto_ai_news_poster_fix_css_mime_type() {
                 return;
             }
             
-            const refreshBtn = document.querySelector("button[onclick=\'refreshModelsList()\']");
+            const refreshBtn = document.querySelector("button[onclick=\\'refreshModelsList()\\']");
             if (!refreshBtn) return;
             
             const originalText = refreshBtn.innerHTML;
@@ -740,7 +740,7 @@ function auto_ai_news_poster_fix_css_mime_type() {
                 console.log("   - Button HTML:", generateBtn[0].outerHTML);
             } else {
                 console.log("❌ Generate button NOT found!");
-                console.log("🔍 Searching for any button with \'generate\' in class or id...");
+                console.log("🔍 Searching for any button with \\'generate\\' in class or id...");
                 $("button, input[type=button]").each(function() {
                     const elem = $(this);
                     if (elem.attr("id") && elem.attr("id").toLowerCase().includes("generate")) {
@@ -843,6 +843,73 @@ function auto_ai_news_poster_fix_css_mime_type() {
                         button.prop("disabled", false);
                         button.html("<span>✨</span> Generează articol");
                         console.log("🔄 Button re-enabled");
+                    }
+                });
+            });
+            
+            // Handler pentru butonul de generare imagine AI
+            $("#generate-image-button").on("click", function() {
+                console.log("🎯 GENERATE IMAGE BUTTON CLICKED!");
+                
+                const postID = $("#post_ID").val();
+                const button = $(this);
+                const feedbackText = $("#feedback-text").val();
+
+                console.log("📋 COLLECTED DATA for image generation:");
+                console.log("   - Post ID:", postID);
+                console.log("   - Feedback Text:", feedbackText);
+
+                if (!postID) {
+                    console.error("❌ POST ID is missing for image generation!");
+                    alert("Eroare: ID-ul postării lipsește pentru generarea imaginii!");
+                    return;
+                }
+                
+                button.prop("disabled", true);
+                button.html("⏳ Generare imagine...");
+                console.log("🔄 Image generation button disabled, starting AJAX call...");
+
+                const ajaxData = {
+                    action: "generate_image_for_article",
+                    post_id: postID,
+                    feedback: feedbackText,
+                    security: autoAiNewsPosterAjax.generate_image_nonce
+                };
+
+                console.log("📤 AJAX DATA TO SEND for image generation:", ajaxData);
+
+                $.ajax({
+                    url: autoAiNewsPosterAjax.ajax_url,
+                    method: "POST",
+                    data: ajaxData,
+                    beforeSend: function(xhr) {
+                        console.log("📡 AJAX Image Request starting...");
+                    },
+                    success: function(response) {
+                        console.log("✅ AJAX SUCCESS - Raw image response:", response);
+                        
+                        if (response.success) {
+                            console.log("🎉 Image generation successful!");
+                            location.reload();
+                        } else {
+                            console.error("❌ AJAX Success but image response.success is false");
+                            const errorMsg = response.data && response.data.message ? response.data.message : "Eroare necunoscută la generarea imaginii.";
+                            console.error("📋 Image Error message:", errorMsg);
+                            alert("A apărut o eroare: " + errorMsg);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("💥 AJAX IMAGE ERROR occurred!");
+                        console.error("   - Status:", status);
+                        console.error("   - Error:", error);
+                        console.error("   - Response Text:", xhr.responseText);
+                        alert("A apărut o eroare la generarea imaginii. Verifică consola pentru detalii.");
+                    },
+                    complete: function(xhr, status) {
+                        console.log("🏁 AJAX IMAGE COMPLETE - Status:", status);
+                        button.prop("disabled", false);
+                        button.html("<span>🎨</span> Generează imagine AI");
+                        console.log("🔄 Image generation button re-enabled");
                     }
                 });
             });
