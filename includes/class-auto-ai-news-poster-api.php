@@ -314,6 +314,7 @@ class Auto_Ai_News_Poster_Api
             $post_data['ID'] = $post_id;
         }
 
+        error_log('💾 Final post data before saving: ' . print_r($post_data, true));
         $new_post_id = Post_Manager::insert_or_update_post($post_id, $post_data);
         
         if (is_wp_error($new_post_id)) {
