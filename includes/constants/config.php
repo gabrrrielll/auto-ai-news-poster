@@ -247,36 +247,35 @@ function call_openai_api($api_key, $prompt)
                             'items' => [
                                 'type' => 'string'
                             ]
-                            ],
-                            'images' => [
-                                'type' => 'array',
-                                'description' => 'URL-urile imaginilor relevante din articolele sursă',
-                                'items' => [
-                                    'type' => 'string'
-                                ]
-                            ],
-                            'sources' => [
-                                'type' => 'array',
-                                'description' => 'URL-urile complete ale știrilor citite',
-                                'items' => [
-                                    'type' => 'string'
-                                ]
-                            ],
-                            'source_titles' => [
-                                'type' => 'array',
-                                'description' => 'Titlurile exacte ale articolelor parsate si citite',
-                                'items' => [
-                                    'type' => 'string'
-                                ]
+                        ],
+                        'images' => [
+                            'type' => 'array',
+                            'description' => 'URL-urile imaginilor relevante din articolele sursă',
+                            'items' => [
+                                'type' => 'string'
                             ]
                         ],
-                        'required' => ['title', 'content', 'summary', 'category', 'images', 'sources', 'source_titles'],
-                        'additionalProperties' => false
-                    ]
-                ],
-            ],
-            'max_tokens' => 9000,
-        ]
+                        'sources' => [
+                            'type' => 'array',
+                            'description' => 'URL-urile complete ale știrilor citite',
+                            'items' => [
+                                'type' => 'string'
+                            ]
+                        ],
+                        'source_titles' => [
+                            'type' => 'array',
+                            'description' => 'Titlurile exacte ale articolelor parsate si citite',
+                            'items' => [
+                                'type' => 'string'
+                            ]
+                        ]
+                    ],
+                    'required' => ['title', 'content', 'summary', 'category', 'images', 'sources', 'source_titles'],
+                    'additionalProperties' => false
+                ]
+            ]
+        ],
+        'max_tokens' => 9000,
     ];
 
     error_log('📤 REQUEST BODY TO OPENAI:');
