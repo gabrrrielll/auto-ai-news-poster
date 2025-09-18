@@ -39,7 +39,11 @@ function auto_ai_news_poster_enqueue_scripts($hook_suffix)
 // Fix pentru problema MIME type cu CSS-ul și JavaScript-ul
 add_action('admin_head', 'auto_ai_news_poster_fix_css_mime_type', 1);
 function auto_ai_news_poster_fix_css_mime_type() {
-    if (isset($_GET['page']) && $_GET['page'] === 'auto-ai-news-poster') {
+    // Verificăm dacă suntem pe pagina de setări sau pe pagina de editare articol
+    $is_settings_page = isset($_GET['page']) && $_GET['page'] === 'auto-ai-news-poster';
+    $is_post_page = (isset($_GET['post']) && $_GET['post']) || (isset($_GET['post_type']) && $_GET['post_type'] === 'post');
+    
+    if ($is_settings_page || $is_post_page) {
         echo '<style type="text/css">
         /* Auto AI News Poster - Complete styles inline to avoid MIME type issues */
         :root {
@@ -338,6 +342,114 @@ function auto_ai_news_poster_fix_css_mime_type() {
             color: #856404;
         }
         
+        /* Metabox styles for post editing page */
+        .auto-ai-news-poster-metabox {
+            background: var(--card-background);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        
+        .auto-ai-news-poster-metabox .postbox-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            color: white;
+            padding: 15px 20px;
+            border-bottom: none;
+        }
+        
+        .auto-ai-news-poster-metabox .postbox-header h2 {
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .auto-ai-news-poster-metabox .inside {
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .metabox-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: var(--background-color);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+        }
+        
+        .metabox-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .metabox-section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .metabox-section-icon {
+            font-size: 1.2rem;
+            margin-right: 8px;
+        }
+        
+        .metabox-section-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .metabox-textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            transition: var(--transition);
+        }
+        
+        .metabox-textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .metabox-generate-btn {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: var(--border-radius);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .metabox-generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .metabox-generate-btn:active {
+            transform: translateY(0);
+        }
+        
+        .metabox-generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
         /* Responsive design */
         @media (max-width: 768px) {
             .auto-ai-news-poster-admin {
@@ -350,6 +462,15 @@ function auto_ai_news_poster_fix_css_mime_type() {
             
             .auto-ai-news-poster-header h1 {
                 font-size: 2rem;
+            }
+            
+            .metabox-section {
+                padding: 12px;
+            }
+            
+            .metabox-generate-btn {
+                width: 100%;
+                justify-content: center;
             }
         }
         </style>';

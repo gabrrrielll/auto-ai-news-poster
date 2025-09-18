@@ -27,7 +27,8 @@ class Auto_Ai_News_Poster_Metabox
             [self::class, 'render_get_article_metabox'],
             'post',
             'side',
-            'high'
+            'high',
+            ['class' => 'auto-ai-news-poster-metabox']
         );
     }
 
@@ -37,27 +38,27 @@ class Auto_Ai_News_Poster_Metabox
         $custom_source_url = get_post_meta($post->ID, '_custom_source_url', true);
         $additional_instructions = get_post_meta($post->ID, '_additional_instructions', true);
         ?>
-        <div class="inside auto-ai-metabox-content">
-            <div class="metabox-field-group">
-                <label for="additional-instructions" class="metabox-label">
-                    <span class="metabox-icon">🤖</span>
-                    Instrucțiuni suplimentare pentru AI
-                </label>
-                <textarea id="additional-instructions" class="metabox-textarea" 
+        <div class="inside">
+            <div class="metabox-section">
+                <div class="metabox-section-header">
+                    <span class="metabox-section-icon">🤖</span>
+                    <h4 class="metabox-section-title">Instrucțiuni suplimentare pentru AI</h4>
+                </div>
+                <textarea id="additional-instructions" name="additional_instructions" class="metabox-textarea" 
                           placeholder="Introduceți instrucțiuni suplimentare pentru AI..."><?php echo esc_textarea($additional_instructions); ?></textarea>
             </div>
             
-            <div class="metabox-field-group">
-                <label for="custom-source-url" class="metabox-label">
-                    <span class="metabox-icon">🔗</span>
-                    Link sursă personalizată
-                </label>
+            <div class="metabox-section">
+                <div class="metabox-section-header">
+                    <span class="metabox-section-icon">🔗</span>
+                    <h4 class="metabox-section-title">Link sursă personalizată</h4>
+                </div>
                 <textarea id="custom-source-url" name="custom_source_url" class="metabox-textarea" 
                           placeholder="Introduceți un link sursă pentru a genera articolul..."><?php echo esc_url($custom_source_url); ?></textarea>
             </div>
             
-            <button id="get-article-button" type="button" class="metabox-button metabox-button-primary">
-                <span class="button-icon">✨</span>
+            <button id="get-article-button" type="button" class="metabox-generate-btn">
+                <span>✨</span>
                 Generează articol
             </button>
         </div>
