@@ -344,7 +344,7 @@ class Auto_Ai_News_Poster_Settings
                         <?php if (!empty($available_models)): ?>
                             <optgroup label="🌟 Recomandate">
                                 <?php 
-                                $recommended_models = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'];
+                                $recommended_models = ['gpt-5', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini'];
                                 foreach ($recommended_models as $model_id) {
                                     if (isset($available_models[$model_id])) {
                                         $model = $available_models[$model_id];
@@ -367,9 +367,16 @@ class Auto_Ai_News_Poster_Settings
                                 ?>
                             </optgroup>
                         <?php else: ?>
-                            <option value="gpt-4o" <?php selected($selected_model, 'gpt-4o'); ?>>GPT-4o - Acuratețe înaltă, cost moderat</option>
-                            <option value="gpt-4-turbo" <?php selected($selected_model, 'gpt-4-turbo'); ?>>GPT-4 Turbo - Acuratețe maximă, cost ridicat</option>
-                            <option value="gpt-4o-mini" <?php selected($selected_model, 'gpt-4o-mini'); ?>>GPT-4o Mini - Optimizat pentru precizie, cost redus</option>
+                            <optgroup label="🌟 Recomandate">
+                                <option value="gpt-5" <?php selected($selected_model, 'gpt-5'); ?>>GPT-5 - Cel mai bun model pentru coding și task-uri agentice</option>
+                                <option value="gpt-5-mini" <?php selected($selected_model, 'gpt-5-mini'); ?>>GPT-5 Mini - Versiune rapidă și economică pentru task-uri bine definite</option>
+                                <option value="gpt-4o" <?php selected($selected_model, 'gpt-4o'); ?>>GPT-4o - Acuratețe înaltă, cost moderat</option>
+                            </optgroup>
+                            <optgroup label="📊 Alte modele">
+                                <option value="gpt-5-nano" <?php selected($selected_model, 'gpt-5-nano'); ?>>GPT-5 Nano - Cel mai rapid și economic GPT-5</option>
+                                <option value="gpt-4-turbo" <?php selected($selected_model, 'gpt-4-turbo'); ?>>GPT-4 Turbo - Acuratețe maximă, cost ridicat</option>
+                                <option value="gpt-4o-mini" <?php selected($selected_model, 'gpt-4o-mini'); ?>>GPT-4o Mini - Optimizat pentru precizie, cost redus</option>
+                            </optgroup>
                         <?php endif; ?>
                     </select>
                     <div class="form-description">
@@ -806,14 +813,19 @@ class Auto_Ai_News_Poster_Settings
     public static function filter_structured_output_models($models)
     {
         $structured_models = [
-            'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo',
+            // GPT-5 Series (Latest)
+            'gpt-5', 'gpt-5-nano', 'gpt-5-mini',
+            // GPT-4 Series
+            'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4',
             'gpt-4o-2024-08-06', 'gpt-4-turbo-2024-04-09', 'gpt-4-0613', 'gpt-4-0314',
-            'gpt-3.5-turbo-1106', 'gpt-3.5-turbo-0613', 'gpt-3.5-turbo-0301'
+            // GPT-3.5 Series
+            'gpt-3.5-turbo', 'gpt-3.5-turbo-1106', 'gpt-3.5-turbo-0613', 'gpt-3.5-turbo-0301'
         ];
         
         return array_filter($models, function($model) use ($structured_models) {
-            // Verificăm dacă modelul este în lista noastră sau dacă începe cu gpt-4 sau gpt-3.5
+            // Verificăm dacă modelul este în lista noastră sau dacă începe cu gpt-5, gpt-4 sau gpt-3.5
             return in_array($model['id'], $structured_models) || 
+                   strpos($model['id'], 'gpt-5') === 0 ||
                    strpos($model['id'], 'gpt-4') === 0 || 
                    strpos($model['id'], 'gpt-3.5') === 0;
         });
@@ -823,6 +835,11 @@ class Auto_Ai_News_Poster_Settings
     public static function get_static_models_list()
     {
         return [
+            // GPT-5 Series (Latest)
+            'gpt-5' => ['id' => 'gpt-5', 'object' => 'model'],
+            'gpt-5-nano' => ['id' => 'gpt-5-nano', 'object' => 'model'],
+            'gpt-5-mini' => ['id' => 'gpt-5-mini', 'object' => 'model'],
+            // GPT-4 Series
             'gpt-4o' => ['id' => 'gpt-4o', 'object' => 'model'],
             'gpt-4o-mini' => ['id' => 'gpt-4o-mini', 'object' => 'model'],
             'gpt-4-turbo' => ['id' => 'gpt-4-turbo', 'object' => 'model'],
@@ -833,16 +850,24 @@ class Auto_Ai_News_Poster_Settings
     public static function get_model_description($model_id)
     {
         $descriptions = [
+            // GPT-5 Series (Latest and most advanced)
+            'gpt-5' => 'GPT-5 - Cel mai bun model pentru coding și task-uri agentice',
+            'gpt-5-nano' => 'GPT-5 Nano - Cel mai rapid și economic GPT-5',
+            'gpt-5-mini' => 'GPT-5 Mini - Versiune rapidă și economică pentru task-uri bine definite',
+            // GPT-4 Series
             'gpt-4o' => 'GPT-4o - Acuratețe înaltă, cost moderat',
             'gpt-4o-mini' => 'GPT-4o Mini - Optimizat pentru precizie, cost redus',
             'gpt-4-turbo' => 'GPT-4 Turbo - Acuratețe maximă, cost ridicat',
             'gpt-4' => 'GPT-4 - Model clasic, performanță înaltă',
+            // GPT-3.5 Series
             'gpt-3.5-turbo' => 'GPT-3.5 Turbo - Rapid și economic',
         ];
         
         // Dacă nu avem descriere specifică, generăm una dinamică
         if (!isset($descriptions[$model_id])) {
-            if (strpos($model_id, 'gpt-4') === 0) {
+            if (strpos($model_id, 'gpt-5') === 0) {
+                return $model_id . ' - Model GPT-5 de ultimă generație';
+            } elseif (strpos($model_id, 'gpt-4') === 0) {
                 return $model_id . ' - Model GPT-4 avansat';
             } elseif (strpos($model_id, 'gpt-3.5') === 0) {
                 return $model_id . ' - Model GPT-3.5 rapid';
