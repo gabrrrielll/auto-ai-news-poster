@@ -13,6 +13,8 @@ class Auto_Ai_News_Poster_Settings
             add_option('auto_ai_news_poster_current_category_index', 0);
         }
 
+        // Handler AJAX pentru actualizarea listei de modele
+        add_action('wp_ajax_refresh_openai_models', [self::class, 'ajax_refresh_openai_models']);
     }
 
 
@@ -313,6 +315,11 @@ class Auto_Ai_News_Poster_Settings
     public static function chatgpt_api_key_callback()
     {
         $options = get_option('auto_ai_news_poster_settings');
+        $api_key = $options['chatgpt_api_key'] ?? '';
+        $selected_model = $options['ai_model'] ?? 'gpt-4o';
+        
+        // Obținem lista de modele disponibile
+        $available_models = self::get_cached_openai_models($api_key);
         ?>
         <div class="settings-card">
             <div class="settings-card-header">
@@ -323,8 +330,8 @@ class Auto_Ai_News_Poster_Settings
                 <div class="form-group">
                     <label for="chatgpt_api_key" class="control-label">Cheia API OpenAI</label>
                     <input type="password" name="auto_ai_news_poster_settings[chatgpt_api_key]"
-                           value="<?php echo esc_attr($options['chatgpt_api_key']); ?>" class="form-control"
-                           id="chatgpt_api_key" placeholder="sk-...">
+                           value="<?php echo esc_attr($api_key); ?>" class="form-control"
+                           id="chatgpt_api_key" placeholder="sk-..." onchange="refreshModelsList()">
                     <span class="info-icon tooltip">
                         i
                         <span class="tooltiptext">Pentru a obține cheia API OpenAI, accesați https://platform.openai.com/settings/organization/api-keys</span>
@@ -334,12 +341,46 @@ class Auto_Ai_News_Poster_Settings
                 <div class="form-group">
                     <label for="ai_model" class="control-label">Model AI</label>
                     <select name="auto_ai_news_poster_settings[ai_model]" class="form-control" id="ai_model">
-                        <option value="gpt-4o" <?php selected($options['ai_model'] ?? 'gpt-4o', 'gpt-4o'); ?>>GPT-4o - Acuratețe înaltă, cost moderat</option>
-                        <option value="gpt-4-turbo" <?php selected($options['ai_model'] ?? 'gpt-4o', 'gpt-4-turbo'); ?>>GPT-4 Turbo - Acuratețe maximă, cost ridicat</option>
-                        <option value="gpt-4o-mini" <?php selected($options['ai_model'] ?? 'gpt-4o', 'gpt-4o-mini'); ?>>GPT-4o Mini - Optimizat pentru precizie, cost redus</option>
+                        <?php if (!empty($available_models)): ?>
+                            <optgroup label="🌟 Recomandate">
+                                <?php 
+                                $recommended_models = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'];
+                                foreach ($recommended_models as $model_id) {
+                                    if (isset($available_models[$model_id])) {
+                                        $model = $available_models[$model_id];
+                                        $description = self::get_model_description($model_id);
+                                        $selected = selected($selected_model, $model_id, false);
+                                        echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
+                                    }
+                                }
+                                ?>
+                            </optgroup>
+                            <optgroup label="📊 Toate modelele disponibile">
+                                <?php 
+                                foreach ($available_models as $model_id => $model) {
+                                    if (!in_array($model_id, $recommended_models)) {
+                                        $description = self::get_model_description($model_id);
+                                        $selected = selected($selected_model, $model_id, false);
+                                        echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
+                                    }
+                                }
+                                ?>
+                            </optgroup>
+                        <?php else: ?>
+                            <option value="gpt-4o" <?php selected($selected_model, 'gpt-4o'); ?>>GPT-4o - Acuratețe înaltă, cost moderat</option>
+                            <option value="gpt-4-turbo" <?php selected($selected_model, 'gpt-4-turbo'); ?>>GPT-4 Turbo - Acuratețe maximă, cost ridicat</option>
+                            <option value="gpt-4o-mini" <?php selected($selected_model, 'gpt-4o-mini'); ?>>GPT-4o Mini - Optimizat pentru precizie, cost redus</option>
+                        <?php endif; ?>
                     </select>
                     <div class="form-description">
-                        Selectează modelul AI pentru generarea articolelor. GPT-4o este recomandat pentru echilibrul între acuratețe și cost.
+                        <?php if (!empty($available_models)): ?>
+                            Lista de modele este actualizată dinamic din API-ul OpenAI. 
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshModelsList()" style="margin-left: 10px;">
+                                🔄 Actualizează lista
+                            </button>
+                        <?php else: ?>
+                            Introduceți cheia API pentru a vedea toate modelele disponibile.
+                        <?php endif; ?>
                     </div>
                 </div>
                 
@@ -382,6 +423,52 @@ class Auto_Ai_News_Poster_Settings
                 content.style.display = 'none';
                 icon.textContent = '▼';
             }
+        }
+        
+        function refreshModelsList() {
+            const apiKey = document.getElementById('chatgpt_api_key').value;
+            const modelSelect = document.getElementById('ai_model');
+            
+            if (!apiKey) {
+                alert('Vă rugăm să introduceți mai întâi cheia API OpenAI.');
+                return;
+            }
+            
+            // Afișăm indicator de încărcare
+            const refreshBtn = document.querySelector('button[onclick="refreshModelsList()"]');
+            const originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '⏳ Se încarcă...';
+            refreshBtn.disabled = true;
+            
+            // Facem apel AJAX pentru a actualiza lista
+            fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'refresh_openai_models',
+                    api_key: apiKey,
+                    nonce: '<?php echo wp_create_nonce('refresh_models_nonce'); ?>'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reîncărcăm pagina pentru a afișa noile modele
+                    location.reload();
+                } else {
+                    alert('Eroare la actualizarea listei de modele: ' + (data.data || 'Eroare necunoscută'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Eroare la actualizarea listei de modele.');
+            })
+            .finally(() => {
+                refreshBtn.innerHTML = originalText;
+                refreshBtn.disabled = false;
+            });
         }
         </script>
         <?php
@@ -651,6 +738,141 @@ class Auto_Ai_News_Poster_Settings
             </div>
         </div>
         <?php
+    }
+
+    // Funcție pentru obținerea modelelor OpenAI cu cache
+    public static function get_cached_openai_models($api_key)
+    {
+        // Verificăm cache-ul (24 ore)
+        $cached_models = get_transient('openai_models_cache');
+        
+        if ($cached_models !== false && !empty($cached_models)) {
+            return $cached_models;
+        }
+        
+        // Dacă nu avem API key, returnăm lista statică
+        if (empty($api_key)) {
+            return self::get_static_models_list();
+        }
+        
+        // Facem apel API pentru a obține modelele
+        $models = self::get_available_openai_models($api_key);
+        
+        if ($models && !empty($models)) {
+            // Salvăm în cache pentru 24 ore
+            set_transient('openai_models_cache', $models, 24 * HOUR_IN_SECONDS);
+            return $models;
+        }
+        
+        // Fallback la lista statică dacă API-ul nu răspunde
+        return self::get_static_models_list();
+    }
+    
+    // Funcție pentru apelarea API-ului OpenAI pentru modele
+    public static function get_available_openai_models($api_key)
+    {
+        $response = wp_remote_get('https://api.openai.com/v1/models', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type' => 'application/json',
+            ],
+            'timeout' => 30,
+        ]);
+        
+        if (is_wp_error($response)) {
+            return false;
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        
+        if (!isset($data['data']) || !is_array($data['data'])) {
+            return false;
+        }
+        
+        // Filtrează doar modelele cu output structurat
+        $structured_models = self::filter_structured_output_models($data['data']);
+        
+        // Organizează modelele într-un array asociativ
+        $models_array = [];
+        foreach ($structured_models as $model) {
+            $models_array[$model['id']] = $model;
+        }
+        
+        return $models_array;
+    }
+    
+    // Funcție pentru filtrarea modelelor cu output structurat
+    public static function filter_structured_output_models($models)
+    {
+        $structured_models = [
+            'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'
+        ];
+        
+        return array_filter($models, function($model) use ($structured_models) {
+            return in_array($model['id'], $structured_models);
+        });
+    }
+    
+    // Lista statică de modele (fallback)
+    public static function get_static_models_list()
+    {
+        return [
+            'gpt-4o' => ['id' => 'gpt-4o', 'object' => 'model'],
+            'gpt-4o-mini' => ['id' => 'gpt-4o-mini', 'object' => 'model'],
+            'gpt-4-turbo' => ['id' => 'gpt-4-turbo', 'object' => 'model'],
+        ];
+    }
+    
+    // Funcție pentru descrierile modelelor
+    public static function get_model_description($model_id)
+    {
+        $descriptions = [
+            'gpt-4o' => 'GPT-4o - Acuratețe înaltă, cost moderat',
+            'gpt-4o-mini' => 'GPT-4o Mini - Optimizat pentru precizie, cost redus',
+            'gpt-4-turbo' => 'GPT-4 Turbo - Acuratețe maximă, cost ridicat',
+            'gpt-4' => 'GPT-4 - Model clasic, performanță înaltă',
+            'gpt-3.5-turbo' => 'GPT-3.5 Turbo - Rapid și economic',
+        ];
+        
+        return $descriptions[$model_id] ?? $model_id;
+    }
+    
+    // Handler AJAX pentru actualizarea listei de modele
+    public static function ajax_refresh_openai_models()
+    {
+        // Verificăm nonce-ul
+        if (!wp_verify_nonce($_POST['nonce'], 'refresh_models_nonce')) {
+            wp_send_json_error('Nonce verification failed');
+            return;
+        }
+        
+        // Verificăm permisiunile
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+            return;
+        }
+        
+        $api_key = sanitize_text_field($_POST['api_key']);
+        
+        if (empty($api_key)) {
+            wp_send_json_error('API key is required');
+            return;
+        }
+        
+        // Ștergem cache-ul existent
+        delete_transient('openai_models_cache');
+        
+        // Obținem noile modele
+        $models = self::get_available_openai_models($api_key);
+        
+        if ($models && !empty($models)) {
+            // Salvăm în cache pentru 24 ore
+            set_transient('openai_models_cache', $models, 24 * HOUR_IN_SECONDS);
+            wp_send_json_success('Models list updated successfully');
+        } else {
+            wp_send_json_error('Failed to fetch models from OpenAI API');
+        }
     }
 
     // Funcție simplă pentru sanitizarea doar a checkbox-urilor
