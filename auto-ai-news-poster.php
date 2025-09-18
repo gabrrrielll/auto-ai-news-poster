@@ -1,5 +1,13 @@
 <?php
 
+// TEMPORARY: Force PHP error logging for debugging (START)
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
+ini_set('log_errors', '1');
+ini_set('error_log', plugin_dir_path(__FILE__) . 'php_error.log');
+// TEMPORARY: Force PHP error logging for debugging (END)
+
 /**
  * Plugin Name: Auto AI News Poster
  * Description: Un plugin care preia știri de pe minim trei surse, le analizează și publică un articol obiectiv în mod automat sau manual.
