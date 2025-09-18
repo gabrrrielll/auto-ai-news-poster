@@ -990,8 +990,11 @@ class Auto_Ai_News_Poster_Settings
         $sanitized = $existing_options;
         
         // Lista checkbox-urilor care trebuie să fie setate explicit
-        $checkbox_fields = ['auto_rotate_categories', 'use_external_images', 'generate_image', 
+        $checkbox_fields = ['auto_rotate_categories', 'generate_image', 
                            'run_until_bulk_exhausted', 'generate_tags'];
+
+        // Câmpurile de tip <select> care trebuie validate
+        $select_fields = ['mode', 'status', 'specific_search_category', 'author_name', 'article_length_option', 'use_external_images', 'ai_model'];
         
         // Setăm toate checkbox-urile la 'no' înainte de a procesa input-ul
         foreach ($checkbox_fields as $checkbox_field) {
@@ -1004,8 +1007,17 @@ class Auto_Ai_News_Poster_Settings
                 // Pentru checkbox-uri, setăm 'yes' dacă sunt bifate
                 if (in_array($key, $checkbox_fields)) {
                     $sanitized[$key] = ($value === 'yes') ? 'yes' : 'no';
-                } else {
-                    // Pentru alte câmpuri, sanitizăm normal
+                } 
+                // Pentru câmpurile de tip <select>, salvăm valoarea selectată
+                elseif (in_array($key, $select_fields)) {
+                     $sanitized[$key] = sanitize_text_field($value);
+                }
+                // Pentru textarea, folosim o sanitizare specifică
+                elseif ($key === 'news_sources' || $key === 'default_ai_instructions' || $key === 'bulk_custom_source_urls') {
+                    $sanitized[$key] = esc_textarea($value);
+                }
+                // Pentru alte câmpuri, sanitizăm normal
+                else {
                     $sanitized[$key] = sanitize_text_field($value);
                 }
             }
