@@ -28,7 +28,15 @@ class Post_Manager
 
     public static function set_post_tags($post_id, $tags)
     {
-        wp_set_post_tags($post_id, $tags);
+        $options = get_option('auto_ai_news_poster_settings', []);
+        $generate_tags_option = $options['generate_tags'] ?? 'yes';
+
+        if ($generate_tags_option === 'yes' && !empty($tags)) {
+            error_log('🏷️ Setting tags for post ID: ' . $post_id . ', Tags: ' . print_r($tags, true));
+            wp_set_post_tags($post_id, $tags);
+        } else {
+            error_log('🚫 Tags generation is disabled or tags are empty for post ID: ' . $post_id);
+        }
     }
 
     public static function set_post_categories($post_id, $category)
