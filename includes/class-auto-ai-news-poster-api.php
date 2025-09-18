@@ -183,50 +183,58 @@ class Auto_Ai_News_Poster_Api
         if (empty($api_key)) {
             error_log('❌ API key is empty - stopping execution');
             wp_send_json_error(['message' => 'Cheia API lipsește']);
+            return;
         }
         
-        // Pentru link personalizat, nu avem nevoie de sursele din setări
-        if (empty($custom_source_url) && empty($sources)) {
-            error_log('❌ Both custom URL and sources are empty - stopping execution');
-            wp_send_json_error(['message' => 'Sursele lipsesc']);
-        }
-        
-        error_log('✅ Basic validation passed - continuing...');
+        // Inițializăm $bulk_links ca un array gol
+        $bulk_links = [];
+        $run_until_bulk_exhausted = false;
 
-        // Dacă avem un link personalizat, îl folosim direct
+        // Logica pentru link-ul personalizat vs. bulk links
         if (!empty($custom_source_url)) {
-            // Link personalizat - continuăm cu procesarea
+            error_log('📝 Using custom source URL: ' . $custom_source_url);
+            // Nu este necesară logica pentru bulk links dacă avem un URL personalizat.
         } else {
-            // Verificăm dacă există opțiunea "Rulează automat doar până la epuizarea listei de linkuri"
+            // Procesăm bulk links dacă nu există un custom_source_url
+            error_log('🔄 No custom source URL, processing bulk links...');
             $run_until_bulk_exhausted = $options['run_until_bulk_exhausted'] === 'yes';
             $bulk_links = explode("\n", trim($options['bulk_custom_source_urls'] ?? ''));
             $bulk_links = array_filter($bulk_links, 'trim'); // Eliminăm rândurile goale
+            
+            error_log('DEBUG: $run_until_bulk_exhausted:'.($run_until_bulk_exhausted ? 'true' : 'false').' count($bulk_links):'. count($bulk_links).' $bulk_links:'. print_r($bulk_links, true));
 
-            error_log('DEBUG: $run_until_bulk_exhausted:'.$run_until_bulk_exhausted.' count($bulk_links):'. count($bulk_links).' $bulk_links:'. print_r($bulk_links, true));
-            // Dacă este activată opțiunea și lista de linkuri este goală, oprim procesul
             if ($run_until_bulk_exhausted && empty($bulk_links)) {
-                // Dezactivăm cron job-ul
+                error_log('⚠️ Bulk links exhausted in auto mode. Stopping.');
                 if (wp_next_scheduled('auto_ai_news_poster_cron_hook')) {
                     wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
                 }
-
-                // Forțăm schimbarea modului pe manual
                 self::force_mode_change_to_manual();
-
-                error_log('Lista de linkuri personalizate a fost epuizată. Oprirea generării automate.');
-
-                // Pentru cron job, nu trimitem răspuns JSON
                 if (isset($_POST['action'])) {
                     wp_send_json_error(['message' => 'Lista de linkuri s-a epuizat. Generarea automată a fost oprită.']);
                 }
                 return;
             }
-
+            
             // Preluăm primul link din lista bulk dacă nu există un link personalizat trimis prin AJAX
-            if (!$custom_source_url && !empty($bulk_links)) {
+            if (!empty($bulk_links)) {
                 $custom_source_url = array_shift($bulk_links); // Preluăm primul link
+                error_log('🔗 Taken first bulk link: ' . $custom_source_url);
+            } else {
+                // Dacă nici bulk links nu există, și nu am avut custom_source_url, e eroare.
+                error_log('❌ No custom URL and bulk links are empty - stopping execution');
+                wp_send_json_error(['message' => 'Sursele lipsesc']);
+                return;
             }
         }
+
+        // După ce am stabilit $custom_source_url (fie din input, fie din bulk), verificăm duplicatele
+        if (empty($custom_source_url)) {
+             error_log('❌ No custom_source_url determined, cannot proceed.');
+             wp_send_json_error(['message' => 'Nu s-a putut determina un link sursă pentru generare.']);
+             return;
+        }
+        
+        error_log('✅ Proceeding with custom_source_url: ' . $custom_source_url);
 
         // Verificăm dacă acest link a fost deja folosit pentru a evita duplicatele
         if ($custom_source_url) {
@@ -654,3 +662,4 @@ class Auto_Ai_News_Poster_Api
 }
 
 Auto_Ai_News_Poster_Api::init();
+
