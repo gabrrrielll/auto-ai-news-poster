@@ -513,9 +513,9 @@ function auto_ai_news_poster_fix_css_mime_type()
             var autoAiNewsPosterAjax = {
                 ajax_url: "' . admin_url('admin-ajax.php') . '",
                 generate_image_nonce: "' . wp_create_nonce('generate_image_nonce') . '",
-                get_article_nonce: "' . wp_create_nonce('get_article_nonce') . '",
+                get_article_nonce: "' . wp_create_nonce('get_article_from_sources_nonce') . '",
                 refresh_models_nonce: "' . wp_create_nonce('refresh_openai_models_nonce') . '",
-                check_settings_nonce: "' . wp_create_nonce('check_settings_changes_nonce') . '"
+                check_settings_nonce: "' . wp_create_nonce('auto_ai_news_poster_check_settings') . '"
             };
             // Funcții pentru pagina de setări
             function toggleApiInstructions() {
@@ -769,6 +769,53 @@ function auto_ai_news_poster_fix_css_mime_type()
                         }
                     });
                 });
+
+                // Auto-refresh logic for settings page
+                if (window.location.href.includes("page=auto-ai-news-poster")) {
+                   const modeSelect = document.getElementById("mode");
+                   const runUntilExhaustedCheckbox = document.querySelector("input[name=\'auto_ai_news_poster_settings[run_until_bulk_exhausted]\']");
+
+                   const shouldPoll = () => {
+                       return modeSelect && modeSelect.value === "auto" && runUntilExhaustedCheckbox && runUntilExhaustedCheckbox.checked;
+                   };
+                   
+                   if (shouldPoll()) {
+                       console.log("🚀 AUTO AI NEWS POSTER - Auto mode with bulk processing active. Initializing polling for link changes.");
+
+                       const pollingInterval = setInterval(function() {
+                           if (!shouldPoll()) {
+                               console.log("⏹️ Polling stopped because mode is no longer auto/bulk.");
+                               clearInterval(pollingInterval);
+                               return;
+                           }
+
+                           console.log("📡 Polling for link list changes...");
+                           $.ajax({
+                               url: autoAiNewsPosterAjax.ajax_url,
+                               method: "POST",
+                               data: {
+                                   action: "check_settings_changes",
+                                   security: autoAiNewsPosterAjax.check_settings_nonce
+                               },
+                               success: function(response) {
+                                   if (response.success && response.data.needs_refresh) {
+                                       console.log("🔄 Server indicated a refresh is needed. Reloading page...");
+                                       clearInterval(pollingInterval);
+                                       location.reload();
+                                   } else {
+                                       console.log("✅ No changes detected.");
+                                   }
+                               },
+                               error: function(xhr) {
+                                   console.error("Polling error:", xhr.responseText);
+                                   clearInterval(pollingInterval); // Stop on error
+                               }
+                           });
+                       }, 7000); // Poll every 7 seconds
+                   } else {
+                        console.log("ℹ️ Polling for link changes is inactive. Conditions not met (auto mode + run until exhausted).");
+                   }
+                }
             });
             </script>';
     }

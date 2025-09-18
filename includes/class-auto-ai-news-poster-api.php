@@ -154,196 +154,200 @@ class Auto_Ai_News_Poster_Api
     }
 
 
+    /**
+     * Main handler for generating an article. Can be called via AJAX or internally (e.g., cron).
+     */
+    public static function process_article_generation() {
+        $is_ajax_call = wp_doing_ajax();
+        error_log('🚀 PROCESS_ARTICLE_GENERATION() STARTED. AJAX Call: ' . ($is_ajax_call ? 'Yes' : 'No'));
 
-
-
-    public static function process_article_generation()
-    {
-        error_log('🎯 PROCESS_ARTICLE_GENERATION() STARTED');
-
-        // Preluăm setările și cheia API
+        // Load settings
         $options = get_option('auto_ai_news_poster_settings');
-        $api_key = $options['chatgpt_api_key'];
-
-        if (empty($api_key)) {
-            error_log('❌ API key is empty - stopping execution');
-            if (defined('DOING_AJAX') && DOING_AJAX) {
-                wp_send_json_error(['message' => 'Cheia API lipsește']);
-            }
+        if (empty($options['chatgpt_api_key'])) {
+            $error_msg = 'Error: ChatGPT API Key is not set.';
+            error_log($error_msg);
+            if ($is_ajax_call) wp_send_json_error(['message' => $error_msg]);
             return;
         }
 
-        // Determinăm dacă este un apel AJAX (manual) sau un apel CRON (automat)
-        $is_ajax_call = defined('DOING_AJAX') && DOING_AJAX;
         $source_link = '';
-        $post_id = null;
+        $extracted_content = '';
+        $is_bulk_processing = false;
         $additional_instructions = '';
 
+        // --- Determine the source of the article content ---
         if ($is_ajax_call) {
-            error_log('🏃‍♂️ Manual AJAX call detected.');
-            $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : null;
-            $additional_instructions = sanitize_text_field($_POST['instructions'] ?? '');
-            $source_link = isset($_POST['custom_source_url']) ? esc_url_raw($_POST['custom_source_url']) : null;
+            // Manual generation from the post edit screen
+            check_ajax_referer('get_article_from_sources_nonce', 'security');
+            $source_link = isset($_POST['custom_source_url']) ? esc_url_raw($_POST['custom_source_url']) : '';
+            $additional_instructions = isset($_POST['instructions']) ? sanitize_text_field($_POST['instructions']) : '';
+
+            if (empty($source_link)) {
+                wp_send_json_error(['message' => 'Please provide a source URL.']);
+                return;
+            }
+            $extracted_content = self::extract_article_content_from_url($source_link);
+
         } else {
-            error_log('⏰ Automatic CRON call detected.');
+            // Automatic generation from the bulk list (CRON job)
+            $is_bulk_processing = true;
+            error_log('🤖 CRON JOB: Starting bulk processing run.');
             $bulk_links_str = $options['bulk_custom_source_urls'] ?? '';
             $bulk_links = array_filter(explode("\n", trim($bulk_links_str)), 'trim');
 
             if (empty($bulk_links)) {
-                error_log('🛑 CRON: Bulk links list is empty. Stopping cron job.');
-                // Logica de oprire a cron-ului, dacă este necesar
-                 if (wp_next_scheduled('auto_ai_news_poster_cron_hook')) {
-                    wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
+                error_log('🤖 CRON JOB: Bulk list is empty. Nothing to process.');
+                if (isset($options['run_until_bulk_exhausted']) && $options['run_until_bulk_exhausted']) {
+                    self::force_mode_change_to_manual();
                 }
-                self::force_mode_change_to_manual();
                 return;
             }
-            // Preluăm primul link din listă
+
+            // Take the first link from the list
             $source_link = array_shift($bulk_links);
-            // Salvăm lista actualizată imediat, pentru a preveni procesarea multiplă a aceluiași link
+            error_log('🤖 CRON JOB: Picked link from bulk list: ' . $source_link);
+
+            // Immediately update the option with the shortened list to prevent race conditions
             $options['bulk_custom_source_urls'] = implode("\n", $bulk_links);
             update_option('auto_ai_news_poster_settings', $options);
-            error_log('🔗 CRON: Picked up source link: ' . $source_link . '. ' . count($bulk_links) . ' links remaining.');
+            set_transient('auto_ai_news_poster_force_refresh', 'yes', MINUTE_IN_SECONDS); // Signal frontend to refresh
+            error_log('🤖 CRON JOB: Removed link from list and updated options. Remaining links: ' . count($bulk_links));
+            
+            $extracted_content = self::extract_article_content_from_url($source_link);
         }
 
-        if (empty($source_link)) {
-            error_log('❌ No source link provided. Aborting.');
+        // --- Validate extracted content ---
+        if (is_wp_error($extracted_content) || empty(trim($extracted_content))) {
+            $error_message = is_wp_error($extracted_content) ? $extracted_content->get_error_message() : 'Extracted content is empty.';
+            error_log('❌ Content Extraction Failed for ' . $source_link . ': ' . $error_message);
+
+            if ($is_bulk_processing) {
+                self::re_add_link_to_bulk($source_link, 'Failed to extract content');
+            }
             if ($is_ajax_call) {
-                wp_send_json_error(['message' => 'Nu ați furnizat niciun link sursă.']);
+                wp_send_json_error(['message' => "Failed to extract content from URL. Please check the link and try again. Error: " . $error_message]);
             }
             return;
         }
+        error_log('✅ Successfully extracted content. Size: ' . strlen($extracted_content) . ' chars.');
         
-        // --- De aici, logica este comună ---
-
-        // 1. Verificăm dacă link-ul a mai fost folosit
+        // --- Prevent duplicate posts ---
         $existing_posts = get_posts([
             'meta_key' => '_custom_source_url',
             'meta_value' => $source_link,
             'post_type' => 'post',
-            'post_status' => ['publish', 'draft'],
+            'post_status' => ['publish', 'draft', 'pending', 'future'],
             'numberposts' => 1
         ]);
 
         if (!empty($existing_posts)) {
-            error_log('⚠️ Link already used: ' . $source_link . '. Skipping.');
+            error_log('⚠️ Link already used to generate post ID ' . $existing_posts[0]->ID . ': ' . $source_link . '. Skipping.');
              if ($is_ajax_call) {
-                wp_send_json_error(['message' => 'Acest link a fost deja folosit pentru a genera un articol.']);
+                wp_send_json_error(['message' => 'This link has already been used to generate an article.']);
             }
-            // În cazul cron-ului, pur și simplu continuă la următoarea rulare
             return;
         }
 
-        // 2. Extragem conținutul folosind noul mecanism
-        error_log('📝 Extracting content for: ' . $source_link);
-        $article_text_content = self::extract_article_content_from_url($source_link);
 
-        if (is_wp_error($article_text_content) || empty(trim($article_text_content))) {
-            $error_message = is_wp_error($article_text_content) ? $article_text_content->get_error_message() : 'Extracted content is empty.';
-            error_log('❌ Failed to extract content for ' . $source_link . '. Reason: ' . $error_message);
-            if ($is_ajax_call) {
-                wp_send_json_error(['message' => 'Eroare la extragerea conținutului: ' . $error_message]);
-            }
-            // Link-ul a fost deja scos din listă, deci cron-ul va continua cu următorul
-            return;
-        }
-        error_log('✅ Content extracted successfully. Length: ' . strlen($article_text_content));
-
-        // 3. Generăm prompt-ul și apelăm API-ul
-        error_log('🧠 Generating prompt...');
-        $prompt = generate_custom_source_prompt($article_text_content, $additional_instructions);
-        error_log('🤖 Calling OpenAI API...');
-        $response = call_openai_api($api_key, $prompt);
+        // --- Call OpenAI API ---
+        $prompt = generate_custom_source_prompt($extracted_content, $additional_instructions);
+        $response = call_openai_api($options['chatgpt_api_key'], $prompt);
 
         if (is_wp_error($response)) {
-            error_log('❌ API Call Error: ' . $response->get_error_message());
-            if ($is_ajax_call) {
-                wp_send_json_error(['message' => $response->get_error_message()]);
-            }
-            // Dacă API-ul eșuează, adăugăm link-ul înapoi în listă pentru a reîncerca data viitoare
-            if (!$is_ajax_call) {
-                $bulk_links[] = $source_link;
-                $options['bulk_custom_source_urls'] = implode("\n", $bulk_links);
-                update_option('auto_ai_news_poster_settings', $options);
-                error_log('🔄 Re-added failed link to the list: ' . $source_link);
-            }
+            $error_message = 'OpenAI API Error: ' . $response->get_error_message();
+            error_log('❌ ' . $error_message);
+            if ($is_bulk_processing) self::re_add_link_to_bulk($source_link, 'OpenAI API Error');
+            if ($is_ajax_call) wp_send_json_error(['message' => $error_message]);
             return;
         }
 
-        // 4. Procesăm răspunsul și salvăm articolul (logica de mai jos rămâne similară)
+        // --- Process API Response ---
         $body = wp_remote_retrieve_body($response);
-        $body_json = json_decode($body, true);
-        $ai_message_content = $body_json['choices'][0]['message']['content'] ?? null;
-        
-        if (empty($ai_message_content)) {
-            error_log('❌ AI response is empty or invalid.');
-            if ($is_ajax_call) {
-                wp_send_json_error(['message' => 'Răspunsul de la AI este gol sau invalid.']);
-            }
+        $decoded_response = json_decode($body, true);
+        $ai_content_json = $decoded_response['choices'][0]['message']['content'] ?? null;
+
+        if (empty($ai_content_json)) {
+            $error_message = '❌ AI response is empty or in an unexpected format.';
+            error_log($error_message);
+            error_log('Full API Response: ' . print_r($decoded_response, true));
+            if ($is_bulk_processing) self::re_add_link_to_bulk($source_link, 'Empty AI Response');
+            if ($is_ajax_call) wp_send_json_error(['message' => $error_message, 'response' => $decoded_response]);
             return;
         }
 
-        $content_json = json_decode($ai_message_content, true);
+        $article_data = json_decode($ai_content_json, true);
+
         if (json_last_error() !== JSON_ERROR_NONE) {
-             error_log('❌ Failed to parse AI JSON response. Error: ' . json_last_error_msg());
-             if ($is_ajax_call) {
-                wp_send_json_error(['message' => 'Răspunsul de la AI nu este un JSON valid.']);
-            }
+            $error_message = '❌ Failed to decode article data JSON from AI response. Error: ' . json_last_error_msg();
+            error_log($error_message);
+            error_log('AI content string was: ' . $ai_content_json);
+            if ($is_bulk_processing) self::re_add_link_to_bulk($source_link, 'JSON Decode Error');
+            if ($is_ajax_call) wp_send_json_error(['message' => $error_message]);
             return;
         }
         
-        error_log('✅ AI response processed successfully.');
-        $title = $content_json['title'] ?? 'Titlu generat automat';
-        $content = wp_kses_post($content_json['content'] ?? '');
-        $summary = wp_kses_post($content_json['summary'] ?? '');
-        $category = $content_json['category'] ?? '';
-        $tags = $content_json['tags'] ?? [];
-        $author_id = $options['author_name'] ?? get_current_user_id();
+        if (empty($article_data['content']) || empty($article_data['title'])) {
+            $error_message = '❌ AI response was valid JSON but missing required "content" or "title".';
+            error_log($error_message);
+            error_log('Article Data Received: ' . print_r($article_data, true));
+            if ($is_bulk_processing) self::re_add_link_to_bulk($source_link, 'Missing Content in AI JSON');
+            if ($is_ajax_call) wp_send_json_error(['message' => $error_message]);
+            return;
+        }
 
-        $post_data = [
-            'post_title'   => $title,
-            'post_content' => $content,
-            'post_status'  => $options['status'] ?? 'draft',
-            'post_type'    => 'post',
-            'post_excerpt' => $summary,
-            'post_author'  => $author_id,
-        ];
+        // --- Prepare and Save Post ---
+        $post_id = $is_ajax_call ? (isset($_POST['post_id']) ? intval($_POST['post_id']) : null) : null;
         
-        // Dacă e apel AJAX, folosim ID-ul existent, altfel creăm o postare nouă
-        if ($is_ajax_call && $post_id) {
+        $post_data = [
+            'post_title'    => $article_data['title'],
+            'post_content'  => wp_kses_post($article_data['content']),
+            'post_status'   => $options['status'] ?? 'draft',
+            'post_author'   => $options['author_name'] ?? (get_current_user_id() ? get_current_user_id() : 1),
+            'post_excerpt'  => isset($article_data['summary']) ? wp_kses_post($article_data['summary']) : '',
+        ];
+
+        if($post_id) {
             $post_data['ID'] = $post_id;
         }
 
-        error_log('💾 Final post data before saving: ' . print_r($post_data, true));
+        error_log('--- ✅ PREPARING TO SAVE POST ---');
+        error_log('Source Link: ' . $source_link);
+        error_log('Post Data: ' . print_r($post_data, true));
+        error_log('--- END SAVE PREPARATION ---');
+
         $new_post_id = Post_Manager::insert_or_update_post($post_id, $post_data);
-        
+
         if (is_wp_error($new_post_id)) {
-            error_log('❌ Error saving post: ' . $new_post_id->get_error_message());
-            if ($is_ajax_call) {
-                wp_send_json_error(['message' => $new_post_id->get_error_message()]);
-            }
+            $error_message = '❌ Failed to save post to database: ' . $new_post_id->get_error_message();
+            error_log($error_message);
+            if ($is_bulk_processing) self::re_add_link_to_bulk($source_link, 'DB Save Error');
+            if ($is_ajax_call) wp_send_json_error(['message' => $error_message]);
             return;
         }
         
-        error_log('✅ Article saved successfully with ID: ' . $new_post_id);
+        error_log("✅ Successfully generated and saved post ID: {$new_post_id} from source: {$source_link}");
 
-        Post_Manager::set_post_tags($new_post_id, $tags);
-        Post_Manager::set_post_categories($new_post_id, $category);
+        // --- Set Taxonomies and Meta ---
+        Post_Manager::set_post_tags($new_post_id, $article_data['tags'] ?? []);
+        Post_Manager::set_post_categories($new_post_id, $article_data['category'] ?? '');
         update_post_meta($new_post_id, '_custom_source_url', $source_link);
-        
-        // Generarea imaginii (dacă e activată)
+
+
+        // --- Generate Image if enabled ---
         if (isset($options['generate_image']) && $options['generate_image'] === 'yes') {
              error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id);
              self::generate_image_for_article($new_post_id);
         }
 
-        error_log('🎉 Article generation process completed for: ' . $source_link);
         if ($is_ajax_call) {
-            wp_send_json_success(['post_id' => $new_post_id]);
+            wp_send_json_success([
+                'message' => 'Article generated successfully!',
+                'post_id' => $new_post_id,
+                'title' => $post_data['post_title'],
+                'content' => $post_data['post_content'],
+            ]);
         }
     }
-
-
 
 
     public static function generate_image_for_article($post_id = null)
@@ -474,136 +478,35 @@ class Auto_Ai_News_Poster_Api
         self::process_article_generation();
     }
 
-    public static function check_settings_changes()
-    {
-        // Verificăm nonce-ul pentru securitate
-        check_ajax_referer('check_settings_changes_nonce', 'security');
+    /**
+     * AJAX handler to check if the settings page needs to be refreshed.
+     * This is used for providing feedback during bulk processing.
+     */
+    public static function check_settings_changes() {
+        check_ajax_referer('auto_ai_news_poster_check_settings', 'security');
 
-        error_log('check_settings_changes() called');
-
-        // Obținem setările curente
-        $current_settings = get_option('auto_ai_news_poster_settings', []);
-
-        // Verificăm dacă opțiunea run_until_bulk_exhausted este activată
-        $run_until_bulk_exhausted = isset($current_settings['run_until_bulk_exhausted']) && $current_settings['run_until_bulk_exhausted'] === 'yes';
-
-        $needs_refresh = false;
-
-        error_log('check_settings_changes: run_until_bulk_exhausted = ' . ($run_until_bulk_exhausted ? 'yes' : 'no'));
-
-        // Verificăm dacă există un transient de forțare a refresh-ului
+        error_log('AJAX Polling: Checking for refresh transient...');
         $force_refresh = get_transient('auto_ai_news_poster_force_refresh');
-        if ($force_refresh) {
-            $needs_refresh = true;
-            delete_transient('auto_ai_news_poster_force_refresh');
-            error_log('check_settings_changes: FORCED refresh detected');
+
+        if ($force_refresh === 'yes') {
+            error_log('AJAX Polling: Refresh transient FOUND. Instructing client to reload.');
+            delete_transient('auto_ai_news_poster_force_refresh'); // Consume the transient
+            wp_send_json_success(['needs_refresh' => true, 'reason' => 'A bulk link was processed or mode changed.']);
+        } else {
+            error_log('AJAX Polling: No refresh transient. No action needed.');
+            wp_send_json_success(['needs_refresh' => false, 'reason' => 'No change detected.']);
         }
-
-        if ($run_until_bulk_exhausted) {
-            // Verificăm dacă lista de linkuri s-a epuizat
-            $bulk_links = explode("\n", trim($current_settings['bulk_custom_source_urls'] ?? ''));
-            $bulk_links = array_filter($bulk_links, 'trim');
-
-            $current_count = count($bulk_links);
-            $last_check = get_transient('auto_ai_news_poster_last_bulk_check');
-
-            error_log('check_settings_changes: current_count = ' . $current_count . ', last_check = ' . ($last_check !== false ? $last_check : 'false'));
-
-            // Dacă lista este goală și modul este încă automat, trebuie refresh
-            if (empty($bulk_links) && $current_settings['mode'] === 'auto') {
-                $needs_refresh = true;
-                error_log('check_settings_changes: needs_refresh = true (empty list, auto mode)');
-            }
-
-            // Dacă lista nu este goală, verificăm dacă s-a consumat cel puțin un link
-            if (!empty($bulk_links)) {
-                // Comparăm cu ultima verificare (stocată în transient)
-                if ($last_check !== false && $current_count < $last_check) {
-                    $needs_refresh = true;
-                    error_log('check_settings_changes: needs_refresh = true (links consumed: ' . $last_check . ' -> ' . $current_count . ')');
-                }
-
-                // Salvăm numărul curent de linkuri pentru următoarea verificare
-                set_transient('auto_ai_news_poster_last_bulk_check', $current_count, 300); // 5 minute
-            }
-
-            // FORȚARE REFRESH pentru testare - dacă transient-ul nu există, inițializăm și forțăm refresh
-            if ($last_check === false && !empty($bulk_links)) {
-                set_transient('auto_ai_news_poster_last_bulk_check', $current_count, 300);
-                // Forțăm un refresh pentru a inițializa sistemul
-                $needs_refresh = true;
-                error_log('check_settings_changes: FORCED refresh for initialization');
-            }
-        }
-
-        // FORȚARE REFRESH când lista este goală și modul este automat
-        if ($run_until_bulk_exhausted && empty($bulk_links) && $current_settings['mode'] === 'auto') {
-            $needs_refresh = true;
-            error_log('check_settings_changes: FORCED refresh - empty list with auto mode');
-        }
-
-        error_log('check_settings_changes: final needs_refresh = ' . ($needs_refresh ? 'true' : 'false'));
-
-        wp_send_json_success(['needs_refresh' => $needs_refresh]);
     }
 
+    /**
+     * Debugging function to test the refresh mechanism.
+     */
     public static function force_refresh_test()
     {
-        // Verificăm nonce-ul pentru securitate
-        check_ajax_referer('force_refresh_test_nonce', 'security');
-
-        error_log('force_refresh_test() called');
-
-        // Obținem setările curente
-        $current_settings = get_option('auto_ai_news_poster_settings', []);
-
-        // Verificăm dacă opțiunea run_until_bulk_exhausted este activată
-        $run_until_bulk_exhausted = isset($current_settings['run_until_bulk_exhausted']) && $current_settings['run_until_bulk_exhausted'] === 'yes';
-
-        $needs_refresh = false;
-
-        error_log('force_refresh_test: run_until_bulk_exhausted = ' . ($run_until_bulk_exhausted ? 'yes' : 'no'));
-
-        if ($run_until_bulk_exhausted) {
-            // Verificăm dacă lista de linkuri s-a epuizat
-            $bulk_links = explode("\n", trim($current_settings['bulk_custom_source_urls'] ?? ''));
-            $bulk_links = array_filter($bulk_links, 'trim');
-
-            $current_count = count($bulk_links);
-            $last_check = get_transient('auto_ai_news_poster_last_bulk_check');
-
-            error_log('force_refresh_test: current_count = ' . $current_count . ', last_check = ' . ($last_check !== false ? $last_check : 'false'));
-
-            // Dacă lista este goală și modul este încă automat, trebuie refresh
-            if (empty($bulk_links) && $current_settings['mode'] === 'auto') {
-                $needs_refresh = true;
-                error_log('force_refresh_test: needs_refresh = true (empty list, auto mode)');
-            }
-
-            // Dacă lista nu este goală, verificăm dacă s-a consumat cel puțin un link
-            if (!empty($bulk_links)) {
-                // Comparăm cu ultima verificare (stocată în transient)
-                if ($last_check !== false && $current_count < $last_check) {
-                    $needs_refresh = true;
-                    error_log('force_refresh_test: needs_refresh = true (links consumed: ' . $last_check . ' -> ' . $current_count . ')');
-                }
-
-                // Salvăm numărul curent de linkuri pentru următoarea verificare
-                set_transient('auto_ai_news_poster_last_bulk_check', $current_count, 300); // 5 minute
-            }
-
-            // FORȚARE REFRESH pentru testare - dacă transient-ul nu există, inițializăm și forțăm refresh
-            if ($last_check === false && !empty($bulk_links)) {
-                set_transient('auto_ai_news_poster_last_bulk_check', $current_count, 300);
-                // Forțăm un refresh pentru a inițializa sistemul
-                $needs_refresh = true;
-                error_log('force_refresh_test: FORCED refresh for initialization');
-            }
-        }
-
-        error_log('force_refresh_test: final needs_refresh = ' . ($needs_refresh ? 'true' : 'false'));
-
-        wp_send_json_success(['needs_refresh' => $needs_refresh]);
+        check_ajax_referer('auto_ai_news_poster_check_settings', 'security');
+        error_log('DEBUG: Forcing refresh transient via AJAX call.');
+        set_transient('auto_ai_news_poster_force_refresh', 'yes', MINUTE_IN_SECONDS);
+        wp_send_json_success(['message' => 'Refresh transient set!']);
     }
 
     public static function clear_transient()
@@ -623,18 +526,18 @@ class Auto_Ai_News_Poster_Api
 
     private static function force_mode_change_to_manual()
     {
-        // Modificam din automatic pe manual
-        $options_settings = get_option('auto_ai_news_poster_settings', []); // Preia toate opțiunile existente
-        $options_settings['mode'] = 'manual'; // Setează valoarea pentru 'mode'
-        update_option('auto_ai_news_poster_settings', $options_settings); // Salvează toate opțiunile în baza de date
+        error_log('🔄 Forcing mode change to manual.');
+        $options = get_option('auto_ai_news_poster_settings');
+        $options['mode'] = 'manual';
+        // Uncheck the "run until exhausted" checkbox
+        if (isset($options['run_until_bulk_exhausted'])) {
+            $options['run_until_bulk_exhausted'] = 0;
+        }
+        update_option('auto_ai_news_poster_settings', $options);
 
-        // Actualizăm transient-ul pentru refresh automat
-        set_transient('auto_ai_news_poster_last_bulk_check', 0, 300);
-
-        // Forțăm un refresh pentru a actualiza interfața
-        set_transient('auto_ai_news_poster_force_refresh', true, 60);
-
-        error_log('force_mode_change_to_manual: Mode changed to manual, force refresh set');
+        // Set a transient to notify the frontend to refresh
+        set_transient('auto_ai_news_poster_force_refresh', 'yes', MINUTE_IN_SECONDS);
+        error_log('✅ Mode changed to manual and refresh transient set.');
     }
 
     public static function force_refresh_now()
@@ -650,6 +553,30 @@ class Auto_Ai_News_Poster_Api
         error_log('force_refresh_now: Force refresh set');
 
         wp_send_json_success(['message' => 'Force refresh triggered']);
+    }
+
+    /**
+     * Re-adds a failed link to the end of the bulk list for a later retry.
+     *
+     * @param string $link The URL to re-add.
+     * @param string $reason The reason for the failure.
+     */
+    private static function re_add_link_to_bulk($link, $reason = 'Unknown Error') {
+        if (empty($link)) return;
+
+        error_log("🔄 Failure processing link: {$link}. Reason: {$reason}. Re-adding to list for retry.");
+        $options = get_option('auto_ai_news_poster_settings');
+        // Ensure the array key exists and is an array. The links are stored as a string, so we need to convert.
+        $bulk_links_str = $options['bulk_custom_source_urls'] ?? '';
+        $bulk_links = array_filter(explode("\n", trim($bulk_links_str)), 'trim');
+
+        // To be safe, don't add duplicates
+        if (!in_array($link, $bulk_links)) {
+            $bulk_links[] = $link;
+            $options['bulk_custom_source_urls'] = implode("\n", $bulk_links);
+            update_option('auto_ai_news_poster_settings', $options);
+            error_log('✅ Link re-added to bulk list. Total links: ' . count($bulk_links));
+        }
     }
 
     private static function extract_article_content_from_url($url)
