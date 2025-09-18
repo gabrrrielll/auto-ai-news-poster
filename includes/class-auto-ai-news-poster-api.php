@@ -712,11 +712,14 @@ class Auto_Ai_News_Poster_Api
         // Aceasta este o implementare simplă și poate fi inexactă
         $article_content = '';
         $dom = new DOMDocument();
-        // Suprimăm erorile HTML de parsare
         @$dom->loadHTML($body, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_NOCDATA);
         $xpath = new DOMXPath($dom);
 
-        // 1. Eliminăm elementele irelevante înainte de a extrage conținutul
+        // 1. Încercăm să găsim elementul <body>, dacă nu, lucrăm cu întregul document
+        $body_node = $xpath->query('//body')->item(0);
+        $context_node = $body_node ? $body_node : $dom;
+
+        // 2. Eliminăm elementele irelevante din contextul găsit
         $elements_to_remove = [
             '//script',
             '//style',
@@ -736,10 +739,23 @@ class Auto_Ai_News_Poster_Api
             '//select',
             '//textarea',
             '//comment()', // Elimină comentariile HTML
+            // Adăugăm selecții mai specifice pentru blocuri de reclame sau elemente de UI
+            '*[contains(@class, "ad")]',
+            '*[contains(@class, "ads")]',
+            '*[contains(@id, "ad")]',
+            '*[contains(@id, "ads")]',
+            '*[contains(@class, "sidebar")]',
+            '*[contains(@id, "sidebar")]',
+            '*[contains(@class, "menu")]',
+            '*[contains(@id, "menu")]',
+            '*[contains(@class, "widget")]',
+            '*[contains(@id, "widget")]',
+            '*[contains(@class, "breadcrumb")]',
+            '*[contains(@id, "breadcrumb")]',
         ];
 
         foreach ($elements_to_remove as $selector) {
-            $nodes = $xpath->query($selector);
+            $nodes = $xpath->query($selector, $context_node); // Căutăm în contextul body sau al întregului document
             if ($nodes) {
                 foreach ($nodes as $node) {
                     $node->parentNode->removeChild($node);
@@ -747,7 +763,7 @@ class Auto_Ai_News_Poster_Api
             }
         }
 
-        // 2. Caută elementul principal de articol (într-o ordine de prioritate)
+        // 3. Caută elementul principal de articol (într-o ordine de prioritate) în contextul curățat
         $selectors = [
             '//article',
             '//main',
@@ -767,14 +783,13 @@ class Auto_Ai_News_Poster_Api
             '//div[contains(@class, "td-post-content tagdiv-type")]',
             "//div[@class='tdb_single_content']",
             "//div[@id='td-outer-wrap']",
-            '//body',
+            '.', // Fallback: iau conținutul din nodul de context rămas
         ];
 
         $found_node = null;
         foreach ($selectors as $selector) {
-            $nodes = $xpath->query($selector);
+            $nodes = $xpath->query($selector, $context_node);
             if ($nodes->length > 0) {
-                // Prioritizăm nodurile care conțin mai mult text
                 $best_node = null;
                 $max_text_length = 0;
                 foreach ($nodes as $node) {
@@ -786,7 +801,7 @@ class Auto_Ai_News_Poster_Api
                 }
                 if ($best_node) {
                     $found_node = $best_node;
-                    break; // Am găsit cel mai bun nod, oprim căutarea
+                    break;
                 }
             }
         }
@@ -794,21 +809,18 @@ class Auto_Ai_News_Poster_Api
         if ($found_node) {
             $article_content = $found_node->textContent;
         } else {
-            // Dacă nu găsim nimic specific, extragem textul din body (după curățare)
-            $article_content = $dom->textContent;
+            $article_content = $context_node->textContent; // Folosesc textul din nodul de context curățat
         }
 
-        // 3. Post-procesare pentru curățarea textului
-        // Eliminăm spațiile multiple, tab-urile și rândurile goale consecutive
-        $article_content = preg_replace('/[ \t]+/', ' ', $article_content); // Spații/tab-uri multiple cu un singur spațiu
-        $article_content = preg_replace('/(?:\s*\n\s*){2,}/', "\n\n", $article_content); // Rânduri goale multiple cu două rânduri goale
+        // 4. Post-procesare pentru curățarea textului
+        $article_content = preg_replace('/[ \t]+/', ' ', $article_content);
+        $article_content = preg_replace('/(?:\s*\n\s*){2,}/', "\n\n", $article_content);
         $article_content = trim($article_content);
 
         error_log('✅ Content extracted. Length: ' . strlen($article_content));
-        // Limitam conținutul pentru a evita prompturi prea mari
-        $max_content_length = 15000; // Aproximativ 3000-4000 de cuvinte
+        $max_content_length = 15000;
         if (strlen($article_content) > $max_content_length) {
-            $article_content = substr($article_content, 0, $max_content_length); // Trunchiază dacă este prea lung
+            $article_content = substr($article_content, 0, $max_content_length);
             error_log('⚠️ Article content truncated to ' . $max_content_length . ' characters.');
         }
         return $article_content;
