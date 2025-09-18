@@ -485,7 +485,7 @@ class Auto_Ai_News_Poster_Api
         $current_settings = get_option('auto_ai_news_poster_settings', []);
 
         // Verificăm dacă opțiunea run_until_bulk_exhausted este activată
-        $run_until_bulk_exhausted = $current_settings['run_until_bulk_exhausted'] === 'yes';
+        $run_until_bulk_exhausted = isset($current_settings['run_until_bulk_exhausted']) && $current_settings['run_until_bulk_exhausted'] === 'yes';
 
         $needs_refresh = false;
 
@@ -558,7 +558,7 @@ class Auto_Ai_News_Poster_Api
         $current_settings = get_option('auto_ai_news_poster_settings', []);
 
         // Verificăm dacă opțiunea run_until_bulk_exhausted este activată
-        $run_until_bulk_exhausted = $current_settings['run_until_bulk_exhausted'] === 'yes';
+        $run_until_bulk_exhausted = isset($current_settings['run_until_bulk_exhausted']) && $current_settings['run_until_bulk_exhausted'] === 'yes';
 
         $needs_refresh = false;
 

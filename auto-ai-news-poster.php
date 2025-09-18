@@ -515,6 +515,7 @@ function auto_ai_news_poster_fix_css_mime_type()
                 generate_image_nonce: "' . wp_create_nonce('generate_image_nonce') . '",
                 get_article_nonce: "' . wp_create_nonce('get_article_nonce') . '",
                 refresh_models_nonce: "' . wp_create_nonce('refresh_openai_models_nonce') . '",
+                check_settings_nonce: "' . wp_create_nonce('check_settings_changes_nonce') . '"
             };
             // Funcții pentru pagina de setări
             function toggleApiInstructions() {
