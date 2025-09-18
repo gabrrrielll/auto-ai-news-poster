@@ -21,13 +21,32 @@ class Auto_Ai_News_Poster_Api
 
     public static function get_article_from_sources()
     {
+        error_log('🚀 AUTO AI NEWS POSTER - get_article_from_sources() STARTED');
+        error_log('📥 Received POST data: ' . print_r($_POST, true));
+        
         $options = get_option('auto_ai_news_poster_settings');
         $publication_mode = $options['mode']; // Verificăm dacă este 'manual' sau 'auto'
+        
+        error_log('⚙️ Plugin options loaded:');
+        error_log('   - Publication mode: ' . $publication_mode);
+        error_log('   - API key exists: ' . (!empty($options['chatgpt_api_key']) ? 'YES' : 'NO'));
+        error_log('   - News sources count: ' . (isset($options['news_sources']) ? substr_count($options['news_sources'], "\n") + 1 : 0));
 
         if ($publication_mode === 'manual') {
-            check_ajax_referer('get_article_from_sources_nonce', 'security');
+            error_log('🔐 Manual mode - checking nonce...');
+            try {
+                check_ajax_referer('get_article_from_sources_nonce', 'security');
+                error_log('✅ Nonce verification successful');
+            } catch (Exception $e) {
+                error_log('❌ Nonce verification failed: ' . $e->getMessage());
+                wp_send_json_error(['message' => 'Nonce verification failed']);
+                return;
+            }
+        } else {
+            error_log('🤖 Auto mode - skipping nonce check');
         }
 
+        error_log('🔄 Calling process_article_generation()...');
         return self::process_article_generation();
     }
 
@@ -140,25 +159,39 @@ class Auto_Ai_News_Poster_Api
 
     public static function process_article_generation()
     {
+        error_log('🎯 PROCESS_ARTICLE_GENERATION() STARTED');
+        
         // Preluăm datele
         $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : null;
-
         $additional_instructions = sanitize_text_field($_POST['instructions'] ?? '');
+        $custom_source_url = isset($_POST['custom_source_url']) ? sanitize_text_field($_POST['custom_source_url']) : null;
+        
+        error_log('📋 INPUT DATA:');
+        error_log('   - Post ID: ' . ($post_id ?: 'NULL'));
+        error_log('   - Additional Instructions: ' . ($additional_instructions ?: 'EMPTY'));
+        error_log('   - Custom Source URL: ' . ($custom_source_url ?: 'EMPTY'));
+        
         $options = get_option('auto_ai_news_poster_settings');
         $api_key = $options['chatgpt_api_key'];
         $sources = explode("\n", trim($options['news_sources'])); // Sursele din setări
-
-        // Verificăm dacă există un link personalizat
-        $custom_source_url = isset($_POST['custom_source_url']) ? sanitize_text_field($_POST['custom_source_url']) : null;
+        
+        error_log('⚙️ CONFIGURATION:');
+        error_log('   - API Key length: ' . strlen($api_key));
+        error_log('   - Sources from settings: ' . print_r($sources, true));
+        error_log('   - Sources count: ' . count($sources));
         
         if (empty($api_key)) {
+            error_log('❌ API key is empty - stopping execution');
             wp_send_json_error(['message' => 'Cheia API lipsește']);
         }
         
         // Pentru link personalizat, nu avem nevoie de sursele din setări
         if (empty($custom_source_url) && empty($sources)) {
+            error_log('❌ Both custom URL and sources are empty - stopping execution');
             wp_send_json_error(['message' => 'Sursele lipsesc']);
         }
+        
+        error_log('✅ Basic validation passed - continuing...');
 
         // Dacă avem un link personalizat, îl folosim direct
         if (!empty($custom_source_url)) {
@@ -235,30 +268,51 @@ class Auto_Ai_News_Poster_Api
         }
 
         // Generăm promptul din config.php
+        error_log('🧠 GENERATING PROMPT...');
         if (!empty($custom_source_url)) {
+            error_log('📝 Using custom source URL for prompt generation');
             $prompt = generate_custom_source_prompt($custom_source_url, $additional_instructions);
         } else {
+            error_log('📰 Using news sources for prompt generation');
             $prompt = generate_prompt($sources, $additional_instructions, []);
         }
 
-        // Debugging
-        error_log('get_article_from_sources() triggered for post ID: ' . $post_id . ' prompt: ' . $prompt . ' $custom_source_url:' . $custom_source_url);
+        error_log('📨 GENERATED PROMPT:');
+        error_log('   - Length: ' . strlen($prompt) . ' characters');
+        error_log('   - Content: ' . substr($prompt, 0, 500) . '...');
+        error_log('   - Full prompt: ' . $prompt);
 
         // Apelăm OpenAI API din config.php
+        error_log('🤖 CALLING OPENAI API...');
+        error_log('   - API Key: ' . substr($api_key, 0, 10) . '...');
+        error_log('   - Post ID: ' . $post_id);
+        error_log('   - Custom Source URL: ' . $custom_source_url);
+        
         $response = call_openai_api($api_key, $prompt);
 
         if (is_wp_error($response)) {
-            error_log('Eroare API: ' . $response->get_error_message());
+            error_log('❌ API ERROR: ' . $response->get_error_message());
             wp_send_json_error(['message' => $response->get_error_message()]);
         }
 
+        error_log('✅ API RESPONSE RECEIVED');
         $body = wp_remote_retrieve_body($response);
+        error_log('📦 Raw response body: ' . $body);
+        
         $body = json_decode($body, true);
+        error_log('🔍 Decoded response: ' . print_r($body, true));
 
         if (isset($body['choices'][0]['message']['content'])) {
-            $content_json = json_decode($body['choices'][0]['message']['content'], true);
+            error_log('💬 AI message content found');
+            $ai_message_content = $body['choices'][0]['message']['content'];
+            error_log('🤖 AI Message Content: ' . $ai_message_content);
+            
+            $content_json = json_decode($ai_message_content, true);
+            error_log('🔄 Parsing AI content as JSON...');
+            error_log('📊 Parsed JSON: ' . print_r($content_json, true));
 
             if ($content_json) {
+                error_log('✅ JSON parsing successful - processing article data...');
                 // Extragem datele din răspunsul structurat
                 $title = $content_json['title'] ?? '';
                 $content = wp_kses_post($content_json['content'] ?? '');
@@ -269,7 +323,16 @@ class Auto_Ai_News_Poster_Api
                 $sources = $content_json['sources'] ?? [];
                 $source_titles = $content_json['source_titles'] ?? [];
 
+                error_log('📄 EXTRACTED ARTICLE DATA:');
+                error_log('   - Title: ' . $title);
+                error_log('   - Content length: ' . strlen($content));
+                error_log('   - Summary length: ' . strlen($summary));
+                error_log('   - Category: ' . $category);
+                error_log('   - Tags: ' . print_r($tags, true));
+                error_log('   - Images: ' . print_r($images, true));
+
                 $author_id = $options['author_name'] ?? get_current_user_id();
+                error_log('👤 Author ID: ' . $author_id);
 
                 // Construim array-ul de post_data
                 $post_data = [
@@ -281,28 +344,41 @@ class Auto_Ai_News_Poster_Api
                     'post_author' => $author_id
                 ];
 
+                error_log('💾 SAVING ARTICLE...');
+                error_log('   - Post data: ' . print_r($post_data, true));
+
                 // Folosim Post_Manager pentru a crea sau actualiza articolul
                 $post_id = Post_Manager::insert_or_update_post($post_id, $post_data);
 
                 if (isset($post_id['error'])) {
+                    error_log('❌ Error saving post: ' . $post_id['error']);
                     wp_send_json_error(['message' => $post_id['error']]);
                 }
 
+                error_log('✅ Article saved with ID: ' . $post_id);
+
                 // Setăm etichetele articolului
+                error_log('🏷️ Setting tags...');
                 Post_Manager::set_post_tags($post_id, $tags);
 
                 // Setăm categoriile articolului
+                error_log('📁 Setting categories...');
                 Post_Manager::set_post_categories($post_id, $category);
 
                 // Setăm linkul personalizat în metadate
                 if ($custom_source_url) {
+                    error_log('🔗 Setting custom source URL: ' . $custom_source_url);
                     update_post_meta($post_id, '_custom_source_url', $custom_source_url);
                 }
 
                 // În modul automat, generăm imaginea automat
                 if ($options['mode'] === 'auto') {
+                    error_log('🖼️ Auto mode - generating image...');
                     self::generate_image_for_article($post_id);
                 }
+
+                error_log('🎉 ARTICLE GENERATION COMPLETED SUCCESSFULLY!');
+                error_log('   - Final post ID: ' . $post_id);
 
                 wp_send_json_success([
                     'post_id' => $post_id,
@@ -316,9 +392,13 @@ class Auto_Ai_News_Poster_Api
                     'source_titles' => $source_titles
                 ]);
             } else {
+                error_log('❌ JSON parsing failed - invalid AI response format');
+                error_log('   - AI content was: ' . $ai_message_content);
                 wp_send_json_error(['message' => 'Datele primite nu sunt în format JSON structurat.']);
             }
         } else {
+            error_log('❌ No AI message content in response');
+            error_log('   - Response body was: ' . print_r($body, true));
             wp_send_json_error(['message' => 'A apărut o eroare la generarea articolului.']);
         }
     }

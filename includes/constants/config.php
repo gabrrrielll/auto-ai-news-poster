@@ -198,54 +198,55 @@ function generate_prompt($sources, $additional_instructions, $tags): string
 // Funcție pentru apelarea API-ului OpenAI
 function call_openai_api($api_key, $prompt)
 {
-    error_log('call_openai_api()!! ');
+    error_log('🔥 CALL_OPENAI_API() STARTED');
 
     // Obținem modelul selectat din setări
     $options = get_option('auto_ai_news_poster_settings');
     $selected_model = $options['ai_model'] ?? 'gpt-4o';
+    
+    error_log('🤖 AI API CONFIGURATION:');
+    error_log('   - Selected model: ' . $selected_model);
+    error_log('   - API URL: ' . URL_API_OPENAI);
+    error_log('   - API Key length: ' . strlen($api_key));
+    error_log('   - Prompt length: ' . strlen($prompt));
 
-    return wp_remote_post(URL_API_OPENAI, [
-        'headers' => [
-            'Authorization' => 'Bearer ' . $api_key,
-            'Content-Type' => 'application/json',
+    $request_body = [
+        'model' => $selected_model,  // Model selectat din setări
+        'temperature' => 0.1,  // Foarte strict, respectă exact sursa (0.0-1.0)
+        'messages' => [
+            ['role' => 'system', 'content' => 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.'],
+            ['role' => 'user', 'content' => $prompt],
         ],
-        'body' => json_encode([
-            'model' => $selected_model,  // Model selectat din setări
-            'temperature' => 0.1,  // Foarte strict, respectă exact sursa (0.0-1.0)
-            'messages' => [
-                ['role' => 'system', 'content' => 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.'],
-                ['role' => 'user', 'content' => $prompt],
-            ],
-            'response_format' => [
-                'type' => 'json_schema',
-                'json_schema' => [
-                    'name' => 'article_response',
-                    'strict' => true,
-                    'schema' => [
-                        'type' => 'object',
-                        'properties' => [
-                            'title' => [
-                                'type' => 'string',
-                                'description' => 'Titlul articolului generat'
-                            ],
-                            'content' => [
-                                'type' => 'string',
-                                'description' => 'Conținutul complet al articolului generat'
-                            ],
-                            'summary' => [
-                                'type' => 'string',
-                                'description' => 'Un rezumat al articolului generat'
-                            ],
-                            'category' => [
-                                'type' => 'string',
-                                'description' => 'Categoria articolului generat'
-                            ],
-                            'tags' => [
-                                'type' => 'array',
-                                'description' => 'Etichete relevante pentru articol (opțional)',
-                                'items' => [
-                                    'type' => 'string'
-                                ]
+        'response_format' => [
+            'type' => 'json_schema',
+            'json_schema' => [
+                'name' => 'article_response',
+                'strict' => true,
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'title' => [
+                            'type' => 'string',
+                            'description' => 'Titlul articolului generat'
+                        ],
+                        'content' => [
+                            'type' => 'string',
+                            'description' => 'Conținutul complet al articolului generat'
+                        ],
+                        'summary' => [
+                            'type' => 'string',
+                            'description' => 'Un rezumat al articolului generat'
+                        ],
+                        'category' => [
+                            'type' => 'string',
+                            'description' => 'Categoria articolului generat'
+                        ],
+                        'tags' => [
+                            'type' => 'array',
+                            'description' => 'Etichete relevante pentru articol (opțional)',
+                            'items' => [
+                                'type' => 'string'
+                            ]
                             ],
                             'images' => [
                                 'type' => 'array',
@@ -275,9 +276,31 @@ function call_openai_api($api_key, $prompt)
                 ],
             ],
             'max_tokens' => 9000,
-        ]),
+        ]
+    ];
+
+    error_log('📤 REQUEST BODY TO OPENAI:');
+    error_log('   - JSON: ' . json_encode($request_body, JSON_PRETTY_PRINT));
+
+    $response = wp_remote_post(URL_API_OPENAI, [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $api_key,
+            'Content-Type' => 'application/json',
+        ],
+        'body' => json_encode($request_body),
         'timeout' => 180,
     ]);
+
+    error_log('📥 OPENAI API RESPONSE:');
+    if (is_wp_error($response)) {
+        error_log('❌ WP Error: ' . $response->get_error_message());
+    } else {
+        error_log('✅ Response status: ' . wp_remote_retrieve_response_code($response));
+        error_log('📄 Response headers: ' . print_r(wp_remote_retrieve_headers($response), true));
+        error_log('💬 Response body: ' . wp_remote_retrieve_body($response));
+    }
+
+    return $response;
 }
 
 

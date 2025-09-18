@@ -529,56 +529,107 @@ function auto_ai_news_poster_fix_css_mime_type() {
         
         // JavaScript pentru metabox-ul de editare articol
         jQuery(document).ready(function($) {
-            console.log("Auto AI News Poster JavaScript loaded");
+            console.log("🚀 AUTO AI NEWS POSTER - JavaScript loaded");
+            console.log("🔍 Looking for generate button...");
+            
+            const generateBtn = $("#get-article-button");
+            if (generateBtn.length) {
+                console.log("✅ Generate button found:", generateBtn);
+            } else {
+                console.log("❌ Generate button NOT found!");
+            }
             
             // Handler pentru butonul de generare articol
             $("#get-article-button").on("click", function() {
-                console.log("Generate article button clicked");
+                console.log("🎯 GENERATE ARTICLE BUTTON CLICKED!");
                 
                 const additionalInstructions = $("#additional-instructions").val();
                 const customSourceUrl = $("#custom-source-url").val();
                 const postID = $("#post_ID").val();
                 const button = $(this);
 
+                console.log("📋 COLLECTED DATA:");
+                console.log("   - Post ID:", postID);
+                console.log("   - Additional Instructions:", additionalInstructions);
+                console.log("   - Custom Source URL:", customSourceUrl);
+                console.log("   - Button element:", button);
+
+                // Verificări de validare
+                if (!postID) {
+                    console.error("❌ POST ID is missing!");
+                    alert("Eroare: ID-ul postării lipsește!");
+                    return;
+                }
+
+                if (!customSourceUrl && !additionalInstructions) {
+                    console.warn("⚠️ Both custom URL and instructions are empty");
+                }
+
                 // Dezactivăm butonul și adăugăm un loader
                 button.prop("disabled", true);
                 button.html("⏳ Generare...");
+                console.log("🔄 Button disabled, starting AJAX call...");
 
-                console.log("Trimit cererea AJAX...");
-                console.log("Instrucțiuni suplimentare:", additionalInstructions);
-                console.log("customSourceUrl:", customSourceUrl);
-                console.log("Post ID:", postID);
+                const ajaxData = {
+                    action: "get_article_from_sources",
+                    post_id: postID,
+                    instructions: additionalInstructions,
+                    custom_source_url: customSourceUrl,
+                    additional_instructions: additionalInstructions,
+                    security: "' . wp_create_nonce('get_article_from_sources_nonce') . '"
+                };
+                
+                console.log("📤 AJAX DATA TO SEND:", ajaxData);
 
                 $.ajax({
                     url: "' . admin_url('admin-ajax.php') . '",
                     method: "POST",
-                    data: {
-                        action: "get_article_from_sources",
-                        post_id: postID,
-                        instructions: additionalInstructions,
-                        custom_source_url: customSourceUrl,
-                        additional_instructions: additionalInstructions,
-                        security: "' . wp_create_nonce('get_article_from_sources_nonce') . '"
+                    data: ajaxData,
+                    beforeSend: function(xhr) {
+                        console.log("📡 AJAX Request starting...");
+                        console.log("   - URL:", "' . admin_url('admin-ajax.php') . '");
+                        console.log("   - Method: POST");
                     },
                     success: function(response) {
-                        console.log("Răspuns primit:", response);
+                        console.log("✅ AJAX SUCCESS - Raw response:", response);
+                        console.log("📊 Response type:", typeof response);
+                        console.log("🔍 Response success property:", response.success);
+                        
                         if (response.success) {
-                            // Redirecționăm către editorul articolului după ce articolul a fost creat/actualizat
-                            window.location.href = "' . admin_url('post.php') . '?post=" + response.data.post_id + "&action=edit";
+                            console.log("🎉 Article generation successful!");
+                            console.log("📝 Response data:", response.data);
+                            
+                            if (response.data && response.data.post_id) {
+                                const redirectUrl = "' . admin_url('post.php') . '?post=" + response.data.post_id + "&action=edit";
+                                console.log("🔄 Redirecting to:", redirectUrl);
+                                window.location.href = redirectUrl;
+                            } else {
+                                console.error("❌ No post_id in response data");
+                                alert("Eroare: ID-ul postării nu a fost returnat");
+                            }
                         } else {
-                            alert("A apărut o eroare: " + (response.data.message || "Eroare necunoscută"));
-                            console.error("Eroare:", response);
+                            console.error("❌ AJAX Success but response.success is false");
+                            console.error("📋 Error message:", response.data ? response.data.message : "No message");
+                            const errorMsg = response.data && response.data.message ? response.data.message : "Eroare necunoscută";
+                            alert("A apărut o eroare: " + errorMsg);
                         }
                     },
                     error: function(xhr, status, error) {
-                        console.error("Eroare AJAX:", error);
-                        console.error("Răspuns complet AJAX:", xhr.responseText);
-                        alert("A apărut o eroare la procesarea cererii.");
+                        console.error("💥 AJAX ERROR occurred!");
+                        console.error("   - Status:", status);
+                        console.error("   - Error:", error);
+                        console.error("   - Response Text:", xhr.responseText);
+                        console.error("   - Status Code:", xhr.status);
+                        console.error("   - Ready State:", xhr.readyState);
+                        
+                        alert("A apărut o eroare la procesarea cererii. Verifică consola pentru detalii.");
                     },
-                    complete: function() {
+                    complete: function(xhr, status) {
+                        console.log("🏁 AJAX COMPLETE - Status:", status);
                         // Reactivăm butonul și eliminăm loader-ul
                         button.prop("disabled", false);
                         button.html("<span>✨</span> Generează articol");
+                        console.log("🔄 Button re-enabled");
                     }
                 });
             });
