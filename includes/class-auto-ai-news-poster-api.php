@@ -457,7 +457,10 @@ class Auto_Ai_News_Poster_Api
         }
 
         $feedback = sanitize_text_field($_POST['feedback'] ?? '');
+
+        error_log('🔍 Attempting to find post with ID: [' . $post_id . ']');
         $post = get_post($post_id);
+        error_log('🔍 Result of get_post(): ' . print_r($post, true));
 
         if (!$post) {
             error_log('❌ Article not found for ID: ' . $post_id);
