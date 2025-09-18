@@ -389,20 +389,43 @@ class Auto_Ai_News_Poster_Settings
                         </div>
                     <?php endif; ?>
                     
-                    <div class="form-description">
-                        <?php if (!$has_error && !empty($available_models)): ?>
-                            ✅ Lista de modele este actualizată dinamic din API-ul OpenAI. 
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshModelsList()" style="margin-left: 10px;">
-                                🔄 Actualizează lista
+                <div class="form-description">
+                    <?php if (!$has_error && !empty($available_models)): ?>
+                        ✅ Lista de modele este actualizată dinamic din API-ul OpenAI. 
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshModelsList()" style="margin-left: 10px;">
+                            🔄 Actualizează lista
+                        </button>
+                    <?php elseif ($has_error): ?>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshModelsList()">
+                            🔄 Încearcă din nou
+                        </button>
+                    <?php else: ?>
+                        Introduceți cheia API pentru a vedea toate modelele disponibile.
+                    <?php endif; ?>
+                </div>
+                
+                <!-- Debug info pentru cron job -->
+                <div class="form-group" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #007cba;">
+                    <h4 style="margin: 0 0 10px 0; color: #007cba;">🔧 Debug Info - Cron Job</h4>
+                    <?php
+                    $next_scheduled = wp_next_scheduled('auto_ai_news_poster_cron_hook');
+                    $settings = get_option('auto_ai_news_poster_settings', []);
+                    $mode = $settings['mode'] ?? 'manual';
+                    ?>
+                    <p><strong>Modul curent:</strong> <?php echo esc_html($mode); ?></p>
+                    <p><strong>Cron job programat:</strong> <?php echo $next_scheduled ? date('Y-m-d H:i:s', $next_scheduled) : 'NU este programat'; ?></p>
+                    <p><strong>Următoarea execuție:</strong> <?php echo $next_scheduled ? human_time_diff($next_scheduled) . ' de acum' : 'N/A'; ?></p>
+                    <p><strong>Interval cron:</strong> <?php echo esc_html($settings['cron_interval_hours'] ?? 1); ?> ore, <?php echo esc_html($settings['cron_interval_minutes'] ?? 0); ?> minute</p>
+                    
+                    <?php if ($mode === 'auto' && !$next_scheduled): ?>
+                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px; margin-top: 10px;">
+                            <strong>⚠️ Atenție:</strong> Modul este setat pe automat dar cron job-ul nu este programat! 
+                            <button type="button" class="btn btn-sm btn-warning" onclick="location.reload()" style="margin-left: 10px;">
+                                🔄 Reîncarcă pagina
                             </button>
-                        <?php elseif ($has_error): ?>
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshModelsList()">
-                                🔄 Încearcă din nou
-                            </button>
-                        <?php else: ?>
-                            Introduceți cheia API pentru a vedea toate modelele disponibile.
-                        <?php endif; ?>
-                    </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
                 </div>
                 
                 <div class="api-instructions">
