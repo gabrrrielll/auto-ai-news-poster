@@ -712,42 +712,105 @@ class Auto_Ai_News_Poster_Api
         // Aceasta este o implementare simplă și poate fi inexactă
         $article_content = '';
         $dom = new DOMDocument();
-        @$dom->loadHTML($body);
+        // Suprimăm erorile HTML de parsare
+        @$dom->loadHTML($body, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_NOCDATA);
         $xpath = new DOMXPath($dom);
 
-        // Caută elementul principal de articol (de exemplu, <article>, <div class="article">, etc.)
-        $article_elements = $xpath->query("//article | //div[@class='article'] | //div[@class='post'] | //div[@class='content']");
+        // 1. Eliminăm elementele irelevante înainte de a extrage conținutul
+        $elements_to_remove = [
+            '//script',
+            '//style',
+            '//header',
+            '//footer',
+            '//nav',
+            '//aside',
+            '//form',
+            '//iframe',
+            '//noscript',
+            '//meta',
+            '//link',
+            '//img[not(@src)]', // Eliminăm imaginile fără sursă (adesea placeholdere sau trackere)
+            '//svg',
+            '//button',
+            '//input',
+            '//select',
+            '//textarea',
+            '//comment()', // Elimină comentariile HTML
+        ];
 
-        if ($article_elements->length > 0) {
-            $article_content = $dom->saveHTML($article_elements->item(0)); // Salvează HTML-ul elementului găsit
-        } else {
-            // Caută titlul și conținutul principal
-            $title_element = $xpath->query('//title');
-            if ($title_element->length > 0) {
-                $article_content .= $title_element->item(0)->textContent . "\n\n";
-            }
-
-            $main_content_elements = $xpath->query("//main | //div[@class='main'] | //div[@class='main-content'] | //div[@class='site-content']");
-            if ($main_content_elements->length > 0) {
-                $article_content .= $dom->saveHTML($main_content_elements->item(0));
-            } else {
-                // Caută conținutul principal de articol (de exemplu, <p>, <div class="entry-content">)
-                $content_elements = $xpath->query("//p | //div[@class='entry-content'] | //div[@class='post-content'] | //div[@class='article-content']");
-                if ($content_elements->length > 0) {
-                    $article_content .= $dom->saveHTML($content_elements->item(0));
-                } else {
-                    // Dacă nu găsim niciun element de articol, încercăm să extragem tot conținutul
-                    $article_content = $body;
+        foreach ($elements_to_remove as $selector) {
+            $nodes = $xpath->query($selector);
+            if ($nodes) {
+                foreach ($nodes as $node) {
+                    $node->parentNode->removeChild($node);
                 }
             }
         }
 
-        // Eliminăm tag-urile HTML și spațiile inutile
-        $article_content = strip_tags($article_content);
-        $article_content = preg_replace('/\s+/u', ' ', $article_content); // Înlocuiește spațiile multiple cu unul
+        // 2. Caută elementul principal de articol (într-o ordine de prioritate)
+        $selectors = [
+            '//article',
+            '//main',
+            '//div[contains(@class, "entry-content")]',
+            '//div[contains(@class, "post-content")]',
+            '//div[contains(@class, "article-content")]',
+            '//div[contains(@class, "td-post-content")]',
+            '//div[contains(@id, "content")]',
+            '//div[contains(@class, "content")]',
+            '//div[contains(@class, "td-container")]',
+            '//div[contains(@class, "tdc-row")]',
+            '//div[contains(@class, "tdb-block-inner td-fix-index")]',
+            '//div[contains(@class, "td_block_wrap")]',
+            '//div[contains(@class, "td-ss-main-content")]',
+            '//div[contains(@class, "tdb-block-inner")]',
+            '//div[contains(@class, "tdb_single_content")]',
+            '//div[contains(@class, "td-post-content tagdiv-type")]',
+            '//div[@class='tdb_single_content']',
+            '//div[@id='td-outer-wrap']',
+            '//body',
+        ];
+
+        $found_node = null;
+        foreach ($selectors as $selector) {
+            $nodes = $xpath->query($selector);
+            if ($nodes->length > 0) {
+                // Prioritizăm nodurile care conțin mai mult text
+                $best_node = null;
+                $max_text_length = 0;
+                foreach ($nodes as $node) {
+                    $text_length = strlen(trim($node->textContent));
+                    if ($text_length > $max_text_length) {
+                        $max_text_length = $text_length;
+                        $best_node = $node;
+                    }
+                }
+                if ($best_node) {
+                    $found_node = $best_node;
+                    break; // Am găsit cel mai bun nod, oprim căutarea
+                }
+            }
+        }
+
+        if ($found_node) {
+            $article_content = $found_node->textContent;
+        } else {
+            // Dacă nu găsim nimic specific, extragem textul din body (după curățare)
+            $article_content = $dom->textContent;
+        }
+
+        // 3. Post-procesare pentru curățarea textului
+        // Eliminăm spațiile multiple, tab-urile și rândurile goale consecutive
+        $article_content = preg_replace('/[ \t]+/', ' ', $article_content); // Spații/tab-uri multiple cu un singur spațiu
+        $article_content = preg_replace('/(?:\s*\n\s*){2,}/', "\n\n", $article_content); // Rânduri goale multiple cu două rânduri goale
         $article_content = trim($article_content);
 
         error_log('✅ Content extracted. Length: ' . strlen($article_content));
+        // Limitam conținutul pentru a evita prompturi prea mari
+        $max_content_length = 15000; // Aproximativ 3000-4000 de cuvinte
+        if (strlen($article_content) > $max_content_length) {
+            $article_content = substr($article_content, 0, $max_content_length); // Trunchiază dacă este prea lung
+            error_log('⚠️ Article content truncated to ' . $max_content_length . ' characters.');
+        }
         return $article_content;
     }
 }
