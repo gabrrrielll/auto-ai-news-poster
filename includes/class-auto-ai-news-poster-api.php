@@ -715,11 +715,24 @@ class Auto_Ai_News_Poster_Api
         @$dom->loadHTML($body, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_NOCDATA);
         $xpath = new DOMXPath($dom);
 
-        // 1. Încercăm să găsim elementul <body>, dacă nu, lucrăm cu întregul document
+        // Extrage conținutul din elementul <body>
         $body_node = $xpath->query('//body')->item(0);
-        $context_node = $body_node ? $body_node : $dom;
+        if (!$body_node) {
+            error_log('⚠️ No <body> tag found. Returning raw body content after basic cleanup.');
+            // Fallback: dacă nu există <body>, facem o curățare de bază a întregului body
+            $article_content = preg_replace('/[ \t]+/', ' ', $body); // Spații/tab-uri multiple cu un singur spațiu
+            $article_content = preg_replace('/(?:\s*\n\s*){2,}/', "\n\n", $article_content); // Rânduri goale multiple cu două rânduri goale
+            $article_content = trim(strip_tags($article_content));
+            return $article_content;
+        }
 
-        // 2. Eliminăm elementele irelevante din contextul găsit
+        // Reconstruim un DOMDocument doar cu conținutul din <body>
+        $body_html = $dom->saveHTML($body_node);
+        $dom_body = new DOMDocument();
+        @$dom_body->loadHTML($body_html, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_NOCDATA);
+        $xpath_body = new DOMXPath($dom_body);
+
+        // 1. Eliminăm elementele irelevante din noul document (doar <body>)
         $elements_to_remove = [
             '//script',
             '//style',
@@ -732,14 +745,13 @@ class Auto_Ai_News_Poster_Api
             '//noscript',
             '//meta',
             '//link',
-            '//img[not(@src)]', // Eliminăm imaginile fără sursă (adesea placeholdere sau trackere)
+            '//img[not(@src)]',
             '//svg',
             '//button',
             '//input',
             '//select',
             '//textarea',
-            '//comment()', // Elimină comentariile HTML
-            // Adăugăm selecții mai specifice pentru blocuri de reclame sau elemente de UI
+            '//comment()',
             '*[contains(@class, "ad")]',
             '*[contains(@class, "ads")]',
             '*[contains(@id, "ad")]',
@@ -755,7 +767,7 @@ class Auto_Ai_News_Poster_Api
         ];
 
         foreach ($elements_to_remove as $selector) {
-            $nodes = $xpath->query($selector, $context_node); // Căutăm în contextul body sau al întregului document
+            $nodes = $xpath_body->query($selector);
             if ($nodes) {
                 foreach ($nodes as $node) {
                     $node->parentNode->removeChild($node);
@@ -763,7 +775,7 @@ class Auto_Ai_News_Poster_Api
             }
         }
 
-        // 3. Caută elementul principal de articol (într-o ordine de prioritate) în contextul curățat
+        // 2. Caută elementul principal de articol (într-o ordine de prioritate) în contextul curățat
         $selectors = [
             '//article',
             '//main',
@@ -783,12 +795,12 @@ class Auto_Ai_News_Poster_Api
             '//div[contains(@class, "td-post-content tagdiv-type")]',
             "//div[@class='tdb_single_content']",
             "//div[@id='td-outer-wrap']",
-            '.', // Fallback: iau conținutul din nodul de context rămas
+            '.', // Fallback: iau conținutul din nodul de context rămas (body)
         ];
 
         $found_node = null;
         foreach ($selectors as $selector) {
-            $nodes = $xpath->query($selector, $context_node);
+            $nodes = $xpath_body->query($selector);
             if ($nodes->length > 0) {
                 $best_node = null;
                 $max_text_length = 0;
@@ -809,10 +821,10 @@ class Auto_Ai_News_Poster_Api
         if ($found_node) {
             $article_content = $found_node->textContent;
         } else {
-            $article_content = $context_node->textContent; // Folosesc textul din nodul de context curățat
+            $article_content = $dom_body->textContent; // Folosesc textul din body-ul curățat
         }
 
-        // 4. Post-procesare pentru curățarea textului
+        // 3. Post-procesare pentru curățarea textului
         $article_content = preg_replace('/[ \t]+/', ' ', $article_content);
         $article_content = preg_replace('/(?:\s*\n\s*){2,}/', "\n\n", $article_content);
         $article_content = trim($article_content);
