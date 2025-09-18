@@ -433,9 +433,11 @@ class Auto_Ai_News_Poster_Api
     public static function generate_image_for_article($post_id = null)
     {
         error_log('🖼️ GENERATE_IMAGE_FOR_ARTICLE() STARTED');
-        error_log('📥 Initial call state: post_id argument=' . ($post_id ?? 'null') . ', $_POST=' . print_r($_POST, true));
+        // Folosim var_export pentru a vedea exact tipul variabilei (null, '', etc.)
+        error_log('📥 Initial call state: post_id argument=' . var_export($post_id, true) . ', $_POST=' . print_r($_POST, true));
 
-        $is_ajax = ($post_id === null);
+        // Corectăm detecția apelului AJAX. empty() va trata corect atât null cât și string-urile goale.
+        $is_ajax = empty($post_id);
 
         if ($is_ajax) {
             // This is an AJAX call, get post_id from $_POST
