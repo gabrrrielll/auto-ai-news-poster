@@ -527,7 +527,7 @@ class Auto_Ai_News_Poster_Api
             $error_message = 'Eroare necunoscută la generarea imaginii.';
             if (isset($image_json['error']['message'])) {
                 $error_message = $image_json['error']['message'];
-            } else if (isset($image_json['error'])) {
+            } elseif (isset($image_json['error'])) {
                 $error_message = print_r($image_json['error'], true);
             }
             error_log('❌ Failed to generate image for post ID ' . $post_id . ': ' . $error_message);
