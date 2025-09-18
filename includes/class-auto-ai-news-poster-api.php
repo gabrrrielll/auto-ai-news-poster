@@ -277,11 +277,26 @@ class Auto_Ai_News_Poster_Api
 
         // Generăm promptul din config.php
         error_log('🧠 GENERATING PROMPT...');
+        $article_text_content = '';
+
         if (!empty($custom_source_url)) {
-            error_log('📝 Using custom source URL for prompt generation');
-            $prompt = generate_custom_source_prompt($custom_source_url, $additional_instructions);
+            error_log('📝 Using custom source URL: ' . $custom_source_url . ' for content extraction.');
+            $article_text_content = self::extract_article_content_from_url($custom_source_url);
+
+            if (is_wp_error($article_text_content)) {
+                error_log('❌ Error extracting content: ' . $article_text_content->get_error_message());
+                wp_send_json_error(['message' => 'Eroare la extragerea conținutului articolului: ' . $article_text_content->get_error_message()]);
+                return;
+            }
+            if (empty($article_text_content)) {
+                error_log('⚠️ Extracted content is empty for URL: ' . $custom_source_url);
+                wp_send_json_error(['message' => 'Nu s-a putut extrage conținutul articolului de la URL-ul furnizat.']);
+                return;
+            }
+            error_log('✅ Content extracted. Length: ' . strlen($article_text_content));
+            $prompt = generate_custom_source_prompt($article_text_content, $additional_instructions);
         } else {
-            error_log('📰 Using news sources for prompt generation');
+            error_log('📰 Using news sources for prompt generation (no custom URL).');
             $prompt = generate_prompt($sources, $additional_instructions, []);
         }
 
@@ -658,6 +673,82 @@ class Auto_Ai_News_Poster_Api
         error_log('force_refresh_now: Force refresh set');
 
         wp_send_json_success(['message' => 'Force refresh triggered']);
+    }
+
+    private static function extract_article_content_from_url($url)
+    {
+        error_log('🔗 Extracting content from URL: ' . $url);
+        $response = wp_remote_get($url);
+
+        if (is_wp_error($response)) {
+            error_log('❌ WP_Remote_Get error: ' . $response->get_error_message());
+            return $response;
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        error_log('📦 Raw response body: ' . $body);
+
+        if (empty($body)) {
+            error_log('⚠️ Extracted body is empty for URL: ' . $url);
+            return new WP_Error('empty_body', 'Nu s-a putut extrage conținutul din URL-ul furnizat.');
+        }
+
+        // Utilizăm o librărie pentru parsarea HTML (de exemplu, Simple HTML DOM)
+        // Aceasta este o dependență externă și trebuie instalată
+        // require_once 'simple_html_dom.php'; // Dacă folosiți Simple HTML DOM
+
+        // Exemplu de parsare cu Simple HTML DOM (dacă este instalat)
+        // $html = str_get_html($body);
+        // if ($html) {
+        //     $article_content = $html->find('article', 0)->innertext; // Extrage conținutul articolului
+        //     $html->clear(); // Eliberează memoria
+        //     return $article_content;
+        // } else {
+        //     error_log('❌ Simple HTML DOM parsing failed for URL: ' . $url);
+        //     return new WP_Error('html_parse_failed', 'Nu s-a putut parsa HTML-ul din URL-ul furnizat.');
+        // }
+
+        // Exemplu de parsare simplă (fără librărie)
+        // Aceasta este o implementare simplă și poate fi inexactă
+        $article_content = '';
+        $dom = new DOMDocument();
+        @$dom->loadHTML($body);
+        $xpath = new DOMXPath($dom);
+
+        // Caută elementul principal de articol (de exemplu, <article>, <div class="article">, etc.)
+        $article_elements = $xpath->query("//article | //div[@class='article'] | //div[@class='post'] | //div[@class='content']");
+
+        if ($article_elements->length > 0) {
+            $article_content = $dom->saveHTML($article_elements->item(0)); // Salvează HTML-ul elementului găsit
+        } else {
+            // Caută titlul și conținutul principal
+            $title_element = $xpath->query("//title");
+            if ($title_element->length > 0) {
+                $article_content .= $title_element->item(0)->textContent . "\n\n";
+            }
+
+            $main_content_elements = $xpath->query("//main | //div[@class='main'] | //div[@class='main-content'] | //div[@class='site-content']");
+            if ($main_content_elements->length > 0) {
+                $article_content .= $dom->saveHTML($main_content_elements->item(0));
+            } else {
+                // Caută conținutul principal de articol (de exemplu, <p>, <div class="entry-content">)
+                $content_elements = $xpath->query("//p | //div[@class='entry-content'] | //div[@class='post-content'] | //div[@class='article-content']");
+                if ($content_elements->length > 0) {
+                    $article_content .= $dom->saveHTML($content_elements->item(0));
+                } else {
+                    // Dacă nu găsim niciun element de articol, încercăm să extragem tot conținutul
+                    $article_content = $body;
+                }
+            }
+        }
+
+        // Eliminăm tag-urile HTML și spațiile inutile
+        $article_content = strip_tags($article_content);
+        $article_content = preg_replace('/\s+/u', ' ', $article_content); // Înlocuiește spațiile multiple cu unul
+        $article_content = trim($article_content);
+
+        error_log('✅ Content extracted. Length: ' . strlen($article_content));
+        return $article_content;
     }
 }
 

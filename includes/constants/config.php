@@ -4,7 +4,7 @@
 const URL_API_OPENAI = 'https://api.openai.com/v1/chat/completions';
 const URL_API_IMAGE = 'https://api.openai.com/v1/images/generations';
 
-function generate_custom_source_prompt($link, $additional_instructions): string
+function generate_custom_source_prompt($article_text_content, $additional_instructions): string
 {
     // Listă de etichete existente
     $existing_tags = get_tags(['hide_empty' => false]);
@@ -41,9 +41,9 @@ function generate_custom_source_prompt($link, $additional_instructions): string
         $length_instruction = 'similare cu articolul sursă in privinta numarului de cuvinte';
     }
 
-    $prompt = "Analizează următorul articol furnizat la acest link: $link\n";
-    $prompt .= "IMPORTANT: NU INVENTA INFORMATII! Folosește DOAR informațiile exacte din articolul sursă. Nu adăuga detalii care nu sunt menționate în articolul original.\n";
-    $prompt .= "Generează un articol care să respecte strict și în totalitate informațiile din acest link, dar scris într-un mod diferit, unic și poate chiar îmbogățit în exprimare. Este extrem de important ca articolul să respecte strict dimensiunea $length_instruction. Nerespectarea acestei cerințe va invalida complet rezultatul generat.\n";
+    $prompt = "Analizează următorul conținut de articol furnizat: \n\n" . $article_text_content . "\n\n";
+    $prompt .= "IMPORTANT: NU INVENTA INFORMATII! Folosește DOAR informațiile exacte din conținutul furnizat. Nu adăuga detalii care nu sunt menționate în textul original.\n";
+    $prompt .= "Generează un articol care să respecte strict și în totalitate informațiile din acest conținut, dar scris într-un mod diferit, unic și poate chiar îmbogățit în exprimare. Este extrem de important ca articolul să respecte strict dimensiunea $length_instruction. Nerespectarea acestei cerințe va invalida complet rezultatul generat.\n";
     $prompt .= "DIMENSIUNE OBLIGATORIE: Articolul trebuie să aibă exact $length_instruction. Nu mai mult, nu mai puțin. Numără cuvintele și respectă această cerință.\n";
     $prompt .= $additional_instructions !== '' ? "\nInstrucțiuni suplimentare: " . $additional_instructions : '';
 
