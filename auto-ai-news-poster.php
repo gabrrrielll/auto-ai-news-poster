@@ -507,9 +507,9 @@ function auto_ai_news_poster_fix_css_mime_type()
                     color: var(--text-secondary);
                 }
             </style>';
-            
-            // Adăugăm și JavaScript-ul inline pentru a evita problemele MIME type
-            echo '<script type="text/javascript">
+
+        // Adăugăm și JavaScript-ul inline pentru a evita problemele MIME type
+        echo '<script type="text/javascript">
             var autoAiNewsPosterAjax = {
                 ajax_url: "' . admin_url('admin-ajax.php') . '",
                 generate_image_nonce: "' . wp_create_nonce('generate_image_nonce') . '",
@@ -770,10 +770,9 @@ function auto_ai_news_poster_fix_css_mime_type()
                 });
             });
             </script>';
-        }
     }
+}
 
 // Eliminăm funcționalitatea veche de încărcare CSS/JS inline
 // Această secțiune este acum goală, deoarece totul este gestionat prin wp_enqueue_script și wp_enqueue_style
 // Funcția de activare a plugin-ului
-

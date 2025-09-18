@@ -430,23 +430,24 @@ class Auto_Ai_News_Poster_Api
 
 
 
-    public static function generate_image_for_article($post_id)
+    public static function generate_image_for_article($post_id = null)
     {
         error_log('🖼️ GENERATE_IMAGE_FOR_ARTICLE() STARTED');
-
-        // Verificăm nonce-ul pentru securitate
-        try {
-            check_ajax_referer('generate_image_nonce', 'security');
-            error_log('✅ Nonce verification successful for image generation.');
-        } catch (Exception $e) {
-            error_log('❌ Nonce verification failed for image generation: ' . $e->getMessage());
-            wp_send_json_error(['message' => 'Nonce verification failed for image generation.']);
-            return;
-        }
+        error_log('📥 Received parameters: post_id=' . $post_id . ', $_POST=' . print_r($_POST, true));
 
         // Preluăm post_id dacă apelul nu vine dintr-un context în care este deja setat (ex. cron)
-        if ($post_id == null) {
+        if ($post_id === null) {
             $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+            
+            // Verificăm nonce-ul pentru securitate doar pentru apelurile AJAX
+            try {
+                check_ajax_referer('generate_image_nonce', 'security');
+                error_log('✅ Nonce verification successful for image generation.');
+            } catch (Exception $e) {
+                error_log('❌ Nonce verification failed for image generation: ' . $e->getMessage());
+                wp_send_json_error(['message' => 'Nonce verification failed for image generation.']);
+                return;
+            }
         }
 
         if ($post_id === 0) {
@@ -482,18 +483,27 @@ class Auto_Ai_News_Poster_Api
         error_log('   - Tags: ' . implode(', ', $tags));
         error_log('   - Feedback: ' . ($feedback ?: 'EMPTY'));
 
+        error_log('🎨 Calling DALL-E API with:');
+        error_log('   - Summary: ' . $summary);
+        error_log('   - Tags: ' . implode(', ', $tags));
+        error_log('   - Feedback: ' . $feedback);
+        
         $image_response = call_openai_image_api($api_key, $summary, $tags, $feedback);
-        $image_body = wp_remote_retrieve_body($image_response);
-        $image_json = json_decode($image_body, true);
-
-        error_log('📥 DALL-E API RAW RESPONSE BODY: ' . $image_body);
-        error_log('🔍 DALL-E API DECODED RESPONSE: ' . print_r($image_json, true));
-
+        
         if (is_wp_error($image_response)) {
             error_log('❌ DALL-E API WP Error: ' . $image_response->get_error_message());
             wp_send_json_error(['message' => 'Eroare la apelul DALL-E API: ' . $image_response->get_error_message()]);
             return;
         }
+        
+        $response_code = wp_remote_retrieve_response_code($image_response);
+        error_log('📊 DALL-E API Response Code: ' . $response_code);
+        
+        $image_body = wp_remote_retrieve_body($image_response);
+        error_log('📥 DALL-E API RAW RESPONSE BODY: ' . $image_body);
+        
+        $image_json = json_decode($image_body, true);
+        error_log('🔍 DALL-E API DECODED RESPONSE: ' . print_r($image_json, true));
 
         $image_url = $image_json['data'][0]['url'] ?? '';
         $title = get_the_title($post_id);
