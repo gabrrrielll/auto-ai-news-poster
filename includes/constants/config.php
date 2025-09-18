@@ -212,7 +212,7 @@ function call_openai_api($api_key, $prompt)
 
     $request_body = [
         'model' => $selected_model,  // Model selectat din setări
-        'temperature' => 0.1,  // Foarte strict, respectă exact sursa (0.0-1.0)
+        // 'temperature' => 0.1,  // Foarte strict, respectă exact sursa (0.0-1.0) - eliminat conform erorii API
         'messages' => [
             ['role' => 'system', 'content' => 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.'],
             ['role' => 'user', 'content' => $prompt],
