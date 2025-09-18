@@ -275,7 +275,7 @@ function call_openai_api($api_key, $prompt)
                 ]
             ]
         ],
-        'max_tokens' => 9000,
+        'max_completion_tokens' => 9000,
     ];
 
     error_log('📤 REQUEST BODY TO OPENAI:');
