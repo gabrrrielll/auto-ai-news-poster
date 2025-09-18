@@ -23,10 +23,10 @@ class Auto_Ai_News_Poster_Api
     {
         error_log('🚀 AUTO AI NEWS POSTER - get_article_from_sources() STARTED');
         error_log('📥 Received POST data: ' . print_r($_POST, true));
-        
+
         $options = get_option('auto_ai_news_poster_settings');
         $publication_mode = $options['mode']; // Verificăm dacă este 'manual' sau 'auto'
-        
+
         error_log('⚙️ Plugin options loaded:');
         error_log('   - Publication mode: ' . $publication_mode);
         error_log('   - API key exists: ' . (!empty($options['chatgpt_api_key']) ? 'YES' : 'NO'));
@@ -160,32 +160,32 @@ class Auto_Ai_News_Poster_Api
     public static function process_article_generation()
     {
         error_log('🎯 PROCESS_ARTICLE_GENERATION() STARTED');
-        
+
         // Preluăm datele
         $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : null;
         $additional_instructions = sanitize_text_field($_POST['instructions'] ?? '');
         $custom_source_url = isset($_POST['custom_source_url']) ? sanitize_text_field($_POST['custom_source_url']) : null;
-        
+
         error_log('📋 INPUT DATA:');
         error_log('   - Post ID: ' . ($post_id ?: 'NULL'));
         error_log('   - Additional Instructions: ' . ($additional_instructions ?: 'EMPTY'));
         error_log('   - Custom Source URL: ' . ($custom_source_url ?: 'EMPTY'));
-        
+
         $options = get_option('auto_ai_news_poster_settings');
         $api_key = $options['chatgpt_api_key'];
         $sources = explode("\n", trim($options['news_sources'])); // Sursele din setări
-        
+
         error_log('⚙️ CONFIGURATION:');
         error_log('   - API Key length: ' . strlen($api_key));
         error_log('   - Sources from settings: ' . print_r($sources, true));
         error_log('   - Sources count: ' . count($sources));
-        
+
         if (empty($api_key)) {
             error_log('❌ API key is empty - stopping execution');
             wp_send_json_error(['message' => 'Cheia API lipsește']);
             return;
         }
-        
+
         // Inițializăm $bulk_links ca un array gol
         $bulk_links = [];
         $run_until_bulk_exhausted = false;
@@ -200,7 +200,7 @@ class Auto_Ai_News_Poster_Api
             $run_until_bulk_exhausted = $options['run_until_bulk_exhausted'] === 'yes';
             $bulk_links = explode("\n", trim($options['bulk_custom_source_urls'] ?? ''));
             $bulk_links = array_filter($bulk_links, 'trim'); // Eliminăm rândurile goale
-            
+
             error_log('DEBUG: $run_until_bulk_exhausted:'.($run_until_bulk_exhausted ? 'true' : 'false').' count($bulk_links):'. count($bulk_links).' $bulk_links:'. print_r($bulk_links, true));
 
             if ($run_until_bulk_exhausted && empty($bulk_links)) {
@@ -214,7 +214,7 @@ class Auto_Ai_News_Poster_Api
                 }
                 return;
             }
-            
+
             // Preluăm primul link din lista bulk dacă nu există un link personalizat trimis prin AJAX
             if (!empty($bulk_links)) {
                 $custom_source_url = array_shift($bulk_links); // Preluăm primul link
@@ -229,11 +229,11 @@ class Auto_Ai_News_Poster_Api
 
         // După ce am stabilit $custom_source_url (fie din input, fie din bulk), verificăm duplicatele
         if (empty($custom_source_url)) {
-             error_log('❌ No custom_source_url determined, cannot proceed.');
-             wp_send_json_error(['message' => 'Nu s-a putut determina un link sursă pentru generare.']);
-             return;
+            error_log('❌ No custom_source_url determined, cannot proceed.');
+            wp_send_json_error(['message' => 'Nu s-a putut determina un link sursă pentru generare.']);
+            return;
         }
-        
+
         error_log('✅ Proceeding with custom_source_url: ' . $custom_source_url);
 
         // Verificăm dacă acest link a fost deja folosit pentru a evita duplicatele
@@ -310,7 +310,7 @@ class Auto_Ai_News_Poster_Api
         error_log('   - API Key: ' . substr($api_key, 0, 10) . '...');
         error_log('   - Post ID: ' . $post_id);
         error_log('   - Custom Source URL: ' . $custom_source_url);
-        
+
         $response = call_openai_api($api_key, $prompt);
 
         if (is_wp_error($response)) {
@@ -321,7 +321,7 @@ class Auto_Ai_News_Poster_Api
         error_log('✅ API RESPONSE RECEIVED');
         $body = wp_remote_retrieve_body($response);
         error_log('📦 Raw response body: ' . $body);
-        
+
         $body = json_decode($body, true);
         error_log('🔍 Decoded response: ' . print_r($body, true));
 
@@ -329,7 +329,7 @@ class Auto_Ai_News_Poster_Api
             error_log('💬 AI message content found');
             $ai_message_content = $body['choices'][0]['message']['content'];
             error_log('🤖 AI Message Content: ' . $ai_message_content);
-            
+
             $content_json = json_decode($ai_message_content, true);
             error_log('🔄 Parsing AI content as JSON...');
             error_log('📊 Parsed JSON: ' . print_r($content_json, true));
@@ -722,7 +722,7 @@ class Auto_Ai_News_Poster_Api
             $article_content = $dom->saveHTML($article_elements->item(0)); // Salvează HTML-ul elementului găsit
         } else {
             // Caută titlul și conținutul principal
-            $title_element = $xpath->query("//title");
+            $title_element = $xpath->query('//title');
             if ($title_element->length > 0) {
                 $article_content .= $title_element->item(0)->textContent . "\n\n";
             }
@@ -753,4 +753,3 @@ class Auto_Ai_News_Poster_Api
 }
 
 Auto_Ai_News_Poster_Api::init();
-
