@@ -806,11 +806,16 @@ class Auto_Ai_News_Poster_Settings
     public static function filter_structured_output_models($models)
     {
         $structured_models = [
-            'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'
+            'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo',
+            'gpt-4o-2024-08-06', 'gpt-4-turbo-2024-04-09', 'gpt-4-0613', 'gpt-4-0314',
+            'gpt-3.5-turbo-1106', 'gpt-3.5-turbo-0613', 'gpt-3.5-turbo-0301'
         ];
         
         return array_filter($models, function($model) use ($structured_models) {
-            return in_array($model['id'], $structured_models);
+            // Verificăm dacă modelul este în lista noastră sau dacă începe cu gpt-4 sau gpt-3.5
+            return in_array($model['id'], $structured_models) || 
+                   strpos($model['id'], 'gpt-4') === 0 || 
+                   strpos($model['id'], 'gpt-3.5') === 0;
         });
     }
     
@@ -835,7 +840,18 @@ class Auto_Ai_News_Poster_Settings
             'gpt-3.5-turbo' => 'GPT-3.5 Turbo - Rapid și economic',
         ];
         
-        return $descriptions[$model_id] ?? $model_id;
+        // Dacă nu avem descriere specifică, generăm una dinamică
+        if (!isset($descriptions[$model_id])) {
+            if (strpos($model_id, 'gpt-4') === 0) {
+                return $model_id . ' - Model GPT-4 avansat';
+            } elseif (strpos($model_id, 'gpt-3.5') === 0) {
+                return $model_id . ' - Model GPT-3.5 rapid';
+            } else {
+                return $model_id;
+            }
+        }
+        
+        return $descriptions[$model_id];
     }
     
     // Handler AJAX pentru actualizarea listei de modele
