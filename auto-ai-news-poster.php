@@ -549,7 +549,7 @@ function auto_ai_news_poster_fix_css_mime_type() {
                 console.log("   - Button HTML:", generateBtn[0].outerHTML);
             } else {
                 console.log("❌ Generate button NOT found!");
-                console.log("🔍 Searching for any button with 'generate' in class or id...");
+                console.log("🔍 Searching for any button with \'generate\' in class or id...");
                 $("button, input[type=button]").each(function() {
                     const elem = $(this);
                     if (elem.attr("id") && elem.attr("id").toLowerCase().includes("generate")) {
