@@ -210,6 +210,15 @@ function call_openai_api($api_key, $prompt)
     error_log('   - API Key length: ' . strlen($api_key));
     error_log('   - Prompt length: ' . strlen($prompt));
 
+    // Preluăm setările pentru a vedea dacă trebuie să generăm etichete
+    $options = get_option('auto_ai_news_poster_settings', []);
+    $generate_tags_option = $options['generate_tags'] ?? 'yes';
+
+    $required_properties = ['title', 'content', 'summary', 'category', 'images', 'sources', 'source_titles'];
+    if ($generate_tags_option === 'yes') {
+        $required_properties[] = 'tags';
+    }
+
     $request_body = [
         'model' => $selected_model,  // Model selectat din setări
         // 'temperature' => 0.1,  // Foarte strict, respectă exact sursa (0.0-1.0) - eliminat conform erorii API
@@ -270,7 +279,7 @@ function call_openai_api($api_key, $prompt)
                             ]
                         ]
                     ],
-                    'required' => ['title', 'content', 'summary', 'category', 'images', 'sources', 'source_titles'],
+                    'required' => $required_properties,
                     'additionalProperties' => false
                 ]
             ]
