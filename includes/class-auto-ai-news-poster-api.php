@@ -765,8 +765,8 @@ class Auto_Ai_News_Poster_Api
             '//div[contains(@class, "tdb-block-inner")]',
             '//div[contains(@class, "tdb_single_content")]',
             '//div[contains(@class, "td-post-content tagdiv-type")]',
-            '//div[@class='tdb_single_content']',
-            '//div[@id='td-outer-wrap']',
+            "//div[@class='tdb_single_content']",
+            "//div[@id='td-outer-wrap']",
             '//body',
         ];
 
