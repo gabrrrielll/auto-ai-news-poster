@@ -122,6 +122,11 @@ class Post_Manager
 
             update_post_meta($image_id, '_wp_attachment_image_alt', $title); // Setăm atributul "alt" cu titlul articolului
 
+            // Curățăm metadatele externe, deoarece imaginea a fost importată
+            error_log('🖼️ Image imported. Deleting external image meta for post ID: ' . $post_id);
+            delete_post_meta($post_id, '_external_image_url');
+            delete_post_meta($post_id, '_external_image_source');
+
 
         } else {
             // Setăm imaginea reprezentativă externă folosind URL-ul direct
