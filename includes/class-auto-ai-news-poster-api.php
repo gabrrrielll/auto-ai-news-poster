@@ -433,38 +433,35 @@ class Auto_Ai_News_Poster_Api
     public static function generate_image_for_article($post_id = null)
     {
         error_log('🖼️ GENERATE_IMAGE_FOR_ARTICLE() STARTED');
-        error_log('📥 Received parameters: post_id=' . $post_id . ', $_POST=' . print_r($_POST, true));
+        error_log('📥 Initial call state: post_id argument=' . ($post_id ?? 'null') . ', $_POST=' . print_r($_POST, true));
 
-        // Preluăm post_id dacă apelul nu vine dintr-un context în care este deja setat (ex. cron)
-        if ($post_id === null) {
+        $is_ajax = ($post_id === null);
+
+        if ($is_ajax) {
+            // This is an AJAX call, get post_id from $_POST
             $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-
-            // Verificăm nonce-ul pentru securitate doar pentru apelurile AJAX
+            error_log('--- AJAX Call --- Assigned post_id from $_POST. New value: [' . $post_id . ']');
+            
             try {
                 check_ajax_referer('generate_image_nonce', 'security');
                 error_log('✅ Nonce verification successful for image generation.');
             } catch (Exception $e) {
                 error_log('❌ Nonce verification failed for image generation: ' . $e->getMessage());
-                wp_send_json_error(['message' => 'Nonce verification failed for image generation.']);
+                wp_send_json_error(['message' => 'Nonce verification failed: ' . $e->getMessage()]);
                 return;
             }
+        } else {
+             error_log('--- Internal Call --- Using provided post_id: [' . $post_id . ']');
         }
 
-        if ($post_id === 0) {
-            error_log('❌ No valid post ID provided for image generation.');
+        if (empty($post_id) || !is_numeric($post_id) || $post_id <= 0) {
+            error_log('❌ Invalid or zero post ID (' . $post_id . '). Aborting.');
             wp_send_json_error(['message' => 'ID-ul postării lipsește sau este invalid.']);
             return;
         }
 
-        // --- TEMPORARY DEBUG ---
-        error_log('--- DEBUG --- Just before get_post, the post_id is: ' . $post_id);
-        // --- END TEMPORARY DEBUG ---
-
         $feedback = sanitize_text_field($_POST['feedback'] ?? '');
-
-        error_log('🔍 Attempting to find post with ID: [' . $post_id . ']');
         $post = get_post($post_id);
-        error_log('🔍 Result of get_post(): ' . print_r($post, true));
 
         if (!$post) {
             error_log('❌ Article not found for ID: ' . $post_id);
