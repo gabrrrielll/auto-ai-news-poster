@@ -203,7 +203,7 @@ function call_openai_api($api_key, $prompt)
     // Obținem modelul selectat din setări
     $options = get_option('auto_ai_news_poster_settings');
     $selected_model = $options['ai_model'] ?? 'gpt-4o';
-    
+
     error_log('🤖 AI API CONFIGURATION:');
     error_log('   - Selected model: ' . $selected_model);
     error_log('   - API URL: ' . URL_API_OPENAI);

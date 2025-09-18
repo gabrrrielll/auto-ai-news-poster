@@ -18,13 +18,8 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-met
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-api.php'; 
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-hooks.php';
 
-// Funcția pentru înregistrarea scripturilor și stilurilor
-add_action('admin_enqueue_scripts', 'auto_ai_news_poster_enqueue_scripts');
-function auto_ai_news_poster_enqueue_scripts($hook_suffix)
-{
-    // Nu mai încărcăm nimic extern - totul este inline pentru a evita problemele MIME type
-    // JavaScript-ul și CSS-ul sunt încorporate în funcția auto_ai_news_poster_fix_css_mime_type()
-}
+// Nu mai încărcăm scripturi externe - totul este inline
+// Eliminăm complet această funcționalitate pentru a evita conflictele
 
 // Fix pentru problema MIME type cu CSS-ul și JavaScript-ul
 add_action('admin_head', 'auto_ai_news_poster_fix_css_mime_type', 1);
@@ -32,6 +27,14 @@ function auto_ai_news_poster_fix_css_mime_type() {
     // Verificăm dacă suntem pe pagina de setări sau pe pagina de editare articol
     $is_settings_page = isset($_GET['page']) && $_GET['page'] === 'auto-ai-news-poster';
     $is_post_page = (isset($_GET['post']) && $_GET['post']) || (isset($_GET['post_type']) && $_GET['post_type'] === 'post');
+    
+    // Debug pentru încărcarea CSS/JS
+    error_log('🎨 CSS/JS Loading check:');
+    error_log('   - Current URL: ' . $_SERVER['REQUEST_URI']);
+    error_log('   - GET params: ' . print_r($_GET, true));
+    error_log('   - Is settings page: ' . ($is_settings_page ? 'YES' : 'NO'));
+    error_log('   - Is post page: ' . ($is_post_page ? 'YES' : 'NO'));
+    error_log('   - Should load CSS/JS: ' . (($is_settings_page || $is_post_page) ? 'YES' : 'NO'));
     
     if ($is_settings_page || $is_post_page) {
         echo '<style type="text/css">
@@ -530,13 +533,32 @@ function auto_ai_news_poster_fix_css_mime_type() {
         // JavaScript pentru metabox-ul de editare articol
         jQuery(document).ready(function($) {
             console.log("🚀 AUTO AI NEWS POSTER - JavaScript loaded");
+            console.log("🔍 Current page URL:", window.location.href);
             console.log("🔍 Looking for generate button...");
+            
+            // Verificăm toate elementele relevante
+            console.log("📋 Available elements:");
+            console.log("   - get-article-button:", $("#get-article-button").length);
+            console.log("   - additional-instructions:", $("#additional-instructions").length);
+            console.log("   - custom-source-url:", $("#custom-source-url").length);
+            console.log("   - post_ID:", $("#post_ID").length);
             
             const generateBtn = $("#get-article-button");
             if (generateBtn.length) {
                 console.log("✅ Generate button found:", generateBtn);
+                console.log("   - Button HTML:", generateBtn[0].outerHTML);
             } else {
                 console.log("❌ Generate button NOT found!");
+                console.log("🔍 Searching for any button with 'generate' in class or id...");
+                $("button, input[type=button]").each(function() {
+                    const elem = $(this);
+                    if (elem.attr("id") && elem.attr("id").toLowerCase().includes("generate")) {
+                        console.log("Found button with generate in ID:", elem[0].outerHTML);
+                    }
+                    if (elem.attr("class") && elem.attr("class").toLowerCase().includes("generate")) {
+                        console.log("Found button with generate in class:", elem[0].outerHTML);
+                    }
+                });
             }
             
             // Handler pentru butonul de generare articol
