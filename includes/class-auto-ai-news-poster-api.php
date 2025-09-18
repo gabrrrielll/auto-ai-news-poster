@@ -678,7 +678,7 @@ class Auto_Ai_News_Poster_Api
     private static function extract_article_content_from_url($url)
     {
         error_log('🔗 Extracting content from URL: ' . $url);
-        $response = wp_remote_get($url);
+        $response = wp_remote_get($url, ['timeout' => 300]); // Mărit timeout-ul la 300 de secunde (5 minute)
 
         if (is_wp_error($response)) {
             error_log('❌ WP_Remote_Get error: ' . $response->get_error_message());
