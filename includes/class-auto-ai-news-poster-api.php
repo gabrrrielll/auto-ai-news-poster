@@ -719,18 +719,30 @@ class Auto_Ai_News_Poster_Api
         $body_node = $xpath->query('//body')->item(0);
         if (!$body_node) {
             error_log('⚠️ No <body> tag found. Returning raw body content after basic cleanup.');
-            // Fallback: dacă nu există <body>, facem o curățare de bază a întregului body
-            $article_content = preg_replace('/[ \t]+/', ' ', $body); // Spații/tab-uri multiple cu un singur spațiu
-            $article_content = preg_replace('/(?:\s*\n\s*){2,}/', "\n\n", $article_content); // Rânduri goale multiple cu două rânduri goale
+            $article_content = preg_replace('/[ \t]+/', ' ', $body);
+            $article_content = preg_replace('/(?:\s*\n\s*){2,}/', "\n\n", $article_content);
             $article_content = trim(strip_tags($article_content));
             return $article_content;
         }
 
-        // Reconstruim un DOMDocument doar cu conținutul din <body>
-        $body_html = $dom->saveHTML($body_node);
-        $dom_body = new DOMDocument();
-        @$dom_body->loadHTML($body_html, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_NOCDATA);
-        $xpath_body = new DOMXPath($dom_body);
+        // Extragem 'innerHTML' din elementul <body> pentru a evita reconstruirea <head>
+        $body_inner_html = '';
+        foreach ($body_node->childNodes as $child_node) {
+            $body_inner_html .= $dom->saveHTML($child_node);
+        }
+
+        // Reconstruim un DOMDocument doar cu conținutul din <body> (fără head)
+        $dom_body_clean = new DOMDocument();
+        // Încărcăm HTML-ul în mod explicit într-o structură completă pentru a preveni auto-adăugarea de <head>
+        @$dom_body_clean->loadHTML('<html><body>' . $body_inner_html . '</body></html>', LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_NOCDATA);
+        $xpath_body = new DOMXPath($dom_body_clean);
+
+        // Nodul de context pentru căutările ulterioare este acum elementul body din noul document
+        $context_node_clean = $xpath_body->query('//body')->item(0);
+        if (!$context_node_clean) {
+            error_log('❌ Failed to re-parse body content after innerHTML extraction.');
+            return new WP_Error('body_reparse_failed', 'Eroare internă la procesarea conținutului articolului.');
+        }
 
         // 1. Eliminăm elementele irelevante din noul document (doar <body>)
         $elements_to_remove = [
@@ -767,7 +779,7 @@ class Auto_Ai_News_Poster_Api
         ];
 
         foreach ($elements_to_remove as $selector) {
-            $nodes = $xpath_body->query($selector);
+            $nodes = $xpath_body->query($selector, $context_node_clean); // Căutăm în contextul body curățat
             if ($nodes) {
                 foreach ($nodes as $node) {
                     $node->parentNode->removeChild($node);
@@ -800,7 +812,7 @@ class Auto_Ai_News_Poster_Api
 
         $found_node = null;
         foreach ($selectors as $selector) {
-            $nodes = $xpath_body->query($selector);
+            $nodes = $xpath_body->query($selector, $context_node_clean);
             if ($nodes->length > 0) {
                 $best_node = null;
                 $max_text_length = 0;
@@ -821,7 +833,7 @@ class Auto_Ai_News_Poster_Api
         if ($found_node) {
             $article_content = $found_node->textContent;
         } else {
-            $article_content = $dom_body->textContent; // Folosesc textul din body-ul curățat
+            $article_content = $context_node_clean->textContent; // Folosesc textul din body-ul curățat
         }
 
         // 3. Post-procesare pentru curățarea textului
