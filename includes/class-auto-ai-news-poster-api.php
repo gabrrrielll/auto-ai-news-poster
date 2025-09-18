@@ -456,6 +456,10 @@ class Auto_Ai_News_Poster_Api
             return;
         }
 
+        // --- TEMPORARY DEBUG ---
+        error_log('--- DEBUG --- Just before get_post, the post_id is: ' . $post_id);
+        // --- END TEMPORARY DEBUG ---
+
         $feedback = sanitize_text_field($_POST['feedback'] ?? '');
 
         error_log('🔍 Attempting to find post with ID: [' . $post_id . ']');
