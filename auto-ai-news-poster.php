@@ -657,6 +657,10 @@ function auto_ai_news_poster_fix_css_mime_type() {
         
         // Adăugăm și JavaScript-ul inline pentru a evita problemele MIME type
         echo '<script type="text/javascript">
+        var autoAiNewsPosterAjax = {
+            ajax_url: "' . admin_url('admin-ajax.php') . '",
+            generate_image_nonce: "' . wp_create_nonce('generate_image_nonce') . '"
+        };
         // Funcții pentru pagina de setări
         function toggleApiInstructions() {
             const content = document.getElementById("api-instructions-content");

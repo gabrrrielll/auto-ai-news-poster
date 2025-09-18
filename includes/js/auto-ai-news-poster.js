@@ -63,34 +63,34 @@ jQuery(document).ready(function($) {
 
     console.log('Trimit cererea AJAX generate_image_for_article ...');
     console.log('Post ID:', postID);
-     console.log('Feedback:', feedbackText);
+    console.log('Feedback:', feedbackText);
 
     $.ajax({
-        url: ajaxurl,
+        url: autoAiNewsPosterAjax.ajax_url, // Folosim obiectul localizat
         type: 'POST',
         data: {
             action: 'generate_image_for_article',
             post_id: postID,
-            feedback: feedbackText,
-            security: $('#generate_image_nonce').val() // Nonce pentru securitate
+            feedback: feedbackText, // Includem feedback-ul în data trimisă
+            security: autoAiNewsPosterAjax.generate_image_nonce // Folosim nonce-ul localizat
         },
         success: function (response) {
             console.log('Răspuns primit:', response);
             if (response.success) {
-                // Reîncărcăm pagina pentru a vedea imaginea
                 location.reload();
             } else {
-                 console.log('Răspuns Eroare:', response);
+                console.log('Răspuns Eroare:', response);
                 alert('Eroare: ' + response.data.message.message);
             }
         },
-        error: function () {
-            alert('Eroare ajax.');
+        error: function (xhr, status, error) {
+            console.error('Eroare AJAX la generarea imaginii:', error);
+            console.error('Răspuns complet AJAX:', xhr.responseText);
+            alert('A apărut o eroare AJAX la generarea imaginii.');
         },
         complete: function() {
-            // Reactivăm butonul și eliminăm loader-ul
             button.prop('disabled', false);
-            button.html('Generează imagine');
+            button.html('<span class="button-icon">🎨</span>Generează imagine AI'); // Restabilim iconița
         }
     });
 });
