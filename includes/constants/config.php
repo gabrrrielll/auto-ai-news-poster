@@ -28,7 +28,7 @@ function generate_custom_source_prompt($link, $additional_instructions): string
     $category_list = implode(', ', $category_names);
 
     // Obținem categoria selectată din opțiunile de setări
-    $options = get_option('auto_ai_news_poster_settings');
+    $options = get_option('auto_ai_news_poster_settings', []);
 
     $article_length_option = $options['article_length_option'] ?? 'same_as_source';
     $min_length = $options['min_length'] ?? 800;
@@ -48,12 +48,12 @@ function generate_custom_source_prompt($link, $additional_instructions): string
     $prompt .= $additional_instructions !== '' ? "\nInstrucțiuni suplimentare: " . $additional_instructions : '';
 
     // Verificăm dacă trebuie să generăm etichete
-    $generate_tags = $options['generate_tags'] ?? 'yes';
+    $generate_tags_option = $options['generate_tags'] ?? 'yes';
 
     $prompt .= "Include următoarele informații în răspunsul tău:\n";
     $prompt .= "1. Generează un titlu relevant pentru articol, intrigant si care să stărnească curiozitatea cititorului in a citi articolul generat (title).\n";
 
-    if ($generate_tags === 'yes') {
+    if ($generate_tags_option === 'yes') {
         $prompt .= "2. Generează 1-3 etichete relevante (tags) și asigură-te că acestea sunt folosite de cel puțin două ori în conținutul articolului pentru optimizare SEO  și asigură-te că fiecare cuvânt începe cu majusculă.\n";
         $prompt .= " Etichetele sugerate pot fi din lista existentă de etichete: '$existing_tag_list'. Dacă nu există potriviri relevante, sugerează noi etichete.\n";
         $prompt .= "3. Numește numele categoriei care se potrivește mai bine din lista: '$category_list'.\n";
@@ -165,12 +165,12 @@ function generate_prompt($sources, $additional_instructions, $tags): string
     $prompt .= $additional_instructions !== '' ? "\n Instrucțiuni suplimentare: " . $additional_instructions : '';
 
     // Verificăm dacă trebuie să generăm etichete
-    $generate_tags = $options['generate_tags'] ?? 'yes';
+    $generate_tags_option = $options['generate_tags'] ?? 'yes';
 
     $prompt .= "\n Include următoarele informații în răspunsul tău:\n";
     $prompt .= "1. Generează un titlu relevant pentru articol, intrigant si care să stărnească curiozitatea cititorului in a citi articolul generat (title).\n";
 
-    if ($generate_tags === 'yes') {
+    if ($generate_tags_option === 'yes') {
         $prompt .= "2. Generează 1-3 etichete relevante (tags) și asigură-te că acestea sunt folosite de cel puțin două ori în conținutul articolului pentru optimizare SEO  și asigură-te că fiecare cuvânt începe cu majusculă.\n";
         $prompt .= " Etichetele sugerate pot fi din lista existentă de etichete: '$existing_tag_list'. Dacă nu există potriviri relevante, sugerează noi etichete.\n";
         $prompt .= "3. Numește numele categoriei care se potrivește mai bine din lista: '$category_list'.\n";
