@@ -270,7 +270,7 @@ function call_openai_api($api_key, $prompt)
             'Content-Type' => 'application/json',
         ],
         'body' => json_encode($request_body),
-        'timeout' => 180,
+        'timeout' => 300, // Mărit timeout-ul la 300 de secunde (5 minute)
     ]);
 
     error_log('📥 OPENAI API RESPONSE:');
