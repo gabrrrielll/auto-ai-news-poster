@@ -36,7 +36,8 @@ function auto_ai_news_poster_fix_css_mime_type() {
     error_log('   - Is post page: ' . ($is_post_page ? 'YES' : 'NO'));
     error_log('   - Should load CSS/JS: ' . (($is_settings_page || $is_post_page) ? 'YES' : 'NO'));
     
-    if ($is_settings_page || $is_post_page) {
+    // TEMPORAR: Forțăm încărcarea pe toate paginile de admin pentru debug
+    if (is_admin()) {
         echo '<style type="text/css">
         /* Auto AI News Poster - Complete styles inline to avoid MIME type issues */
         :root {
