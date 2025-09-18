@@ -22,18 +22,8 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-hoo
 add_action('admin_enqueue_scripts', 'auto_ai_news_poster_enqueue_scripts');
 function auto_ai_news_poster_enqueue_scripts($hook_suffix)
 {
-    // Verificăm dacă ne aflăm pe pagina de setări a pluginului sau pe pagina de editare a unui articol
-    if ($hook_suffix === 'post.php' || $hook_suffix === 'post-new.php' || (isset($_GET['page']) && $_GET['page'] === 'auto-ai-news-poster')) {
-
-        // NU mai încărcăm fișiere externe pentru a evita problemele MIME type
-        // Totul este încorporat inline în funcția auto_ai_news_poster_fix_css_mime_type()
-        
-        // Doar localizăm variabilele pentru AJAX (fără script extern)
-        wp_localize_script('jquery', 'autoAiNewsPosterAjax', [
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('get_article_from_sources_nonce'),
-        ]);
-    }
+    // Nu mai încărcăm nimic extern - totul este inline pentru a evita problemele MIME type
+    // JavaScript-ul și CSS-ul sunt încorporate în funcția auto_ai_news_poster_fix_css_mime_type()
 }
 
 // Fix pentru problema MIME type cu CSS-ul și JavaScript-ul
@@ -477,28 +467,33 @@ function auto_ai_news_poster_fix_css_mime_type() {
         
         // Adăugăm și JavaScript-ul inline pentru a evita problemele MIME type
         echo '<script type="text/javascript">
+        // Funcții pentru pagina de setări
         function toggleApiInstructions() {
             const content = document.getElementById("api-instructions-content");
             const icon = document.querySelector(".toggle-icon");
             
-            if (content.style.display === "none") {
-                content.style.display = "block";
-                icon.textContent = "▲";
-            } else {
-                content.style.display = "none";
-                icon.textContent = "▼";
+            if (content && icon) {
+                if (content.style.display === "none") {
+                    content.style.display = "block";
+                    icon.textContent = "▲";
+                } else {
+                    content.style.display = "none";
+                    icon.textContent = "▼";
+                }
             }
         }
         
         function refreshModelsList() {
-            const apiKey = document.getElementById("chatgpt_api_key").value;
+            const apiKey = document.getElementById("chatgpt_api_key");
             
-            if (!apiKey) {
+            if (!apiKey || !apiKey.value) {
                 alert("Vă rugăm să introduceți mai întâi cheia API OpenAI.");
                 return;
             }
             
             const refreshBtn = document.querySelector("button[onclick=\'refreshModelsList()\']");
+            if (!refreshBtn) return;
+            
             const originalText = refreshBtn.innerHTML;
             refreshBtn.innerHTML = "⏳ Se încarcă...";
             refreshBtn.disabled = true;
@@ -510,7 +505,7 @@ function auto_ai_news_poster_fix_css_mime_type() {
                 },
                 body: new URLSearchParams({
                     action: "refresh_openai_models",
-                    api_key: apiKey,
+                    api_key: apiKey.value,
                     nonce: "' . wp_create_nonce('refresh_models_nonce') . '"
                 })
             })
@@ -531,6 +526,63 @@ function auto_ai_news_poster_fix_css_mime_type() {
                 refreshBtn.disabled = false;
             });
         }
+        
+        // JavaScript pentru metabox-ul de editare articol
+        jQuery(document).ready(function($) {
+            console.log("Auto AI News Poster JavaScript loaded");
+            
+            // Handler pentru butonul de generare articol
+            $("#get-article-button").on("click", function() {
+                console.log("Generate article button clicked");
+                
+                const additionalInstructions = $("#additional-instructions").val();
+                const customSourceUrl = $("#custom-source-url").val();
+                const postID = $("#post_ID").val();
+                const button = $(this);
+
+                // Dezactivăm butonul și adăugăm un loader
+                button.prop("disabled", true);
+                button.html("⏳ Generare...");
+
+                console.log("Trimit cererea AJAX...");
+                console.log("Instrucțiuni suplimentare:", additionalInstructions);
+                console.log("customSourceUrl:", customSourceUrl);
+                console.log("Post ID:", postID);
+
+                $.ajax({
+                    url: "' . admin_url('admin-ajax.php') . '",
+                    method: "POST",
+                    data: {
+                        action: "get_article_from_sources",
+                        post_id: postID,
+                        instructions: additionalInstructions,
+                        custom_source_url: customSourceUrl,
+                        additional_instructions: additionalInstructions,
+                        security: "' . wp_create_nonce('get_article_from_sources_nonce') . '"
+                    },
+                    success: function(response) {
+                        console.log("Răspuns primit:", response);
+                        if (response.success) {
+                            // Redirecționăm către editorul articolului după ce articolul a fost creat/actualizat
+                            window.location.href = "' . admin_url('post.php') . '?post=" + response.data.post_id + "&action=edit";
+                        } else {
+                            alert("A apărut o eroare: " + (response.data.message || "Eroare necunoscută"));
+                            console.error("Eroare:", response);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Eroare AJAX:", error);
+                        console.error("Răspuns complet AJAX:", xhr.responseText);
+                        alert("A apărut o eroare la procesarea cererii.");
+                    },
+                    complete: function() {
+                        // Reactivăm butonul și eliminăm loader-ul
+                        button.prop("disabled", false);
+                        button.html("<span>✨</span> Generează articol");
+                    }
+                });
+            });
+        });
         </script>';
     }
 }
