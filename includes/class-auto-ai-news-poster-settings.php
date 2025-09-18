@@ -320,6 +320,9 @@ class Auto_Ai_News_Poster_Settings
         
         // Obținem lista de modele disponibile
         $available_models = self::get_cached_openai_models($api_key);
+        $has_error = isset($available_models['error']);
+        $error_message = $has_error ? $available_models['error'] : '';
+        $error_type = $has_error ? $available_models['error_type'] : '';
         ?>
         <div class="settings-card">
             <div class="settings-card-header">
@@ -341,7 +344,7 @@ class Auto_Ai_News_Poster_Settings
                 <div class="form-group">
                     <label for="ai_model" class="control-label">Model AI</label>
                     <select name="auto_ai_news_poster_settings[ai_model]" class="form-control" id="ai_model">
-                        <?php if (!empty($available_models)): ?>
+                        <?php if (!$has_error && !empty($available_models)): ?>
                             <optgroup label="🌟 Recomandate">
                                 <?php 
                                 $recommended_models = ['gpt-5', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini'];
@@ -367,23 +370,34 @@ class Auto_Ai_News_Poster_Settings
                                 ?>
                             </optgroup>
                         <?php else: ?>
-                            <optgroup label="🌟 Recomandate">
-                                <option value="gpt-5" <?php selected($selected_model, 'gpt-5'); ?>>GPT-5 - Cel mai bun model pentru coding și task-uri agentice</option>
-                                <option value="gpt-5-mini" <?php selected($selected_model, 'gpt-5-mini'); ?>>GPT-5 Mini - Versiune rapidă și economică pentru task-uri bine definite</option>
-                                <option value="gpt-4o" <?php selected($selected_model, 'gpt-4o'); ?>>GPT-4o - Acuratețe înaltă, cost moderat</option>
-                            </optgroup>
-                            <optgroup label="📊 Alte modele">
-                                <option value="gpt-5-nano" <?php selected($selected_model, 'gpt-5-nano'); ?>>GPT-5 Nano - Cel mai rapid și economic GPT-5</option>
-                                <option value="gpt-4-turbo" <?php selected($selected_model, 'gpt-4-turbo'); ?>>GPT-4 Turbo - Acuratețe maximă, cost ridicat</option>
-                                <option value="gpt-4o-mini" <?php selected($selected_model, 'gpt-4o-mini'); ?>>GPT-4o Mini - Optimizat pentru precizie, cost redus</option>
-                            </optgroup>
+                            <option value="" disabled>
+                                <?php if ($has_error): ?>
+                                    ❌ Eroare la încărcarea modelelor
+                                <?php else: ?>
+                                    ⏳ Se încarcă modelele...
+                                <?php endif; ?>
+                            </option>
                         <?php endif; ?>
                     </select>
+                    
+                    <?php if ($has_error): ?>
+                        <div class="alert alert-danger" style="margin-top: 10px; padding: 10px; background: #fee; border: 1px solid #fcc; border-radius: 4px;">
+                            <strong>❌ Eroare la încărcarea modelelor:</strong><br>
+                            <strong>Motivul:</strong> <?php echo esc_html($error_message); ?><br>
+                            <strong>Tipul erorii:</strong> <?php echo esc_html($error_type); ?><br>
+                            <small>Verificați cheia API și încercați din nou.</small>
+                        </div>
+                    <?php endif; ?>
+                    
                     <div class="form-description">
-                        <?php if (!empty($available_models)): ?>
-                            Lista de modele este actualizată dinamic din API-ul OpenAI. 
+                        <?php if (!$has_error && !empty($available_models)): ?>
+                            ✅ Lista de modele este actualizată dinamic din API-ul OpenAI. 
                             <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshModelsList()" style="margin-left: 10px;">
                                 🔄 Actualizează lista
+                            </button>
+                        <?php elseif ($has_error): ?>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshModelsList()">
+                                🔄 Încearcă din nou
                             </button>
                         <?php else: ?>
                             Introduceți cheia API pentru a vedea toate modelele disponibile.
@@ -757,9 +771,9 @@ class Auto_Ai_News_Poster_Settings
             return $cached_models;
         }
         
-        // Dacă nu avem API key, returnăm lista statică
+        // Dacă nu avem API key, returnăm eroare
         if (empty($api_key)) {
-            return self::get_static_models_list();
+            return ['error' => 'API key is required', 'error_type' => 'missing_api_key'];
         }
         
         // Facem apel API pentru a obține modelele
@@ -771,8 +785,8 @@ class Auto_Ai_News_Poster_Settings
             return $models;
         }
         
-        // Fallback la lista statică dacă API-ul nu răspunde
-        return self::get_static_models_list();
+        // Returnăm eroare dacă API-ul nu răspunde
+        return ['error' => 'Failed to load models from OpenAI API', 'error_type' => 'api_error'];
     }
     
     // Funcție pentru apelarea API-ului OpenAI pentru modele
@@ -787,18 +801,45 @@ class Auto_Ai_News_Poster_Settings
         ]);
         
         if (is_wp_error($response)) {
-            return false;
+            return [
+                'error' => 'Network error: ' . $response->get_error_message(),
+                'error_type' => 'network_error'
+            ];
         }
         
+        $response_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
         
+        // Verificăm codul de răspuns
+        if ($response_code !== 200) {
+            $error_message = 'API Error (HTTP ' . $response_code . ')';
+            if (isset($data['error']['message'])) {
+                $error_message .= ': ' . $data['error']['message'];
+            }
+            return [
+                'error' => $error_message,
+                'error_type' => 'api_error',
+                'response_code' => $response_code
+            ];
+        }
+        
         if (!isset($data['data']) || !is_array($data['data'])) {
-            return false;
+            return [
+                'error' => 'Invalid API response format',
+                'error_type' => 'invalid_response'
+            ];
         }
         
         // Filtrează doar modelele cu output structurat
         $structured_models = self::filter_structured_output_models($data['data']);
+        
+        if (empty($structured_models)) {
+            return [
+                'error' => 'No structured output models found in API response',
+                'error_type' => 'no_models'
+            ];
+        }
         
         // Organizează modelele într-un array asociativ
         $models_array = [];
