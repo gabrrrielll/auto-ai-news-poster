@@ -37,9 +37,9 @@ function auto_ai_news_poster_enqueue_scripts($hook_suffix)
 }
 
 // Fix pentru problema MIME type cu CSS-ul și JavaScript-ul
-add_action('wp_head', 'auto_ai_news_poster_fix_css_mime_type', 1);
+add_action('admin_head', 'auto_ai_news_poster_fix_css_mime_type', 1);
 function auto_ai_news_poster_fix_css_mime_type() {
-    if (is_admin() && isset($_GET['page']) && $_GET['page'] === 'auto-ai-news-poster') {
+    if (isset($_GET['page']) && $_GET['page'] === 'auto-ai-news-poster') {
         echo '<style type="text/css">
         /* Auto AI News Poster - Complete styles inline to avoid MIME type issues */
         :root {
