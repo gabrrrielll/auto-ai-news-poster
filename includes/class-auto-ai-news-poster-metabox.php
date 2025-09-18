@@ -75,7 +75,8 @@ class Auto_Ai_News_Poster_Metabox
             [self::class, 'render_external_image_metabox'],
             'post',
             'side',
-            'high'
+            'high',
+            ['class' => 'auto-ai-news-poster-metabox'] // Adaugăm clasa custom pentru stilizare
         );
     }
 

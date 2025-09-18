@@ -475,6 +475,184 @@ function auto_ai_news_poster_fix_css_mime_type() {
                 justify-content: center;
             }
         }
+
+        /* Stiluri pentru Metaboxuri */
+        .auto-ai-news-poster-metabox .inside {
+            margin: 0;
+            padding: 0;
+        }
+
+        .metabox-section {
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            overflow: hidden;
+            background: var(--background-color-secondary);
+        }
+
+        .metabox-section-header {
+            background: var(--background-color);
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+        }
+
+        .metabox-section-icon {
+            font-size: 1.2rem;
+            margin-right: 8px;
+            color: var(--primary-color);
+        }
+
+        .metabox-section-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .metabox-field-group {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .metabox-field-group:last-child {
+            border-bottom: none;
+        }
+
+        .metabox-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            font-size: 0.95rem;
+        }
+
+        .metabox-label .metabox-icon {
+            margin-right: 5px;
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .metabox-input[type="text"],
+        .metabox-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 14px;
+            background: var(--input-background);
+            color: var(--text-primary);
+            transition: var(--transition);
+            box-sizing: border-box; /* Include padding in element's total width and height */
+        }
+
+        .metabox-input[type="text"]:focus,
+        .metabox-textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .metabox-textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .metabox-description {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .metabox-generate-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: calc(100% - 30px); /* 30px = 2 * 15px padding */
+            padding: 12px 15px;
+            margin: 15px;
+            background: linear-gradient(145deg, var(--primary-color), var(--primary-hover));
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-small);
+        }
+
+        .metabox-generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+            filter: brightness(1.1);
+        }
+
+        .metabox-generate-btn:active {
+            transform: translateY(0);
+            box-shadow: var(--shadow-small);
+        }
+
+        .metabox-generate-btn span {
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+
+        /* Stiluri pentru buttton generare imagine AI */
+        #generate-image-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: calc(100% - 30px); /* 30px = 2 * 15px padding */
+            padding: 12px 15px;
+            margin: 15px;
+            background: linear-gradient(145deg, #6c5ce7, #8e44ad); /* O culoare diferită pentru butonul de imagine */
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-small);
+        }
+
+        #generate-image-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+            filter: brightness(1.1);
+        }
+
+        #generate-image-button:active {
+            transform: translateY(0);
+            box-shadow: var(--shadow-small);
+        }
+
+        #generate-image-button .button-icon {
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+
+        /* Stiluri pentru câmpurile de input/textarea în metabox-ul de imagine */
+        .auto-ai-metabox-content .metabox-input,
+        .auto-ai-metabox-content .metabox-textarea {
+            background-color: var(--input-background);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .auto-ai-metabox-content .metabox-input::placeholder,
+        .auto-ai-metabox-content .metabox-textarea::placeholder {
+            color: var(--text-secondary-light);
+        }
+
+        .auto-ai-metabox-content .metabox-description {
+            color: var(--text-secondary);
+        }
         </style>';
         
         // Adăugăm și JavaScript-ul inline pentru a evita problemele MIME type
