@@ -44,50 +44,87 @@ class Auto_Ai_News_Poster_Cron
     public static function auto_post()
     {
         $settings = get_option('auto_ai_news_poster_settings');
+        $generation_mode = $settings['generation_mode'] ?? 'parse_link'; // Mod implicit: parse_link
 
         if ($settings['mode'] === 'auto') {
-            // Verificăm dacă opțiunea "Rulează automat doar până la epuizarea listei de linkuri" este activată
-            $run_until_bulk_exhausted = $settings['run_until_bulk_exhausted'] === 'yes';
+            if ($generation_mode === 'parse_link') {
+                // Verificăm dacă opțiunea "Rulează automat doar până la epuizarea listei de linkuri" este activată
+                $run_until_bulk_exhausted = $settings['run_until_bulk_exhausted'] === 'yes';
 
-            if ($run_until_bulk_exhausted) {
-                // Verificăm dacă lista de linkuri este goală
-                $bulk_links = explode("\n", trim($settings['bulk_custom_source_urls'] ?? ''));
-                $bulk_links = array_filter($bulk_links, 'trim'); // Eliminăm rândurile goale
+                if ($run_until_bulk_exhausted) {
+                    // Verificăm dacă lista de linkuri este goală
+                    $bulk_links = explode("\n", trim($settings['bulk_custom_source_urls'] ?? ''));
+                    $bulk_links = array_filter($bulk_links, 'trim'); // Eliminăm rândurile goale
 
-                error_log('CRON DEBUG: $run_until_bulk_exhausted:'.$run_until_bulk_exhausted.' count($bulk_links):'. count($bulk_links).' $bulk_links:'. print_r($bulk_links, true));
+                    error_log('CRON DEBUG: $run_until_bulk_exhausted:'.$run_until_bulk_exhausted.' count($bulk_links):'. count($bulk_links).' $bulk_links:'. print_r($bulk_links, true));
 
-                if (empty($bulk_links)) {
-                    // Lista de linkuri s-a epuizat, oprim cron job-ul și schimbăm modul pe manual
-                    error_log('Lista de linkuri personalizate a fost epuizată. Oprirea cron job-ului.');
-                    
-                    // Dezactivăm cron job-ul
-                    wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
-                    
-                    // Schimbăm modul din automat pe manual
-                    $settings['mode'] = 'manual';
-                    update_option('auto_ai_news_poster_settings', $settings);
-                    
-                    // Actualizăm transient-ul pentru refresh automat
-                    set_transient('auto_ai_news_poster_last_bulk_check', 0, 300);
-                    
-                    return; // Oprim execuția
+                    if (empty($bulk_links)) {
+                        // Lista de linkuri s-a epuizat, oprim cron job-ul și schimbăm modul pe manual
+                        error_log('Lista de linkuri personalizate a fost epuizată. Oprirea cron job-ului.');
+
+                        // Dezactivăm cron job-ul
+                        wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
+
+                        // Schimbăm modul din automat pe manual
+                        $settings['mode'] = 'manual';
+                        update_option('auto_ai_news_poster_settings', $settings);
+
+                        // Actualizăm transient-ul pentru refresh automat
+                        set_transient('auto_ai_news_poster_last_bulk_check', 0, 300);
+
+                        return; // Oprim execuția
+                    }
+
+                    // Actualizăm transient-ul pentru verificarea schimbărilor
+                    set_transient('auto_ai_news_poster_last_bulk_check', count($bulk_links), 300);
                 }
-                
-                // Actualizăm transient-ul pentru verificarea schimbărilor
-                set_transient('auto_ai_news_poster_last_bulk_check', count($bulk_links), 300);
-            }
 
-            // Log the auto post execution
-            error_log('Auto post cron triggered.');
+                // Log the auto post execution
+                error_log('Auto post cron triggered for "parse_link" mode.');
 
-            try {
-                // Apelează direct process_article_generation() în loc de get_article_from_sources()
-                Auto_Ai_News_Poster_Api::process_article_generation();
-            } catch (Exception $e) {
-                // Log any errors that occur during posting
-                error_log('Error during auto post: ' . $e->getMessage());
+                try {
+                    // Apelează direct process_article_generation() în loc de get_article_from_sources()
+                    Auto_Ai_News_Poster_Api::process_article_generation();
+                } catch (Exception $e) {
+                    // Log any errors that occur during posting
+                    error_log('Error during auto post ("parse_link" mode): ' . $e->getMessage());
+                }
+            } elseif ($generation_mode === 'ai_browsing') {
+                error_log('Auto post cron triggered for "ai_browsing" mode.');
+                try {
+                    self::trigger_ai_browsing_generation();
+                } catch (Exception $e) {
+                    error_log('Error during auto post ("ai_browsing" mode): ' . $e->getMessage());
+                }
             }
         }
+    }
+
+    public static function trigger_ai_browsing_generation()
+    {
+        $settings = get_option('auto_ai_news_poster_settings');
+        $news_sources = $settings['news_sources'] ?? '';
+        $category_id = $settings['specific_search_category'] ?? '';
+
+        if (empty($news_sources) || empty($category_id)) {
+            error_log('AI Browsing Mode Error: News sources or category is not set.');
+            return;
+        }
+
+        // Obține ultimele 5 titluri din categoria specificată
+        $latest_posts_args = [
+            'posts_per_page' => 5,
+            'cat' => $category_id,
+            'orderby' => 'date',
+            'order' => 'DESC',
+            'post_status' => 'publish',
+            'fields' => 'ids'
+        ];
+        $latest_post_ids = get_posts($latest_posts_args);
+        $latest_titles = array_map('get_the_title', $latest_post_ids);
+
+        // Apelează funcția API pentru generare
+        Auto_Ai_News_Poster_Api::generate_article_with_browsing($news_sources, get_cat_name($category_id), $latest_titles);
     }
 
 

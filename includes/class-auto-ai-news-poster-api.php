@@ -174,6 +174,16 @@ class Auto_Ai_News_Poster_Api
             return;
         }
 
+        // Determinăm modul de generare (relevant mai ales pentru CRON)
+        $generation_mode = $options['generation_mode'] ?? 'parse_link';
+
+        if ($generation_mode === 'ai_browsing' && !$is_ajax_call) {
+            // Pentru CRON în modul AI Browsing, logica este gestionată de Auto_Ai_News_Poster_Cron::trigger_ai_browsing_generation()
+            // Această funcție (process_article_generation) este acum dedicată modului parse_link
+            error_log('🤖 Skipping process_article_generation for ai_browsing CRON job. It is handled separately.');
+            return;
+        }
+
         $source_link = '';
         $extracted_content = '';
         $is_bulk_processing = false;
@@ -371,6 +381,140 @@ class Auto_Ai_News_Poster_Api
                 'content' => $post_data['post_content'],
             ]);
         }
+    }
+
+
+    /**
+     * Generează un articol folosind modul AI Browsing.
+     *
+     * @param string $news_sources Sursele de știri (separate de newline).
+     * @param string $category_name Numele categoriei de interes.
+     * @param array $latest_titles Lista cu titlurile ultimelor articole pentru a evita duplicarea.
+     */
+    public static function generate_article_with_browsing($news_sources, $category_name, $latest_titles)
+    {
+        error_log('🚀 GENERATE_ARTICLE_WITH_BROWSING() STARTED');
+        $options = get_option('auto_ai_news_poster_settings');
+        $api_key = $options['chatgpt_api_key'];
+
+        if (empty($api_key)) {
+            error_log('❌ AI Browsing Error: API Key is not set.');
+            return;
+        }
+
+        // Construim promptul
+        $prompt = self::build_ai_browsing_prompt($news_sources, $category_name, $latest_titles);
+        error_log('🤖 AI Browsing Prompt built. Length: ' . strlen($prompt) . ' chars.');
+
+        // Apelăm API-ul OpenAI
+        $response = call_openai_api($api_key, $prompt);
+
+        if (is_wp_error($response)) {
+            error_log('❌ AI Browsing OpenAI API Error: ' . $response->get_error_message());
+            return;
+        }
+
+        // Procesăm răspunsul
+        $body = wp_remote_retrieve_body($response);
+        $decoded_response = json_decode($body, true);
+        $ai_content_json = $decoded_response['choices'][0]['message']['content'] ?? null;
+
+        if (empty($ai_content_json)) {
+            error_log('❌ AI Browsing Error: AI response is empty or in an unexpected format.');
+            error_log('Full API Response: ' . print_r($decoded_response, true));
+            return;
+        }
+
+        $article_data = json_decode($ai_content_json, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log('❌ AI Browsing Error: Failed to decode JSON from AI response. Error: ' . json_last_error_msg());
+            error_log('AI content string was: ' . $ai_content_json);
+            return;
+        }
+
+        if (empty($article_data['continut']) || empty($article_data['titlu'])) {
+            error_log('❌ AI Browsing Error: AI response JSON is missing "continut" or "titlu".');
+            error_log('Article Data Received: ' . print_r($article_data, true));
+            return;
+        }
+
+        // Preparăm și salvăm postarea
+        $post_data = [
+            'post_title'    => sanitize_text_field($article_data['titlu']),
+            'post_content'  => wp_kses_post($article_data['continut']),
+            'post_status'   => $options['status'] ?? 'draft',
+            'post_author'   => $options['author_name'] ?? 1,
+            'post_excerpt'  => isset($article_data['meta_descriere']) ? sanitize_text_field($article_data['meta_descriere']) : '',
+            'post_category' => [get_cat_ID($category_name)]
+        ];
+
+        $new_post_id = Post_Manager::insert_or_update_post(null, $post_data);
+
+        if (is_wp_error($new_post_id)) {
+            error_log('❌ AI Browsing Error: Failed to save post. ' . $new_post_id->get_error_message());
+            return;
+        }
+
+        error_log("✅ Successfully generated and saved post ID: {$new_post_id} using AI Browsing for category: {$category_name}");
+
+        // Setăm tag-uri și meta
+        $tags = $article_data['cuvinte_cheie'] ?? [];
+        Post_Manager::set_post_tags($new_post_id, $tags);
+        update_post_meta($new_post_id, '_generation_mode', 'ai_browsing');
+
+        // Generăm imaginea dacă este activată opțiunea
+        if (!empty($article_data['imagine_prompt']) && isset($options['generate_image']) && $options['generate_image'] === 'yes') {
+            error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id . ' using custom prompt.');
+            // Aici ar trebui să apelăm o funcție care generează imaginea folosind promptul custom
+            // Momentan, funcția existentă se bazează pe conținutul postării, o vom folosi pe aceea
+            self::generate_image_for_article($new_post_id);
+        }
+    }
+
+    /**
+     * Construiește promptul pentru modul AI Browsing.
+     */
+    private static function build_ai_browsing_prompt($news_sources, $category_name, $latest_titles)
+    {
+        $options = get_option('auto_ai_news_poster_settings');
+        $custom_instructions = $options['ai_browsing_instructions'] ?? 'Scrie un articol de știre original, în limba română, de 300-500 de cuvinte. Articolul trebuie să fie obiectiv, informativ și bine structurat (introducere, cuprins, încheiere).';
+        $latest_titles_str = !empty($latest_titles) ? implode("\n- ", $latest_titles) : 'Niciun articol recent.';
+
+        $prompt = "
+        **Rol:** Ești un redactor de știri expert în domeniul **{$category_name}**, specializat în găsirea celor mai recente și relevante subiecte.
+
+        **Context:** Ai la dispoziție următoarele resurse și constrângeri:
+        1. **Surse de informare preferate:**
+        {$news_sources}
+        2. **Categorie de interes:** {$category_name}
+        3. **Ultimele articole publicate pe site-ul nostru în această categorie (EVITĂ ACESTE SUBIECTE):**
+        - {$latest_titles_str}
+
+        **Sarcina ta:**
+        1. **Cercetare:** Consultă sursele de informare pentru a identifica un subiect de știre foarte recent (din ultimele 24-48 de ore), important și relevant pentru categoria specificată.
+        2. **Verificarea unicității:** Asigură-te că subiectul ales NU este similar cu niciunul dintre titlurile deja publicate. Dacă este, alege alt subiect.
+        3. **Scrierea articolului:** {$custom_instructions}
+        4. **Generare titlu:** Creează un titlu concis și atractiv pentru articol.
+        5. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol, care ar putea fi folosită într-un generator de imagini AI (ex: DALL-E, Midjourney).
+
+        **Format de răspuns OBLIGATORIU:**
+        Răspunsul tău trebuie să fie exclusiv în format JSON, fără niciun alt text înainte sau după. Structura trebuie să fie următoarea:
+        ```json
+        {
+          \"titlu\": \"Titlul articolului generat de tine\",
+          \"continut\": \"Conținutul complet al articolului, formatat cu paragrafe.\",
+          \"imagine_prompt\": \"Descrierea detaliată pentru imaginea reprezentativă.\",
+          \"meta_descriere\": \"O meta descriere de maximum 160 de caractere, optimizată SEO.\",
+          \"cuvinte_cheie\": [
+            \"cuvant_cheie_1\",
+            \"cuvant_cheie_2\",
+            \"cuvant_cheie_3\"
+          ]
+        }
+        ```
+        ";
+
+        return $prompt;
     }
 
 

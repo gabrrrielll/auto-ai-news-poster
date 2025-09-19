@@ -11,7 +11,7 @@ ini_set('error_log', plugin_dir_path(__FILE__) . 'php_error.log');
 /**
  * Plugin Name: Auto AI News Poster
  * Description: Un plugin care preia știri de pe minim trei surse, le analizează și publică un articol obiectiv în mod automat sau manual.
- * Version: 1.7
+ * Version: 1.15.3
  * Author: Gabriel Sandu
  */
 
@@ -513,6 +513,7 @@ function auto_ai_news_poster_fix_css_mime_type()
         echo '<script type="text/javascript">
             var autoAiNewsPosterAjax = {
                 ajax_url: "' . admin_url('admin-ajax.php') . '",
+                admin_url: "' . admin_url() . '",
                 generate_image_nonce: "' . wp_create_nonce('generate_image_nonce') . '",
                 get_article_nonce: "' . wp_create_nonce('get_article_from_sources_nonce') . '",
                 refresh_models_nonce: "' . wp_create_nonce('refresh_openai_models_nonce') . '",

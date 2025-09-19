@@ -78,6 +78,15 @@ class Auto_Ai_News_Poster_Settings
 
         add_settings_section('main_section', 'Main Settings', null, 'auto_ai_news_poster_settings_page');
 
+        // Camp pentru selectarea modului de generare (AI Browsing vs. Parsare Link)
+        add_settings_field(
+            'generation_mode',
+            'Mod de generare',
+            [self::class, 'generation_mode_callback'],
+            'auto_ai_news_poster_settings_page',
+            'main_section'
+        );
+
         // Camp pentru selectarea modului de publicare
         add_settings_field(
             'mode',
@@ -141,11 +150,20 @@ class Auto_Ai_News_Poster_Settings
             'main_section'
         );
 
-        // Camp pentru instructiuni AI (textarea)
+        // Camp pentru instructiuni AI (textarea) - Mod Parsare Link
         add_settings_field(
-            'default_ai_instructions',
-            'Instrucțiuni suplimentare AI',
-            [self::class, 'ai_instructions_callback'],
+            'parse_link_ai_instructions',
+            'Instrucțiuni AI (Parsare Link)',
+            [self::class, 'parse_link_ai_instructions_callback'],
+            'auto_ai_news_poster_settings_page',
+            'main_section'
+        );
+
+        // Camp pentru instructiuni AI (textarea) - Mod AI Browsing
+        add_settings_field(
+            'ai_browsing_instructions',
+            'Instrucțiuni AI (AI Browsing)',
+            [self::class, 'ai_browsing_instructions_callback'],
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
@@ -206,6 +224,34 @@ class Auto_Ai_News_Poster_Settings
 
     }
 
+    // Callback pentru noul camp "Mod de generare"
+    public static function generation_mode_callback()
+    {
+        $options = get_option('auto_ai_news_poster_settings');
+        $generation_mode = $options['generation_mode'] ?? 'parse_link';
+        ?>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">🧠</div>
+                <h3 class="settings-card-title">Mod Principal de Operare</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <label for="generation_mode" class="control-label">Alege cum vrei să generezi articolele</label>
+                    <select name="auto_ai_news_poster_settings[generation_mode]" class="form-control" id="generation_mode">
+                        <option value="parse_link" <?php selected($generation_mode, 'parse_link'); ?>>1. Parsare Link Specific</option>
+                        <option value="ai_browsing" <?php selected($generation_mode, 'ai_browsing'); ?>>2. Generare Știre cu AI Browsing</option>
+                    </select>
+                    <small class="form-text text-muted">
+                        <b>Parsare Link:</b> Plugin-ul va prelua conținut de la un link specific din lista de surse.<br>
+                        <b>Generare AI:</b> AI-ul va căuta o știre nouă pe internet, folosind sursele de informare și categoria specificată.
+                    </small>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
     // Callback pentru campul Mod de publicare
     public static function mode_callback()
     {
@@ -245,22 +291,24 @@ class Auto_Ai_News_Poster_Settings
 
         $categories = get_categories(['hide_empty' => false]);
         ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">📂</div>
-                <h3 class="settings-card-title">Configurare Categorii</h3>
-            </div>
-            <div class="settings-card-content">
-                <div class="form-group">
-                    <label for="specific_search_category" class="control-label">Categorie specifică pentru căutare</label>
-                    <select name="auto_ai_news_poster_settings[specific_search_category]" class="form-control" id="specific_search_category">
-                        <option value="">Selectează o categorie</option>
-                        <?php foreach ($categories as $category) : ?>
-                            <option value="<?php echo esc_attr($category->term_id); ?>" <?php selected($selected_category, $category->term_id); ?>>
-                                <?php echo esc_html($category->name); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+        <div class="settings-group settings-group-ai_browsing">
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">📂</div>
+                    <h3 class="settings-card-title">Configurare Categorii</h3>
+                </div>
+                <div class="settings-card-content">
+                    <div class="form-group">
+                        <label for="specific_search_category" class="control-label">Categorie specifică pentru căutare AI</label>
+                        <select name="auto_ai_news_poster_settings[specific_search_category]" class="form-control" id="specific_search_category">
+                            <option value="">Selectează o categorie</option>
+                            <?php foreach ($categories as $category) : ?>
+                                <option value="<?php echo esc_attr($category->term_id); ?>" <?php selected($selected_category, $category->term_id); ?>>
+                                    <?php echo esc_html($category->name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -294,17 +342,19 @@ class Auto_Ai_News_Poster_Settings
     {
         $options = get_option('auto_ai_news_poster_settings');
         ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">📰</div>
-                <h3 class="settings-card-title">Surse de Știri</h3>
-            </div>
-            <div class="settings-card-content">
-                <div class="form-group">
-                    <label for="news_sources" class="control-label">Surse de știri</label>
-                    <textarea name="auto_ai_news_poster_settings[news_sources]" class="form-control" id="news_sources"
-                              rows="6"><?php echo esc_textarea($options['news_sources']); ?></textarea>
-                    <small class="form-text text-muted">Adăugați câte un URL de sursă pe fiecare linie.</small>
+        <div class="settings-group settings-group-ai_browsing">
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">📰</div>
+                    <h3 class="settings-card-title">Surse de Informare AI</h3>
+                </div>
+                <div class="settings-card-content">
+                    <div class="form-group">
+                        <label for="news_sources" class="control-label">Surse de știri pentru informare AI</label>
+                        <textarea name="auto_ai_news_poster_settings[news_sources]" class="form-control" id="news_sources"
+                                  rows="6"><?php echo esc_textarea($options['news_sources']); ?></textarea>
+                        <small class="form-text text-muted">Adăugați câte un URL de sursă pe fiecare linie. AI-ul le va folosi ca punct de plecare pentru a găsi știri noi.</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -317,7 +367,7 @@ class Auto_Ai_News_Poster_Settings
         $options = get_option('auto_ai_news_poster_settings');
         $api_key = $options['chatgpt_api_key'] ?? '';
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
-        
+
         // Obținem lista de modele disponibile
         $available_models = self::get_cached_openai_models($api_key);
         $has_error = isset($available_models['error']);
@@ -346,28 +396,28 @@ class Auto_Ai_News_Poster_Settings
                     <select name="auto_ai_news_poster_settings[ai_model]" class="form-control" id="ai_model">
                         <?php if (!$has_error && !empty($available_models)): ?>
                             <optgroup label="🌟 Recomandate">
-                                <?php 
+                                <?php
                                 $recommended_models = ['gpt-5', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini'];
-                                foreach ($recommended_models as $model_id) {
-                                    if (isset($available_models[$model_id])) {
-                                        $model = $available_models[$model_id];
-                                        $description = self::get_model_description($model_id);
-                                        $selected = selected($selected_model, $model_id, false);
-                                        echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
-                                    }
+                            foreach ($recommended_models as $model_id) {
+                                if (isset($available_models[$model_id])) {
+                                    $model = $available_models[$model_id];
+                                    $description = self::get_model_description($model_id);
+                                    $selected = selected($selected_model, $model_id, false);
+                                    echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
                                 }
-                                ?>
+                            }
+                            ?>
                             </optgroup>
                             <optgroup label="📊 Toate modelele disponibile">
-                                <?php 
-                                foreach ($available_models as $model_id => $model) {
-                                    if (!in_array($model_id, $recommended_models)) {
-                                        $description = self::get_model_description($model_id);
-                                        $selected = selected($selected_model, $model_id, false);
-                                        echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
-                                    }
+                                <?php
+                            foreach ($available_models as $model_id => $model) {
+                                if (!in_array($model_id, $recommended_models)) {
+                                    $description = self::get_model_description($model_id);
+                                    $selected = selected($selected_model, $model_id, false);
+                                    echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
                                 }
-                                ?>
+                            }
+                            ?>
                             </optgroup>
                         <?php else: ?>
                             <option value="" disabled>
@@ -409,9 +459,9 @@ class Auto_Ai_News_Poster_Settings
                     <h4 style="margin: 0 0 10px 0; color: #007cba;">🔧 Debug Info - Cron Job</h4>
                     <?php
                     $next_scheduled = wp_next_scheduled('auto_ai_news_poster_cron_hook');
-                    $settings = get_option('auto_ai_news_poster_settings', []);
-                    $mode = $settings['mode'] ?? 'manual';
-                    ?>
+        $settings = get_option('auto_ai_news_poster_settings', []);
+        $mode = $settings['mode'] ?? 'manual';
+        ?>
                     <p><strong>Modul curent:</strong> <?php echo esc_html($mode); ?></p>
                     <p><strong>Cron job programat:</strong> <?php echo $next_scheduled ? date('Y-m-d H:i:s', $next_scheduled) : 'NU este programat'; ?></p>
                     <p><strong>Următoarea execuție:</strong> <?php echo $next_scheduled ? human_time_diff($next_scheduled) . ' de acum' : 'N/A'; ?></p>
@@ -592,23 +642,50 @@ class Auto_Ai_News_Poster_Settings
     }
 
 
-    // Callback pentru instrucțiunile AI (textarea)
-    public static function ai_instructions_callback()
+    // Callback pentru instrucțiunile AI (textarea) - Mod Parsare Link
+    public static function parse_link_ai_instructions_callback()
     {
         $options = get_option('auto_ai_news_poster_settings');
-        $default_instructions = $options['default_ai_instructions'] ?? 'Creează un articol unic pe baza următoarelor surse de știri, respectă structura titlu, etichete și conținut. Sugerează imagini și include rezumatul.';
-
+        $instructions = $options['parse_link_ai_instructions'] ?? 'Creează un articol unic pe baza textului extras. Respectă structura JSON cu titlu, conținut, etichete, și rezumat. Asigură-te că articolul este obiectiv și bine formatat.';
         ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">🤖</div>
-                <h3 class="settings-card-title">Instrucțiuni Suplimentare AI</h3>
+        <div class="settings-group settings-group-parse_link">
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">✍️</div>
+                    <h3 class="settings-card-title">Instrucțiuni AI pentru Parsare Link</h3>
+                </div>
+                <div class="settings-card-content">
+                    <div class="form-group">
+                        <label class="control-label">Instrucțiuni pentru AI (când se parsează un link specific)</label>
+                        <textarea name="auto_ai_news_poster_settings[parse_link_ai_instructions]" class="form-control" rows="6"
+                                  placeholder="Introdu instrucțiunile suplimentare pentru AI"><?php echo esc_textarea($instructions); ?></textarea>
+                        <small class="form-text text-muted">Aceste instrucțiuni sunt adăugate la prompt atunci când generați un articol dintr-un link specific.</small>
+                    </div>
+                </div>
             </div>
-            <div class="settings-card-content">
-                <div class="form-group">
-                    <label class="control-label">Instrucțiuni suplimentare AI pentru generarea articolelor</label>
-                    <textarea name="auto_ai_news_poster_settings[default_ai_instructions]" class="form-control" rows="6"
-                              placeholder="Introdu instrucțiunile suplimentare pentru AI"><?php echo esc_textarea($default_instructions); ?></textarea>
+        </div>
+        <?php
+    }
+
+    // Callback pentru instrucțiunile AI (textarea) - Mod AI Browsing
+    public static function ai_browsing_instructions_callback()
+    {
+        $options = get_option('auto_ai_news_poster_settings');
+        $instructions = $options['ai_browsing_instructions'] ?? 'Scrie un articol de știre original, în limba română, de 300-500 de cuvinte. Articolul trebuie să fie obiectiv, informativ și bine structurat (introducere, cuprins, încheiere).';
+        ?>
+        <div class="settings-group settings-group-ai_browsing">
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">🤖</div>
+                    <h3 class="settings-card-title">Instrucțiuni AI pentru Generare Știre</h3>
+                </div>
+                <div class="settings-card-content">
+                    <div class="form-group">
+                        <label class="control-label">Instrucțiuni pentru AI (când AI-ul caută o știre nouă)</label>
+                        <textarea name="auto_ai_news_poster_settings[ai_browsing_instructions]" class="form-control" rows="6"
+                                  placeholder="Introdu instrucțiunile suplimentare pentru AI"><?php echo esc_textarea($instructions); ?></textarea>
+                        <small class="form-text text-muted">Aceste instrucțiuni sunt adăugate la promptul complex de generare, în secțiunea "Sarcina ta".</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -737,16 +814,18 @@ class Auto_Ai_News_Poster_Settings
         $options = get_option('auto_ai_news_poster_settings');
         $bulk_links = $options['bulk_custom_source_urls'] ?? '';
         ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">🔗</div>
-                <h3 class="settings-card-title">Lista de Linkuri Sursă</h3>
-            </div>
-            <div class="settings-card-content">
-                <div class="form-group">
-                    <label class="control-label">Lista de linkuri sursă personalizate</label>
-                    <textarea name="auto_ai_news_poster_settings[bulk_custom_source_urls]" class="form-control" rows="6" placeholder="Introduceți câte un link pe fiecare rând"><?php echo esc_textarea($bulk_links); ?></textarea>
-                    <small class="form-text text-muted">Introduceți o listă de linkuri sursă. Acestea vor fi folosite automat sau manual pentru generarea articolelor.</small>
+        <div class="settings-group settings-group-parse_link">
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">🔗</div>
+                    <h3 class="settings-card-title">Lista de Linkuri Sursă pentru Parsare</h3>
+                </div>
+                <div class="settings-card-content">
+                    <div class="form-group">
+                        <label class="control-label">Lista de linkuri sursă personalizate</label>
+                        <textarea name="auto_ai_news_poster_settings[bulk_custom_source_urls]" class="form-control" rows="6" placeholder="Introduceți câte un link pe fiecare rând"><?php echo esc_textarea($bulk_links); ?></textarea>
+                        <small class="form-text text-muted">Introduceți o listă de linkuri sursă. Acestea vor fi folosite automat sau manual pentru generarea articolelor.</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -759,26 +838,28 @@ class Auto_Ai_News_Poster_Settings
         $is_auto_mode = isset($options['mode']) && $options['mode'] === 'auto'; // Verificăm dacă modul este "auto"
         $run_until_bulk_exhausted = $options['run_until_bulk_exhausted'] ?? ''; // Valoare implicită pentru cheie
         ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">⚡</div>
-                <h3 class="settings-card-title">Configurare Avansată</h3>
-            </div>
-            <div class="settings-card-content">
-                <div class="checkbox-modern">
-                    <input type="checkbox" name="auto_ai_news_poster_settings[run_until_bulk_exhausted]" 
-                           value="yes" <?php checked($run_until_bulk_exhausted, 'yes'); ?>
-                           <?php echo $is_auto_mode ? '' : 'disabled'; ?> />
-                    <label>Da, rulează doar până la epuizarea listei de linkuri</label>
+        <div class="settings-group settings-group-parse_link">
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">⚡</div>
+                    <h3 class="settings-card-title">Configurare Avansată Parsare</h3>
                 </div>
-                <small class="form-text text-muted">Această opțiune este disponibilă doar în modul automat.</small>
-                <script>
-                    // Script JavaScript pentru a dezactiva checkbox-ul dacă modul este schimbat
-                    document.getElementById('mode').addEventListener('change', function () {
-                        const checkbox = document.querySelector('input[name="auto_ai_news_poster_settings[run_until_bulk_exhausted]"]');
-                        checkbox.disabled = this.value !== 'auto';
-                    });
-                </script>
+                <div class="settings-card-content">
+                    <div class="checkbox-modern">
+                        <input type="checkbox" name="auto_ai_news_poster_settings[run_until_bulk_exhausted]" 
+                               value="yes" <?php checked($run_until_bulk_exhausted, 'yes'); ?>
+                               <?php echo $is_auto_mode ? '' : 'disabled'; ?> />
+                        <label>Da, rulează doar până la epuizarea listei de linkuri</label>
+                    </div>
+                    <small class="form-text text-muted">Această opțiune este disponibilă doar în modul automat.</small>
+                    <script>
+                        // Script JavaScript pentru a dezactiva checkbox-ul dacă modul este schimbat
+                        document.getElementById('mode').addEventListener('change', function () {
+                            const checkbox = document.querySelector('input[name="auto_ai_news_poster_settings[run_until_bulk_exhausted]"]');
+                            checkbox.disabled = this.value !== 'auto';
+                        });
+                    </script>
+                </div>
             </div>
         </div>
         <?php
@@ -789,29 +870,29 @@ class Auto_Ai_News_Poster_Settings
     {
         // Verificăm cache-ul (24 ore)
         $cached_models = get_transient('openai_models_cache');
-        
+
         if ($cached_models !== false && !empty($cached_models)) {
             return $cached_models;
         }
-        
+
         // Dacă nu avem API key, returnăm eroare
         if (empty($api_key)) {
             return ['error' => 'API key is required', 'error_type' => 'missing_api_key'];
         }
-        
+
         // Facem apel API pentru a obține modelele
         $models = self::get_available_openai_models($api_key);
-        
+
         if ($models && !empty($models)) {
             // Salvăm în cache pentru 24 ore
             set_transient('openai_models_cache', $models, 24 * HOUR_IN_SECONDS);
             return $models;
         }
-        
+
         // Returnăm eroare dacă API-ul nu răspunde
         return ['error' => 'Failed to load models from OpenAI API', 'error_type' => 'api_error'];
     }
-    
+
     // Funcție pentru apelarea API-ului OpenAI pentru modele
     public static function get_available_openai_models($api_key)
     {
@@ -822,18 +903,18 @@ class Auto_Ai_News_Poster_Settings
             ],
             'timeout' => 30,
         ]);
-        
+
         if (is_wp_error($response)) {
             return [
                 'error' => 'Network error: ' . $response->get_error_message(),
                 'error_type' => 'network_error'
             ];
         }
-        
+
         $response_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
-        
+
         // Verificăm codul de răspuns
         if ($response_code !== 200) {
             $error_message = 'API Error (HTTP ' . $response_code . ')';
@@ -846,33 +927,33 @@ class Auto_Ai_News_Poster_Settings
                 'response_code' => $response_code
             ];
         }
-        
+
         if (!isset($data['data']) || !is_array($data['data'])) {
             return [
                 'error' => 'Invalid API response format',
                 'error_type' => 'invalid_response'
             ];
         }
-        
+
         // Filtrează doar modelele cu output structurat
         $structured_models = self::filter_structured_output_models($data['data']);
-        
+
         if (empty($structured_models)) {
             return [
                 'error' => 'No structured output models found in API response',
                 'error_type' => 'no_models'
             ];
         }
-        
+
         // Organizează modelele într-un array asociativ
         $models_array = [];
         foreach ($structured_models as $model) {
             $models_array[$model['id']] = $model;
         }
-        
+
         return $models_array;
     }
-    
+
     // Funcție pentru filtrarea modelelor cu output structurat
     public static function filter_structured_output_models($models)
     {
@@ -885,16 +966,16 @@ class Auto_Ai_News_Poster_Settings
             // GPT-3.5 Series
             'gpt-3.5-turbo', 'gpt-3.5-turbo-1106', 'gpt-3.5-turbo-0613', 'gpt-3.5-turbo-0301'
         ];
-        
-        return array_filter($models, function($model) use ($structured_models) {
+
+        return array_filter($models, function ($model) use ($structured_models) {
             // Verificăm dacă modelul este în lista noastră sau dacă începe cu gpt-5, gpt-4 sau gpt-3.5
-            return in_array($model['id'], $structured_models) || 
+            return in_array($model['id'], $structured_models) ||
                    strpos($model['id'], 'gpt-5') === 0 ||
-                   strpos($model['id'], 'gpt-4') === 0 || 
+                   strpos($model['id'], 'gpt-4') === 0 ||
                    strpos($model['id'], 'gpt-3.5') === 0;
         });
     }
-    
+
     // Lista statică de modele (fallback)
     public static function get_static_models_list()
     {
@@ -909,7 +990,7 @@ class Auto_Ai_News_Poster_Settings
             'gpt-4-turbo' => ['id' => 'gpt-4-turbo', 'object' => 'model'],
         ];
     }
-    
+
     // Funcție pentru descrierile modelelor
     public static function get_model_description($model_id)
     {
@@ -926,7 +1007,7 @@ class Auto_Ai_News_Poster_Settings
             // GPT-3.5 Series
             'gpt-3.5-turbo' => 'GPT-3.5 Turbo - Rapid și economic',
         ];
-        
+
         // Dacă nu avem descriere specifică, generăm una dinamică
         if (!isset($descriptions[$model_id])) {
             if (strpos($model_id, 'gpt-5') === 0) {
@@ -939,10 +1020,10 @@ class Auto_Ai_News_Poster_Settings
                 return $model_id;
             }
         }
-        
+
         return $descriptions[$model_id];
     }
-    
+
     // Handler AJAX pentru actualizarea listei de modele
     public static function ajax_refresh_openai_models()
     {
@@ -951,26 +1032,26 @@ class Auto_Ai_News_Poster_Settings
             wp_send_json_error('Nonce verification failed');
             return;
         }
-        
+
         // Verificăm permisiunile
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Insufficient permissions');
             return;
         }
-        
+
         $api_key = sanitize_text_field($_POST['api_key']);
-        
+
         if (empty($api_key)) {
             wp_send_json_error('API key is required');
             return;
         }
-        
+
         // Ștergem cache-ul existent
         delete_transient('openai_models_cache');
-        
+
         // Obținem noile modele
         $models = self::get_available_openai_models($api_key);
-        
+
         if ($models && !empty($models)) {
             // Salvăm în cache pentru 24 ore
             set_transient('openai_models_cache', $models, 24 * HOUR_IN_SECONDS);
@@ -985,35 +1066,35 @@ class Auto_Ai_News_Poster_Settings
     {
         // Obținem setările existente
         $existing_options = get_option('auto_ai_news_poster_settings', []);
-        
+
         // Păstrăm toate setările existente
         $sanitized = $existing_options;
-        
+
         // Lista checkbox-urilor care trebuie să fie setate explicit
-        $checkbox_fields = ['auto_rotate_categories', 'generate_image', 
+        $checkbox_fields = ['auto_rotate_categories', 'generate_image',
                            'run_until_bulk_exhausted', 'generate_tags'];
 
         // Câmpurile de tip <select> care trebuie validate
-        $select_fields = ['mode', 'status', 'specific_search_category', 'author_name', 'article_length_option', 'use_external_images', 'ai_model'];
-        
+        $select_fields = ['mode', 'status', 'specific_search_category', 'author_name', 'article_length_option', 'use_external_images', 'ai_model', 'generation_mode'];
+
         // Setăm toate checkbox-urile la 'no' înainte de a procesa input-ul
         foreach ($checkbox_fields as $checkbox_field) {
             $sanitized[$checkbox_field] = 'no';
         }
-        
+
         // Actualizăm doar câmpurile din input
         if (is_array($input)) {
             foreach ($input as $key => $value) {
                 // Pentru checkbox-uri, setăm 'yes' dacă sunt bifate
                 if (in_array($key, $checkbox_fields)) {
                     $sanitized[$key] = ($value === 'yes') ? 'yes' : 'no';
-                } 
+                }
                 // Pentru câmpurile de tip <select>, salvăm valoarea selectată
                 elseif (in_array($key, $select_fields)) {
-                     $sanitized[$key] = sanitize_text_field($value);
+                    $sanitized[$key] = sanitize_text_field($value);
                 }
                 // Pentru textarea, folosim o sanitizare specifică
-                elseif ($key === 'news_sources' || $key === 'default_ai_instructions' || $key === 'bulk_custom_source_urls') {
+                elseif ($key === 'news_sources' || $key === 'parse_link_ai_instructions' || $key === 'ai_browsing_instructions' || $key === 'bulk_custom_source_urls') {
                     $sanitized[$key] = esc_textarea($value);
                 }
                 // Pentru alte câmpuri, sanitizăm normal
@@ -1022,7 +1103,7 @@ class Auto_Ai_News_Poster_Settings
                 }
             }
         }
-        
+
         return $sanitized;
     }
 

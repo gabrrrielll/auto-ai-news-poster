@@ -6,17 +6,21 @@ const URL_API_IMAGE = 'https://api.openai.com/v1/images/generations';
 
 function generate_custom_source_prompt($article_text_content, $additional_instructions = '')
 {
+    $options = get_option('auto_ai_news_poster_settings');
+    $parse_link_instructions = $options['parse_link_ai_instructions'] ?? 'Creează un articol unic pe baza textului extras. Respectă structura JSON cu titlu, conținut, etichete, și rezumat. Asigură-te că articolul este obiectiv și bine formatat.';
+
     // Construim prompt-ul de bază
     $prompt = "Ești un jurnalist expert care scrie pentru o publicație de știri din România. Sarcina ta este să scrii un articol de știri complet nou și original în limba română, bazat pe informațiile din textul furnizat. Urmează aceste reguli stricte:\n";
     $prompt .= "1. **NU menționa niciodată** 'textul furnizat', 'articolul sursă', 'materialul analizat' sau orice expresie similară. Articolul trebuie să fie independent și să nu facă referire la sursa ta de informație.\n";
     $prompt .= "2. **NU copia și lipi (copy-paste)** fragmente din textul sursă. Toate informațiile trebuie reformulate cu propriile tale cuvinte și integrate natural în noul articol.\n";
     $prompt .= "3. Scrie un articol obiectiv, bine structurat, cu un titlu captivant, un conținut informativ și o listă de etichete (tags) relevante.\n";
     $prompt .= "4. Scopul este să sintetizezi și să prezinți informațiile într-un format de știre proaspăt și original, nu să comentezi pe marginea textului sursă.\n";
+    $prompt .= "5. {$parse_link_instructions}\n";
 
 
-    // Adăugăm instrucțiuni suplimentare, dacă există
+    // Adăugăm instrucțiuni suplimentare, dacă există (pentru apelurile manuale unde se poate adăuga text extra)
     if (!empty($additional_instructions)) {
-        $prompt .= 'Instrucțiuni suplimentare: ' . $additional_instructions . "\n";
+        $prompt .= 'Instrucțiuni suplimentare de moment: ' . $additional_instructions . "\n";
     }
 
     // Adăugăm textul articolului sursă
