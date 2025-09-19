@@ -31,17 +31,15 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-hoo
 
 function auto_ai_news_poster_enqueue_admin_assets($hook)
 {
-    // For debugging: log the hook on every admin page load to identify the correct hook for the settings page
-    error_log('AANP Admin Enqueue Hook: ' . $hook);
-
-    // Get the screen object to be more reliable
+    // For debugging: log the hook and screen ID on every admin page load
     $screen = get_current_screen();
+    $current_screen_id = $screen ? $screen->id : 'no_screen';
+    error_log("--- AANP Enqueue Check --- Hook: {$hook} | Screen ID: {$current_screen_id} ---");
 
     // --- Settings Page Assets ---
-    // The hook for a submenu page is generally 'toplevel_page_your_menu_slug' or '{parent_slug}_page_{submenu_slug}'
-    // In our case, parent is 'edit.php', slug is 'auto-ai-news-poster'. The hook becomes 'posts_page_auto-ai-news-poster'
-    if ($screen && $screen->id === 'posts_page_auto-ai-news-poster') {
-        error_log('✅ AANP: Settings page detected. Enqueuing settings assets.');
+    // The hook for a submenu page under "Posts" is 'posts_page_{submenu_slug}'
+    if ($current_screen_id === 'posts_page_auto-ai-news-poster') {
+        error_log("✅ AANP: Settings page MATCH. Enqueuing settings assets.");
 
         // Enqueue the main stylesheet
         wp_enqueue_style(
@@ -64,8 +62,8 @@ function auto_ai_news_poster_enqueue_admin_assets($hook)
     }
 
     // --- Post Edit Page Assets ---
-    if ($screen && ($screen->id === 'post' || $screen->post_type === 'post')) {
-        error_log('✅ AANP: Post edit page detected. Enqueuing metabox assets.');
+    if ($screen && ($current_screen_id === 'post' || $screen->post_type === 'post')) {
+        error_log("✅ AANP: Post edit page MATCH. Enqueuing metabox assets.");
 
         // Enqueue the metabox-specific JavaScript file
         wp_enqueue_script(
