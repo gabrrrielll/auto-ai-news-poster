@@ -44,10 +44,19 @@ function auto_ai_news_poster_enqueue_admin_assets($hook) {
 
         // Enqueue the main stylesheet
         wp_enqueue_style(
-            'auto-ai-news-poster-admin-css',
-            plugin_dir_url(__FILE__) . 'assets/css/admin.css',
-            array(),
-            '1.0.0'
+            'auto-ai-news-poster-styles',
+            plugin_dir_url(__FILE__) . 'includes/css/auto-ai-news-poster.css',
+            [],
+            filemtime(plugin_dir_path(__FILE__) . 'includes/css/auto-ai-news-poster.css') // Cache busting
+        );
+
+        // Enqueue the settings-specific JavaScript file
+        wp_enqueue_script(
+            'auto-ai-news-poster-settings-js',
+            plugin_dir_url(__FILE__) . 'includes/js/auto-ai-news-poster-settings.js',
+            ['jquery'],
+            filemtime(plugin_dir_path(__FILE__) . 'includes/js/auto-ai-news-poster-settings.js'),
+            true
         );
         
         // Settings page does not need localized script for AJAX calls as they are handled differently
@@ -60,20 +69,18 @@ function auto_ai_news_poster_enqueue_admin_assets($hook) {
         // Enqueue the metabox-specific JavaScript file
         wp_enqueue_script(
             'auto-ai-news-poster-metabox-js',
-            plugin_dir_url(__FILE__) . 'assets/js/metabox.js',
-            array('jquery'),
-            '1.0.0',
+            plugin_dir_url(__FILE__) . 'includes/js/auto-ai-news-poster-metabox.js',
+            ['jquery'],
+            filemtime(plugin_dir_path(__FILE__) . 'includes/js/auto-ai-news-poster-metabox.js'),
             true
         );
 
-        // Localize the script with necessary data
+        // Pass PHP variables to the metabox script
         wp_localize_script('auto-ai-news-poster-metabox-js', 'autoAiNewsPosterAjax', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'admin_url' => admin_url(),
             'generate_image_nonce' => wp_create_nonce('generate_image_nonce'),
             'get_article_nonce' => wp_create_nonce('get_article_from_sources_nonce'),
-            'refresh_models_nonce' => wp_create_nonce('refresh_openai_models_nonce'),
-            'check_settings_nonce' => wp_create_nonce('auto_ai_news_poster_check_settings'),
         ]);
     }
 }
