@@ -237,12 +237,15 @@ class Auto_Ai_News_Poster_Settings
             </div>
             <div class="settings-card-content">
                 <div class="form-group">
-                    <label for="generation_mode" class="control-label">Alege cum vrei să generezi articolele</label>
-                    <select name="auto_ai_news_poster_settings[generation_mode]" class="form-control" id="generation_mode">
-                        <option value="parse_link" <?php selected($generation_mode, 'parse_link'); ?>>1. Parsare Link Specific</option>
-                        <option value="ai_browsing" <?php selected($generation_mode, 'ai_browsing'); ?>>2. Generare Știre cu AI Browsing</option>
-                    </select>
-                    <small class="form-text text-muted">
+                    <label class="control-label">Alege cum vrei să generezi articolele</label>
+                    <div class="mode-switch">
+                        <input type="radio" id="mode_parse_link" name="auto_ai_news_poster_settings[generation_mode]" value="parse_link" <?php checked($generation_mode, 'parse_link'); ?>>
+                        <label for="mode_parse_link">Parsare Link</label>
+
+                        <input type="radio" id="mode_ai_browsing" name="auto_ai_news_poster_settings[generation_mode]" value="ai_browsing" <?php checked($generation_mode, 'ai_browsing'); ?>>
+                        <label for="mode_ai_browsing">Generare AI</label>
+                    </div>
+                    <small class="form-text text-muted" style="margin-top: 10px; display: block;">
                         <b>Parsare Link:</b> Plugin-ul va prelua conținut de la un link specific din lista de surse.<br>
                         <b>Generare AI:</b> AI-ul va căuta o știre nouă pe internet, folosind sursele de informare și categoria specificată.
                     </small>

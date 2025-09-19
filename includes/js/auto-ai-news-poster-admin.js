@@ -61,10 +61,9 @@ function refreshModelsList() {
 // JavaScript pentru metabox-ul de editare articol
 jQuery(document).ready(function($) {
     // Logic for the settings page mode switcher
-    const generationModeSelector = $('#generation_mode');
+    const generationModeRadios = $('input[name="auto_ai_news_poster_settings[generation_mode]"]');
 
     function setupConditionalFields() {
-        console.log("Setting up conditional fields...");
         // Add a class to the parent row (tr) of each settings group
         $('.settings-group').each(function() {
             const row = $(this).closest('tr');
@@ -75,35 +74,31 @@ jQuery(document).ready(function($) {
                 row.addClass('settings-row-ai_browsing');
             }
         });
-        console.log("Parent rows have been tagged with classes.");
     }
     
     function toggleSettingsVisibility() {
-        if (!generationModeSelector.length) return;
+        if (!generationModeRadios.length) return;
 
-        const selectedMode = generationModeSelector.val();
-        console.log(`Generation mode changed to: ${selectedMode}`);
+        const selectedMode = $('input[name="auto_ai_news_poster_settings[generation_mode]"]:checked').val();
         
         // Hide all conditional setting rows
         $('tr[class*="settings-row-"]').hide();
-        console.log("All conditional rows hidden.");
 
         // Show rows for the selected mode
         const classToShow = '.settings-row-' + selectedMode;
         $(classToShow).show();
-        console.log(`Showing rows with class: ${classToShow}`);
     }
     
     // Initial setup
     setupConditionalFields();
 
     // Check if the selector exists before adding listeners
-    if (generationModeSelector.length) {
+    if (generationModeRadios.length) {
         // Run on page load
         toggleSettingsVisibility();
         
         // Run on change
-        generationModeSelector.on('change', toggleSettingsVisibility);
+        generationModeRadios.on('change', toggleSettingsVisibility);
     }
 
     console.log("🤖 AUTO AI NEWS POSTER - JavaScript loaded");

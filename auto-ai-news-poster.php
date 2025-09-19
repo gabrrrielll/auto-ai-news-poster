@@ -403,6 +403,41 @@ function auto_ai_news_poster_fix_css_mime_type()
                     color: var(--text-primary);
                 }
 
+                /* Mode Switch Styles */
+                .mode-switch {
+                    display: flex;
+                    border: 1px solid var(--border-color);
+                    border-radius: var(--border-radius);
+                    overflow: hidden;
+                    width: fit-content;
+                    margin-top: 5px;
+                }
+
+                .mode-switch input[type="radio"] {
+                    display: none;
+                }
+
+                .mode-switch label {
+                    padding: 10px 20px;
+                    cursor: pointer;
+                    transition: background-color 0.3s, color 0.3s;
+                    background-color: var(--card-background);
+                    color: var(--text-secondary);
+                    border-right: 1px solid var(--border-color);
+                    margin-bottom: 0; /* Override default label margin */
+                }
+
+                .mode-switch label:last-of-type {
+                    border-right: none;
+                }
+
+                .mode-switch input[type="radio"]:checked + label {
+                    background-color: var(--primary-color);
+                    color: white;
+                    font-weight: 600;
+                    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+                }
+    
                 .metabox-textarea {
                     width: 100%;
                     min-height: 80px;
