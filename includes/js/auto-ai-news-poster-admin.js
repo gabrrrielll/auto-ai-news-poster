@@ -62,21 +62,41 @@ function refreshModelsList() {
 jQuery(document).ready(function($) {
     // Logic for the settings page mode switcher
     const generationModeSelector = $('#generation_mode');
-    
-    function toggleSettingsVisibility() {
-        const selectedMode = generationModeSelector.val();
-        
-        // Determine which classes to show and hide
-        const showClass = '.settings-group-' + selectedMode;
-        const hideClass = (selectedMode === 'parse_link') ? '.settings-group-ai_browsing' : '.settings-group-parse_link';
-        
-        // Show the parent rows of the correct settings
-        $(showClass).closest('tr').show();
-        
-        // Hide the parent rows of the incorrect settings
-        $(hideClass).closest('tr').hide();
+
+    function setupConditionalFields() {
+        console.log("Setting up conditional fields...");
+        // Add a class to the parent row (tr) of each settings group
+        $('.settings-group').each(function() {
+            const row = $(this).closest('tr');
+            if ($(this).hasClass('settings-group-parse_link')) {
+                row.addClass('settings-row-parse_link');
+            }
+            if ($(this).hasClass('settings-group-ai_browsing')) {
+                row.addClass('settings-row-ai_browsing');
+            }
+        });
+        console.log("Parent rows have been tagged with classes.");
     }
     
+    function toggleSettingsVisibility() {
+        if (!generationModeSelector.length) return;
+
+        const selectedMode = generationModeSelector.val();
+        console.log(`Generation mode changed to: ${selectedMode}`);
+        
+        // Hide all conditional setting rows
+        $('tr[class*="settings-row-"]').hide();
+        console.log("All conditional rows hidden.");
+
+        // Show rows for the selected mode
+        const classToShow = '.settings-row-' + selectedMode;
+        $(classToShow).show();
+        console.log(`Showing rows with class: ${classToShow}`);
+    }
+    
+    // Initial setup
+    setupConditionalFields();
+
     // Check if the selector exists before adding listeners
     if (generationModeSelector.length) {
         // Run on page load

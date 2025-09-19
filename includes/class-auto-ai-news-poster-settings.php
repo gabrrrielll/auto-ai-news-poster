@@ -734,30 +734,32 @@ class Auto_Ai_News_Poster_Settings
         $max_length = $options['max_length'] ?? '';
 
         ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">📏</div>
-                <h3 class="settings-card-title">Configurare Dimensiune Articol</h3>
-            </div>
-            <div class="settings-card-content">
-                <div class="form-group">
-                    <label class="control-label">Selectează dimensiunea articolului</label>
-                    <select name="auto_ai_news_poster_settings[article_length_option]" class="form-control">
-                        <option value="same_as_source" <?php selected($selected_option, 'same_as_source'); ?>>Aceiași dimensiune cu articolul preluat</option>
-                        <option value="set_limits" <?php selected($selected_option, 'set_limits'); ?>>Setează limite</option>
-                    </select>
+        <div class="settings-group settings-group-parse_link">
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">📏</div>
+                    <h3 class="settings-card-title">Configurare Dimensiune Articol</h3>
                 </div>
-                
-                <div class="form-grid">
+                <div class="settings-card-content">
                     <div class="form-group">
-                        <label class="control-label">Lungime minimă</label>
-                        <input type="number" name="auto_ai_news_poster_settings[min_length]" class="form-control"
-                               value="<?php echo esc_attr($min_length); ?>" placeholder="Minim">
+                        <label class="control-label">Selectează dimensiunea articolului</label>
+                        <select name="auto_ai_news_poster_settings[article_length_option]" class="form-control">
+                            <option value="same_as_source" <?php selected($selected_option, 'same_as_source'); ?>>Aceiași dimensiune cu articolul preluat</option>
+                            <option value="set_limits" <?php selected($selected_option, 'set_limits'); ?>>Setează limite</option>
+                        </select>
                     </div>
-                    <div class="form-group">
-                        <label class="control-label">Lungime maximă</label>
-                        <input type="number" name="auto_ai_news_poster_settings[max_length]" class="form-control"
-                               value="<?php echo esc_attr($max_length); ?>" placeholder="Maxim">
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="control-label">Lungime minimă</label>
+                            <input type="number" name="auto_ai_news_poster_settings[min_length]" class="form-control"
+                                   value="<?php echo esc_attr($min_length); ?>" placeholder="Minim">
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">Lungime maximă</label>
+                            <input type="number" name="auto_ai_news_poster_settings[max_length]" class="form-control"
+                                   value="<?php echo esc_attr($max_length); ?>" placeholder="Maxim">
+                        </div>
                     </div>
                 </div>
             </div>
