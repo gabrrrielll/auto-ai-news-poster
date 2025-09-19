@@ -60,33 +60,50 @@ function refreshModelsList() {
 
 // JavaScript pentru metabox-ul de editare articol
 jQuery(document).ready(function($) {
+    console.log("🚀 AANP Admin JS: Document ready. Starting setup.");
+
     // Logic for the settings page mode switcher
     const generationModeRadios = $('input[name="auto_ai_news_poster_settings[generation_mode]"]');
+    console.log(`🔍 AANP Admin JS: Found ${generationModeRadios.length} mode switch radio buttons.`);
 
     function setupConditionalFields() {
+        console.log("🔄 AANP Admin JS: Running setupConditionalFields...");
         // Add a class to the parent row (tr) of each settings group
-        $('.settings-group').each(function() {
+        $('.settings-group').each(function(index) {
             const row = $(this).closest('tr');
+            let addedClass = '';
             if ($(this).hasClass('settings-group-parse_link')) {
                 row.addClass('settings-row-parse_link');
+                addedClass = 'settings-row-parse_link';
             }
             if ($(this).hasClass('settings-group-ai_browsing')) {
                 row.addClass('settings-row-ai_browsing');
+                addedClass = 'settings-row-ai_browsing';
             }
+            console.log(`   - Tagging row ${index} with class: ${addedClass}`);
         });
+        console.log("✅ AANP Admin JS: Finished tagging parent rows.");
     }
     
     function toggleSettingsVisibility() {
-        if (!generationModeRadios.length) return;
+        console.log("👁️ AANP Admin JS: toggleSettingsVisibility triggered.");
+        if (!generationModeRadios.length) {
+            console.log("   - No radio buttons found. Exiting.");
+            return;
+        }
 
         const selectedMode = $('input[name="auto_ai_news_poster_settings[generation_mode]"]:checked').val();
+        console.log(`   - Selected mode is: "${selectedMode}"`);
         
         // Hide all conditional setting rows
         $('tr[class*="settings-row-"]').hide();
+        console.log("   - All conditional rows have been hidden.");
 
         // Show rows for the selected mode
         const classToShow = '.settings-row-' + selectedMode;
         $(classToShow).show();
+        console.log(`   - Attempting to show rows with class: "${classToShow}"`);
+        console.log(`   - Found ${$(classToShow).length} rows to show.`);
     }
     
     // Initial setup
@@ -94,11 +111,14 @@ jQuery(document).ready(function($) {
 
     // Check if the selector exists before adding listeners
     if (generationModeRadios.length) {
+        console.log("🔗 AANP Admin JS: Attaching 'change' event listener to radio buttons.");
         // Run on page load
         toggleSettingsVisibility();
         
         // Run on change
         generationModeRadios.on('change', toggleSettingsVisibility);
+    } else {
+        console.log("⚠️ AANP Admin JS: No radio buttons found to attach event listener.");
     }
 
     console.log("🤖 AUTO AI NEWS POSTER - JavaScript loaded");
