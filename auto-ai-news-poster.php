@@ -29,6 +29,65 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-hoo
 
 // Fix pentru problema MIME type cu CSS-ul și JavaScript-ul
 
+function auto_ai_news_poster_enqueue_admin_assets($hook) {
+    // For debugging: log the hook on every admin page load to identify the correct hook for the settings page
+    error_log("AANP Admin Enqueue Hook: " . $hook);
+
+    // Get the screen object to be more reliable
+    $screen = get_current_screen();
+
+    // --- Settings Page Assets ---
+    // The hook for a submenu page is generally 'toplevel_page_your_menu_slug' or '{parent_slug}_page_{submenu_slug}'
+    // In our case, parent is 'edit.php', slug is 'auto-ai-news-poster'. The hook becomes 'posts_page_auto-ai-news-poster'
+    if ($screen && $screen->id === 'posts_page_auto-ai-news-poster') {
+        error_log("✅ AANP: Settings page detected. Enqueuing settings assets.");
+
+        // Enqueue the main stylesheet
+        wp_enqueue_style(
+            'auto-ai-news-poster-admin-css',
+            plugin_dir_url(__FILE__) . 'assets/css/admin.css',
+            array(),
+            '1.0.0'
+        );
+        
+        // Settings page does not need localized script for AJAX calls as they are handled differently
+    }
+
+    // --- Post Edit Page Assets ---
+    if ($screen && ($screen->id === 'post' || $screen->post_type === 'post')) {
+        error_log("✅ AANP: Post edit page detected. Enqueuing metabox assets.");
+
+        // Enqueue the metabox-specific JavaScript file
+        wp_enqueue_script(
+            'auto-ai-news-poster-metabox-js',
+            plugin_dir_url(__FILE__) . 'assets/js/metabox.js',
+            array('jquery'),
+            '1.0.0',
+            true
+        );
+
+        // Localize the script with necessary data
+        wp_localize_script('auto-ai-news-poster-metabox-js', 'autoAiNewsPosterAjax', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'admin_url' => admin_url(),
+            'generate_image_nonce' => wp_create_nonce('generate_image_nonce'),
+            'get_article_nonce' => wp_create_nonce('get_article_from_sources_nonce'),
+            'refresh_models_nonce' => wp_create_nonce('refresh_openai_models_nonce'),
+            'check_settings_nonce' => wp_create_nonce('auto_ai_news_poster_check_settings'),
+        ]);
+    }
+}
+
+// Remove the old, problematic inline asset loading method
+// This is critical. We ensure the old function is not being called.
+$tag = 'admin_head';
+$function_to_remove = 'auto_ai_news_poster_fix_css_mime_type';
+if (has_action($tag, $function_to_remove)) {
+    remove_action($tag, $function_to_remove, 1);
+}
+
+// Old inline asset function - ensure it is removed or commented out.
+/*
 add_action('admin_head', 'auto_ai_news_poster_fix_css_mime_type', 1);
 function auto_ai_news_poster_fix_css_mime_type()
 {
@@ -858,6 +917,4 @@ function auto_ai_news_poster_fix_css_mime_type()
     }
 }
 
-// Eliminăm funcționalitatea veche de încărcare CSS/JS inline
-// Această secțiune este acum goală, deoarece totul este gestionat prin wp_enqueue_script și wp_enqueue_style
 // Funcția de activare a plugin-ului
