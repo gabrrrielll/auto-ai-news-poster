@@ -29,9 +29,10 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-hoo
 
 // Fix pentru problema MIME type cu CSS-ul și JavaScript-ul
 
-function auto_ai_news_poster_enqueue_admin_assets($hook) {
+function auto_ai_news_poster_enqueue_admin_assets($hook)
+{
     // For debugging: log the hook on every admin page load to identify the correct hook for the settings page
-    error_log("AANP Admin Enqueue Hook: " . $hook);
+    error_log('AANP Admin Enqueue Hook: ' . $hook);
 
     // Get the screen object to be more reliable
     $screen = get_current_screen();
@@ -40,7 +41,7 @@ function auto_ai_news_poster_enqueue_admin_assets($hook) {
     // The hook for a submenu page is generally 'toplevel_page_your_menu_slug' or '{parent_slug}_page_{submenu_slug}'
     // In our case, parent is 'edit.php', slug is 'auto-ai-news-poster'. The hook becomes 'posts_page_auto-ai-news-poster'
     if ($screen && $screen->id === 'posts_page_auto-ai-news-poster') {
-        error_log("✅ AANP: Settings page detected. Enqueuing settings assets.");
+        error_log('✅ AANP: Settings page detected. Enqueuing settings assets.');
 
         // Enqueue the main stylesheet
         wp_enqueue_style(
@@ -58,13 +59,13 @@ function auto_ai_news_poster_enqueue_admin_assets($hook) {
             filemtime(plugin_dir_path(__FILE__) . 'includes/js/auto-ai-news-poster-settings.js'),
             true
         );
-        
+
         // Settings page does not need localized script for AJAX calls as they are handled differently
     }
 
     // --- Post Edit Page Assets ---
     if ($screen && ($screen->id === 'post' || $screen->post_type === 'post')) {
-        error_log("✅ AANP: Post edit page detected. Enqueuing metabox assets.");
+        error_log('✅ AANP: Post edit page detected. Enqueuing metabox assets.');
 
         // Enqueue the metabox-specific JavaScript file
         wp_enqueue_script(
@@ -94,7 +95,7 @@ if (has_action($tag, $function_to_remove)) {
 }
 
 // Old inline asset function - ensure it is removed or commented out.
-/*
+
 add_action('admin_head', 'auto_ai_news_poster_fix_css_mime_type', 1);
 function auto_ai_news_poster_fix_css_mime_type()
 {
