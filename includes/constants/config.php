@@ -16,7 +16,7 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
 
     // Adăugăm instrucțiuni suplimentare, dacă există
     if (!empty($additional_instructions)) {
-        $prompt .= "Instrucțiuni suplimentare: " . $additional_instructions . "\n";
+        $prompt .= 'Instrucțiuni suplimentare: ' . $additional_instructions . "\n";
     }
 
     // Adăugăm textul articolului sursă

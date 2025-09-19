@@ -158,7 +158,8 @@ class Auto_Ai_News_Poster_Api
     /**
      * Main handler for generating an article. Can be called via AJAX or internally (e.g., cron).
      */
-    public static function process_article_generation() {
+    public static function process_article_generation()
+    {
         $is_ajax_call = wp_doing_ajax();
         error_log('🚀 PROCESS_ARTICLE_GENERATION() STARTED. AJAX Call: ' . ($is_ajax_call ? 'Yes' : 'No'));
 
@@ -167,7 +168,9 @@ class Auto_Ai_News_Poster_Api
         if (empty($options['chatgpt_api_key'])) {
             $error_msg = 'Error: ChatGPT API Key is not set.';
             error_log($error_msg);
-            if ($is_ajax_call) wp_send_json_error(['message' => $error_msg]);
+            if ($is_ajax_call) {
+                wp_send_json_error(['message' => $error_msg]);
+            }
             return;
         }
 
@@ -213,7 +216,7 @@ class Auto_Ai_News_Poster_Api
             update_option('auto_ai_news_poster_settings', $options);
             set_transient('auto_ai_news_poster_force_refresh', 'yes', MINUTE_IN_SECONDS); // Signal frontend to refresh
             error_log('🤖 CRON JOB: Removed link from list and updated options. Remaining links: ' . count($bulk_links));
-            
+
             $extracted_content = Auto_AI_News_Poster_Parser::extract_content_from_url($source_link);
         }
 
@@ -226,12 +229,12 @@ class Auto_Ai_News_Poster_Api
                 self::re_add_link_to_bulk($source_link, 'Failed to extract content');
             }
             if ($is_ajax_call) {
-                wp_send_json_error(['message' => "Failed to extract content from URL. Please check the link and try again. Error: " . $error_message]);
+                wp_send_json_error(['message' => 'Failed to extract content from URL. Please check the link and try again. Error: ' . $error_message]);
             }
             return;
         }
         error_log('✅ Successfully extracted content. Size: ' . strlen($extracted_content) . ' chars.');
-        
+
         // --- Prevent duplicate posts ---
         $existing_posts = get_posts([
             'meta_key' => '_custom_source_url',
@@ -243,7 +246,7 @@ class Auto_Ai_News_Poster_Api
 
         if (!empty($existing_posts)) {
             error_log('⚠️ Link already used to generate post ID ' . $existing_posts[0]->ID . ': ' . $source_link . '. Skipping.');
-             if ($is_ajax_call) {
+            if ($is_ajax_call) {
                 wp_send_json_error(['message' => 'This link has already been used to generate an article.']);
             }
             return;
@@ -257,8 +260,12 @@ class Auto_Ai_News_Poster_Api
         if (is_wp_error($response)) {
             $error_message = 'OpenAI API Error: ' . $response->get_error_message();
             error_log('❌ ' . $error_message);
-            if ($is_bulk_processing) self::re_add_link_to_bulk($source_link, 'OpenAI API Error');
-            if ($is_ajax_call) wp_send_json_error(['message' => $error_message]);
+            if ($is_bulk_processing) {
+                self::re_add_link_to_bulk($source_link, 'OpenAI API Error');
+            }
+            if ($is_ajax_call) {
+                wp_send_json_error(['message' => $error_message]);
+            }
             return;
         }
 
@@ -271,8 +278,12 @@ class Auto_Ai_News_Poster_Api
             $error_message = '❌ AI response is empty or in an unexpected format.';
             error_log($error_message);
             error_log('Full API Response: ' . print_r($decoded_response, true));
-            if ($is_bulk_processing) self::re_add_link_to_bulk($source_link, 'Empty AI Response');
-            if ($is_ajax_call) wp_send_json_error(['message' => $error_message, 'response' => $decoded_response]);
+            if ($is_bulk_processing) {
+                self::re_add_link_to_bulk($source_link, 'Empty AI Response');
+            }
+            if ($is_ajax_call) {
+                wp_send_json_error(['message' => $error_message, 'response' => $decoded_response]);
+            }
             return;
         }
 
@@ -282,23 +293,31 @@ class Auto_Ai_News_Poster_Api
             $error_message = '❌ Failed to decode article data JSON from AI response. Error: ' . json_last_error_msg();
             error_log($error_message);
             error_log('AI content string was: ' . $ai_content_json);
-            if ($is_bulk_processing) self::re_add_link_to_bulk($source_link, 'JSON Decode Error');
-            if ($is_ajax_call) wp_send_json_error(['message' => $error_message]);
+            if ($is_bulk_processing) {
+                self::re_add_link_to_bulk($source_link, 'JSON Decode Error');
+            }
+            if ($is_ajax_call) {
+                wp_send_json_error(['message' => $error_message]);
+            }
             return;
         }
-        
+
         if (empty($article_data['content']) || empty($article_data['title'])) {
             $error_message = '❌ AI response was valid JSON but missing required "content" or "title".';
             error_log($error_message);
             error_log('Article Data Received: ' . print_r($article_data, true));
-            if ($is_bulk_processing) self::re_add_link_to_bulk($source_link, 'Missing Content in AI JSON');
-            if ($is_ajax_call) wp_send_json_error(['message' => $error_message]);
+            if ($is_bulk_processing) {
+                self::re_add_link_to_bulk($source_link, 'Missing Content in AI JSON');
+            }
+            if ($is_ajax_call) {
+                wp_send_json_error(['message' => $error_message]);
+            }
             return;
         }
 
         // --- Prepare and Save Post ---
         $post_id = $is_ajax_call ? (isset($_POST['post_id']) ? intval($_POST['post_id']) : null) : null;
-        
+
         $post_data = [
             'post_title'    => $article_data['title'],
             'post_content'  => wp_kses_post($article_data['content']),
@@ -307,7 +326,7 @@ class Auto_Ai_News_Poster_Api
             'post_excerpt'  => isset($article_data['summary']) ? wp_kses_post($article_data['summary']) : '',
         ];
 
-        if($post_id) {
+        if ($post_id) {
             $post_data['ID'] = $post_id;
         }
 
@@ -321,11 +340,15 @@ class Auto_Ai_News_Poster_Api
         if (is_wp_error($new_post_id)) {
             $error_message = '❌ Failed to save post to database: ' . $new_post_id->get_error_message();
             error_log($error_message);
-            if ($is_bulk_processing) self::re_add_link_to_bulk($source_link, 'DB Save Error');
-            if ($is_ajax_call) wp_send_json_error(['message' => $error_message]);
+            if ($is_bulk_processing) {
+                self::re_add_link_to_bulk($source_link, 'DB Save Error');
+            }
+            if ($is_ajax_call) {
+                wp_send_json_error(['message' => $error_message]);
+            }
             return;
         }
-        
+
         error_log("✅ Successfully generated and saved post ID: {$new_post_id} from source: {$source_link}");
 
         // --- Set Taxonomies and Meta ---
@@ -336,8 +359,8 @@ class Auto_Ai_News_Poster_Api
 
         // --- Generate Image if enabled ---
         if (isset($options['generate_image']) && $options['generate_image'] === 'yes') {
-             error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id);
-             self::generate_image_for_article($new_post_id);
+            error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id);
+            self::generate_image_for_article($new_post_id);
         }
 
         if ($is_ajax_call) {
@@ -364,7 +387,7 @@ class Auto_Ai_News_Poster_Api
             // This is an AJAX call, get post_id from $_POST
             $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
             error_log('--- AJAX Call --- Assigned post_id from $_POST. New value: [' . $post_id . ']');
-            
+
             try {
                 check_ajax_referer('generate_image_nonce', 'security');
                 error_log('✅ Nonce verification successful for image generation.');
@@ -374,7 +397,7 @@ class Auto_Ai_News_Poster_Api
                 return;
             }
         } else {
-             error_log('--- Internal Call --- Using provided post_id: [' . $post_id . ']');
+            error_log('--- Internal Call --- Using provided post_id: [' . $post_id . ']');
         }
 
         if (empty($post_id) || !is_numeric($post_id) || $post_id <= 0) {
@@ -483,7 +506,8 @@ class Auto_Ai_News_Poster_Api
      * AJAX handler to check if the settings page needs to be refreshed.
      * This is used for providing feedback during bulk processing.
      */
-    public static function check_settings_changes() {
+    public static function check_settings_changes()
+    {
         check_ajax_referer('auto_ai_news_poster_check_settings', 'security');
 
         error_log('AJAX Polling: Checking for refresh transient...');
@@ -562,8 +586,11 @@ class Auto_Ai_News_Poster_Api
      * @param string $link The URL to re-add.
      * @param string $reason The reason for the failure.
      */
-    private static function re_add_link_to_bulk($link, $reason = 'Unknown Error') {
-        if (empty($link)) return;
+    private static function re_add_link_to_bulk($link, $reason = 'Unknown Error')
+    {
+        if (empty($link)) {
+            return;
+        }
 
         error_log("🔄 Failure processing link: {$link}. Reason: {$reason}. Re-adding to list for retry.");
         $options = get_option('auto_ai_news_poster_settings');
