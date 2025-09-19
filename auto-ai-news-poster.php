@@ -39,7 +39,7 @@ function auto_ai_news_poster_enqueue_admin_assets($hook)
     // --- Settings Page Assets ---
     // The hook for a submenu page under "Posts" is 'posts_page_{submenu_slug}'
     if ($current_screen_id === 'posts_page_auto-ai-news-poster') {
-        error_log("✅ AANP: Settings page MATCH. Enqueuing settings assets.");
+        error_log('✅ AANP: Settings page MATCH. Enqueuing settings assets.');
 
         // Enqueue the main stylesheet
         wp_enqueue_style(
@@ -63,7 +63,7 @@ function auto_ai_news_poster_enqueue_admin_assets($hook)
 
     // --- Post Edit Page Assets ---
     if ($screen && ($current_screen_id === 'post' || $screen->post_type === 'post')) {
-        error_log("✅ AANP: Post edit page MATCH. Enqueuing metabox assets.");
+        error_log('✅ AANP: Post edit page MATCH. Enqueuing metabox assets.');
 
         // Enqueue the metabox-specific JavaScript file
         wp_enqueue_script(
