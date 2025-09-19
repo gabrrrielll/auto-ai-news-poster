@@ -321,15 +321,17 @@ class Auto_Ai_News_Poster_Settings
     {
         $options = get_option('auto_ai_news_poster_settings');
         ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">🔄</div>
-                <h3 class="settings-card-title">Rotire Automată Categorii</h3>
-            </div>
-            <div class="settings-card-content">
-                <div class="checkbox-modern">
-                    <input type="checkbox" name="auto_ai_news_poster_settings[auto_rotate_categories]" value="yes" <?php checked($options['auto_rotate_categories'], 'yes'); ?> />
-                    <label>Da, rulează automat categoriile în ordine</label>
+        <div class="settings-group settings-group-ai_browsing">
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">🔄</div>
+                    <h3 class="settings-card-title">Rotire Automată Categorii</h3>
+                </div>
+                <div class="settings-card-content">
+                    <div class="checkbox-modern">
+                        <input type="checkbox" name="auto_ai_news_poster_settings[auto_rotate_categories]" value="yes" <?php checked($options['auto_rotate_categories'], 'yes'); ?> />
+                        <label>Da, rulează automat categoriile în ordine</label>
+                    </div>
                 </div>
             </div>
         </div>

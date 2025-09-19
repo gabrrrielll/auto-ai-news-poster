@@ -59,25 +59,36 @@ function refreshModelsList() {
 }
 
 // JavaScript pentru metabox-ul de editare articol
-jQuery(document).ready(function ($) {
+jQuery(document).ready(function($) {
     // Logic for the settings page mode switcher
     const generationModeSelector = $('#generation_mode');
 
+    // Add classes to the parent table rows of our settings groups
+    $('.settings-group').each(function() {
+        const row = $(this).closest('tr');
+        if ($(this).hasClass('settings-group-parse_link')) {
+            row.addClass('settings-row-parse_link');
+        }
+        if ($(this).hasClass('settings-group-ai_browsing')) {
+            row.addClass('settings-row-ai_browsing');
+        }
+    });
+    
     function toggleSettingsVisibility() {
         const selectedMode = generationModeSelector.val();
-
-        // Hide all groups first
-        $('.settings-group').hide();
-
-        // Show the selected group
-        $('.settings-group-' + selectedMode).show();
+        
+        // Hide all conditional rows first
+        $('[class^="settings-row-"]').hide();
+        
+        // Show the rows for the selected mode
+        $('.settings-row-' + selectedMode).show();
     }
-
+    
     // Check if the selector exists before adding listeners
     if (generationModeSelector.length) {
         // Run on page load
         toggleSettingsVisibility();
-
+        
         // Run on change
         generationModeSelector.on('change', toggleSettingsVisibility);
     }
