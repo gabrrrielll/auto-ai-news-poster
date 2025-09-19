@@ -62,26 +62,19 @@ function refreshModelsList() {
 jQuery(document).ready(function($) {
     // Logic for the settings page mode switcher
     const generationModeSelector = $('#generation_mode');
-
-    // Add classes to the parent table rows of our settings groups
-    $('.settings-group').each(function() {
-        const row = $(this).closest('tr');
-        if ($(this).hasClass('settings-group-parse_link')) {
-            row.addClass('settings-row-parse_link');
-        }
-        if ($(this).hasClass('settings-group-ai_browsing')) {
-            row.addClass('settings-row-ai_browsing');
-        }
-    });
     
     function toggleSettingsVisibility() {
         const selectedMode = generationModeSelector.val();
         
-        // Hide all conditional rows first
-        $('[class^="settings-row-"]').hide();
+        // Determine which classes to show and hide
+        const showClass = '.settings-group-' + selectedMode;
+        const hideClass = (selectedMode === 'parse_link') ? '.settings-group-ai_browsing' : '.settings-group-parse_link';
         
-        // Show the rows for the selected mode
-        $('.settings-row-' + selectedMode).show();
+        // Show the parent rows of the correct settings
+        $(showClass).closest('tr').show();
+        
+        // Hide the parent rows of the incorrect settings
+        $(hideClass).closest('tr').hide();
     }
     
     // Check if the selector exists before adding listeners
