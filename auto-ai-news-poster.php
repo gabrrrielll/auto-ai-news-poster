@@ -32,51 +32,50 @@ add_action('admin_enqueue_scripts', 'auto_ai_news_poster_enqueue_admin_assets');
 
 function auto_ai_news_poster_enqueue_admin_assets($hook)
 {
-    // For debugging: log the hook and screen ID on every admin page load
+    // Pentru depanare: afișăm hook-ul pe fiecare pagină de administrare
+    error_log('AANP Admin Enqueue Hook: ' . $hook);
+
+    // Obținem ecranul curent pentru o verificare mai fiabilă
     $screen = get_current_screen();
     $current_screen_id = $screen ? $screen->id : 'no_screen';
     error_log("--- AANP Enqueue Check --- Hook: {$hook} | Screen ID: {$current_screen_id} ---");
 
-    // --- Settings Page Assets ---
-    // The hook for a submenu page under "Posts" is 'posts_page_{submenu_slug}'
+    // --- Active pe pagina de setări ---
     if ($current_screen_id === 'posts_page_auto-ai-news-poster') {
-        error_log('✅ AANP: Settings page MATCH. Enqueuing settings assets.');
-        echo '<script type="text/javascript">console.log("✅ AANP: Settings page MATCH. Enqueuing settings assets.");</script>';
+        error_log('✅ AANP: Pagină de setări DETECTATĂ. Se adaugă în coadă resursele pentru setări.');
 
-        // Enqueue the main stylesheet
+        // Adăugăm fișierul CSS principal
         wp_enqueue_style(
             'auto-ai-news-poster-styles',
             plugin_dir_url(__FILE__) . 'includes/css/auto-ai-news-poster.css',
             [],
-            filemtime(plugin_dir_path(__FILE__) . 'includes/css/auto-ai-news-poster.css') // Cache busting
+            '1.0.1' // Versiune statică pentru depanare
         );
 
-        // Enqueue the settings-specific JavaScript file
+        // Adăugăm fișierul JavaScript specific setărilor
         wp_enqueue_script(
             'auto-ai-news-poster-settings-js',
             plugin_dir_url(__FILE__) . 'includes/js/auto-ai-news-poster-settings.js',
             ['jquery'],
-            filemtime(plugin_dir_path(__FILE__) . 'includes/js/auto-ai-news-poster-settings.js'),
+            '1.0.1', // Versiune statică pentru depanare
             true
         );
-
-        // Settings page does not need localized script for AJAX calls as they are handled differently
     }
 
-    // --- Post Edit Page Assets ---
+    // --- Active pe pagina de editare a articolelor ---
     if ($screen && ($current_screen_id === 'post' || $screen->post_type === 'post')) {
-        error_log('✅ AANP: Post edit page MATCH. Enqueuing metabox assets.');
+        error_log('✅ AANP: Pagină de editare articol DETECTATĂ. Se adaugă în coadă resursele pentru metabox.');
 
-        // Enqueue the metabox-specific JavaScript file
+        // Adăugăm fișierul JavaScript specific metabox-ului
         wp_enqueue_script(
             'auto-ai-news-poster-metabox-js',
             plugin_dir_url(__FILE__) . 'includes/js/auto-ai-news-poster-metabox.js',
             ['jquery'],
-            filemtime(plugin_dir_path(__FILE__) . 'includes/js/auto-ai-news-poster-metabox.js'),
+            '1.0.1', // Versiune statică pentru depanare
             true
         );
 
-        // Pass PHP variables to the metabox script
+        // Trimitem variabile PHP către scriptul metabox-ului
         wp_localize_script('auto-ai-news-poster-metabox-js', 'autoAiNewsPosterAjax', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'admin_url' => admin_url(),
