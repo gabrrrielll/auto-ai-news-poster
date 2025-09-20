@@ -41,7 +41,7 @@ function auto_ai_news_poster_load_assets_inline()
         return; // Ieșim dacă nu suntem pe pagina corectă
     }
 
-    error_log("✅ AANP: Pagină de setări DETECTATĂ. Se încarcă resursele direct în <head>.");
+    error_log('✅ AANP: Pagină de setări DETECTATĂ. Se încarcă resursele direct în <head>.');
 
     // Construim URL-urile manual pentru a fi siguri
     $site_url = site_url();
