@@ -32,46 +32,54 @@ add_action('admin_enqueue_scripts', 'auto_ai_news_poster_enqueue_admin_assets');
 
 function auto_ai_news_poster_enqueue_admin_assets($hook)
 {
-    // Pentru depanare: afișăm hook-ul pe fiecare pagină de administrare
-    error_log('AANP Admin Enqueue Hook: ' . $hook);
+    // Obținem URL-ul de bază al site-ului
+    $site_url = site_url();
+    // Obținem calea către directorul de plugin-uri
+    $plugin_dir_path = plugin_dir_path(__FILE__);
+    // Găsim calea relativă de la rădăcina site-ului la directorul de plugin-uri
+    $relative_path = str_replace(ABSPATH, '', $plugin_dir_path);
+    // Construim URL-ul de bază al plugin-ului
+    $plugin_base_url = $site_url . '/' . $relative_path;
 
-    // Obținem ecranul curent pentru o verificare mai fiabilă
+    // Pentru depanare
+    error_log("--- AANP Enqueue Paths ---");
+    error_log("Site URL: " . $site_url);
+    error_log("Plugin Dir Path: " . $plugin_dir_path);
+    error_log("ABSPATH: " . ABSPATH);
+    error_log("Relative Path: " . $relative_path);
+    error_log("Constructed Plugin Base URL: " . $plugin_base_url);
+    
     $screen = get_current_screen();
     $current_screen_id = $screen ? $screen->id : 'no_screen';
-    error_log("--- AANP Enqueue Check --- Hook: {$hook} | Screen ID: {$current_screen_id} ---");
 
     // --- Active pe pagina de setări ---
     if ($current_screen_id === 'posts_page_auto-ai-news-poster') {
-        error_log('✅ AANP: Pagină de setări DETECTATĂ. Se adaugă în coadă resursele pentru setări.');
-
         // Adăugăm fișierul CSS principal
         wp_enqueue_style(
             'auto-ai-news-poster-styles',
-            plugin_dir_url(__FILE__) . 'includes/css/auto-ai-news-poster.css',
+            $plugin_base_url . 'includes/css/auto-ai-news-poster.css',
             [],
-            '1.0.1' // Versiune statică pentru depanare
+            '1.0.2' // Versiune statică
         );
 
         // Adăugăm fișierul JavaScript specific setărilor
         wp_enqueue_script(
             'auto-ai-news-poster-settings-js',
-            plugin_dir_url(__FILE__) . 'includes/js/auto-ai-news-poster-settings.js',
+            $plugin_base_url . 'includes/js/auto-ai-news-poster-settings.js',
             ['jquery'],
-            '1.0.1', // Versiune statică pentru depanare
+            '1.0.2', // Versiune statică
             true
         );
     }
 
     // --- Active pe pagina de editare a articolelor ---
     if ($screen && ($current_screen_id === 'post' || $screen->post_type === 'post')) {
-        error_log('✅ AANP: Pagină de editare articol DETECTATĂ. Se adaugă în coadă resursele pentru metabox.');
-
         // Adăugăm fișierul JavaScript specific metabox-ului
         wp_enqueue_script(
             'auto-ai-news-poster-metabox-js',
-            plugin_dir_url(__FILE__) . 'includes/js/auto-ai-news-poster-metabox.js',
+            $plugin_base_url . 'includes/js/auto-ai-news-poster-metabox.js',
             ['jquery'],
-            '1.0.1', // Versiune statică pentru depanare
+            '1.0.2', // Versiune statică
             true
         );
 
