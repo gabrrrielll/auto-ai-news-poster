@@ -59,7 +59,7 @@ function refreshModelsList() {
 }
 
 // JavaScript pentru metabox-ul de editare articol
-jQuery(document).ready(function($) {
+// jQuery(document).ready(function($) {
     console.log("🚀 AANP Settings JS: Document ready. Starting setup.");
 
     // Logic for the settings page mode switcher
@@ -119,4 +119,4 @@ jQuery(document).ready(function($) {
     } else {
         console.log("⚠️ AANP Settings JS: No radio buttons found to attach event listener.");
     }
-});
+// });

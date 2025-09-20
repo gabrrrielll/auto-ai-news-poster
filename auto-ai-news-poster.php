@@ -27,7 +27,8 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-par
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-api.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-hooks.php';
 
-// Fix pentru problema MIME type cu CSS-ul și JavaScript-ul
+// --- Asset Enqueuing ---
+add_action('admin_enqueue_scripts', 'auto_ai_news_poster_enqueue_admin_assets');
 
 function auto_ai_news_poster_enqueue_admin_assets($hook)
 {
@@ -40,6 +41,7 @@ function auto_ai_news_poster_enqueue_admin_assets($hook)
     // The hook for a submenu page under "Posts" is 'posts_page_{submenu_slug}'
     if ($current_screen_id === 'posts_page_auto-ai-news-poster') {
         error_log('✅ AANP: Settings page MATCH. Enqueuing settings assets.');
+        echo '<script type="text/javascript">console.log("✅ AANP: Settings page MATCH. Enqueuing settings assets.");</script>';
 
         // Enqueue the main stylesheet
         wp_enqueue_style(
