@@ -337,11 +337,11 @@ class Auto_AI_News_Poster_Parser
         }
 
         if ($best_node && $best_score > 0) { // Ensure a meaningful node with a positive score is found
-            $article_content = self::filter_paragraphs($best_node->childNodes);
+            $article_content = $best_node->textContent;
             error_log('✅ Found content using selector with score: ' . $best_score . ')');
         } else {
-            $article_content = self::filter_paragraphs($context_node_clean->childNodes); // Fallback: iau conținutul din nodul de context rămas (body) și îl filtrez
-            error_log('⚠️ No specific content selector matched, using filtered full body content');
+            $article_content = $context_node_clean->textContent; // Fallback: iau conținutul din nodul de context rămas (body)
+            error_log('⚠️ No specific content selector matched, using full body content');
         }
 
         // 3. Post-procesare pentru curățarea textului
@@ -570,7 +570,8 @@ class Auto_AI_News_Poster_Parser
      * @param int $min_length The minimum length a paragraph should have.
      * @return string The combined filtered text.
      */
-    private static function filter_paragraphs($nodes, $min_length = 100) {
+    private static function filter_paragraphs($nodes, $min_length = 100)
+    {
         $filtered_paragraphs = [];
         foreach ($nodes as $node) {
             if ($node->nodeType === XML_ELEMENT_NODE) {
@@ -579,7 +580,7 @@ class Auto_AI_News_Poster_Parser
                     if (strlen($text) >= $min_length) {
                         $filtered_paragraphs[] = $text;
                     }
-                } else if ($node->hasChildNodes()) {
+                } elseif ($node->hasChildNodes()) {
                     $filtered_paragraphs[] = self::filter_paragraphs($node->childNodes, $min_length);
                 }
             }
