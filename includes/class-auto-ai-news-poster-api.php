@@ -398,10 +398,9 @@ class Auto_Ai_News_Poster_Api
 
 
         // --- Generate Image if enabled ---
-        if (isset($options['generate_image']) && $options['generate_image'] === 'yes') {
-            error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id);
-            self::generate_image_for_article($new_post_id);
-        }
+        // Removed automatic image generation from article generation flow.
+        // Image generation should now be triggered explicitly by the 'Generate Image AI' button via its own AJAX call.
+        // This prevents accidental image generation and associated API safety errors when only an article is being generated.
 
         if ($is_ajax_call) {
             wp_send_json_success([
