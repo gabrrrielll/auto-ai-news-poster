@@ -66,7 +66,14 @@ function auto_ai_news_poster_inline_admin_js()
             return; // Ieșim dacă nu suntem pe paginile corecte
         }
 
-        $js_path = plugin_dir_path(__FILE__) . 'includes/js/auto-ai-news-poster-settings.js';
+        // Alegem fișierul JS potrivit în funcție de pagină
+        if ($current_screen_id === 'posts_page_auto-ai-news-poster') {
+            // Pagina de setări
+            $js_path = plugin_dir_path(__FILE__) . 'includes/js/auto-ai-news-poster-settings.js';
+        } else {
+            // Pagina de editare articol
+            $js_path = plugin_dir_path(__FILE__) . 'includes/js/auto-ai-news-poster-metabox.js';
+        }
 
         if (file_exists($js_path)) {
             echo '<script type="text/javascript">';
