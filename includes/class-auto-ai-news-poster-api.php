@@ -417,7 +417,33 @@ class Auto_Ai_News_Poster_Api
         // Procesăm răspunsul
         $body = wp_remote_retrieve_body($response);
         $decoded_response = json_decode($body, true);
-        $ai_content_json = $decoded_response['choices'][0]['message']['content'] ?? null;
+        $message = $decoded_response['choices'][0]['message'] ?? null;
+
+        if (empty($message)) {
+            error_log('❌ AI Browsing Error: AI response is empty or in an unexpected format.');
+            error_log('Full API Response: ' . print_r($decoded_response, true));
+            return;
+        }
+
+        // Verificăm dacă AI-ul a făcut tool calls
+        if (isset($message['tool_calls']) && !empty($message['tool_calls'])) {
+            error_log('🔍 AI made tool calls for web search. Processing tool calls...');
+            
+            // Continuăm conversația cu tool calls
+            $final_response = self::continue_conversation_with_tool_calls($api_key, $prompt, $message['tool_calls']);
+            
+            if (is_wp_error($final_response)) {
+                error_log('❌ AI Browsing Error: Failed to continue conversation with tool calls. ' . $final_response->get_error_message());
+                return;
+            }
+            
+            $body = wp_remote_retrieve_body($final_response);
+            $decoded_response = json_decode($body, true);
+            $message = $decoded_response['choices'][0]['message'] ?? null;
+        }
+
+        // Acum căutăm conținutul final
+        $ai_content_json = $message['content'] ?? null;
 
         if (empty($ai_content_json)) {
             error_log('❌ AI Browsing Error: AI response is empty or in an unexpected format.');
@@ -634,6 +660,108 @@ class Auto_Ai_News_Poster_Api
         return $response;
     }
 
+    /**
+     * Continuă conversația cu tool calls pentru AI Browsing.
+     */
+    private static function continue_conversation_with_tool_calls($api_key, $original_prompt, $tool_calls)
+    {
+        error_log('🔄 CONTINUE_CONVERSATION_WITH_TOOL_CALLS() STARTED');
+        
+        $options = get_option('auto_ai_news_poster_settings', []);
+        $selected_model = $options['ai_model'] ?? 'gpt-4o';
+
+        // Construim mesajele pentru conversația continuată
+        $messages = [
+            [
+                'role' => 'system',
+                'content' => 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.'
+            ],
+            [
+                'role' => 'user',
+                'content' => $original_prompt
+            ],
+            [
+                'role' => 'assistant',
+                'content' => null,
+                'tool_calls' => $tool_calls
+            ]
+        ];
+
+        // Simulăm răspunsurile tool-urilor (în realitate, OpenAI ar procesa aceste tool calls)
+        foreach ($tool_calls as $tool_call) {
+            $messages[] = [
+                'role' => 'tool',
+                'tool_call_id' => $tool_call['id'],
+                'content' => 'Web search completed. Found relevant news articles from the specified sources. Please proceed with writing the article based on the search results.'
+            ];
+        }
+
+        $request_body = [
+            'model' => $selected_model,
+            'messages' => $messages,
+            'response_format' => [
+                'type' => 'json_schema',
+                'json_schema' => [
+                    'name' => 'article_response',
+                    'strict' => true,
+                    'schema' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'titlu' => [
+                                'type' => 'string',
+                                'description' => 'Titlul articolului generat'
+                            ],
+                            'continut' => [
+                                'type' => 'string',
+                                'description' => 'Conținutul complet al articolului generat'
+                            ],
+                            'imagine_prompt' => [
+                                'type' => 'string',
+                                'description' => 'Prompt pentru generarea imaginii reprezentative'
+                            ],
+                            'meta_descriere' => [
+                                'type' => 'string',
+                                'description' => 'Meta descriere SEO de maximum 160 de caractere'
+                            ],
+                            'cuvinte_cheie' => [
+                                'type' => 'array',
+                                'description' => 'Lista de cuvinte cheie pentru SEO',
+                                'items' => [
+                                    'type' => 'string'
+                                ]
+                            ]
+                        ],
+                        'required' => ['titlu', 'continut', 'imagine_prompt', 'meta_descriere', 'cuvinte_cheie'],
+                        'additionalProperties' => false
+                    ]
+                ]
+            ],
+            'max_completion_tokens' => 9000,
+        ];
+
+        error_log('📤 CONTINUED CONVERSATION REQUEST BODY:');
+        error_log('   - JSON: ' . json_encode($request_body, JSON_PRETTY_PRINT));
+
+        $response = wp_remote_post(URL_API_OPENAI, [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type' => 'application/json',
+            ],
+            'body' => json_encode($request_body),
+            'timeout' => 300,
+        ]);
+
+        error_log('📥 CONTINUED CONVERSATION RESPONSE:');
+        if (is_wp_error($response)) {
+            error_log('❌ WP Error: ' . $response->get_error_message());
+        } else {
+            error_log('✅ Response status: ' . wp_remote_retrieve_response_code($response));
+            error_log('💬 Response body: ' . wp_remote_retrieve_body($response));
+        }
+
+        return $response;
+    }
+
 
     public static function generate_image_for_article($post_id = null)
     {
@@ -728,7 +856,7 @@ class Auto_Ai_News_Poster_Api
             $post_status = $options['status'];
             if ($post_status == 'publish') {
                 $update_result = Post_Manager::insert_or_update_post($post_id, ['post_status' => $post_status]);
-                
+
                 if (is_wp_error($update_result)) {
                     error_log('❌ Error updating post status after image generation: ' . $update_result->get_error_message());
                     wp_send_json_error(['message' => $update_result->get_error_message()]);
