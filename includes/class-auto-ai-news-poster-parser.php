@@ -142,50 +142,54 @@ class Auto_AI_News_Poster_Parser
 
         // 2. Caută elementul principal de articol (într-o ordine de prioritate) în contextul curățat
         $selectors = [
-            '//article',
-            '//main',
-            '//div[contains(@class, "entry-content")]',
-            '//div[contains(@class, "post-content")]',
-            '//div[contains(@class, "article-content")]',
-            '//div[contains(@class, "td-post-content")]',
-            '//div[contains(@id, "content")]',
-            '//div[contains(@class, "content")]',
-            '//div[contains(@class, "td-container")]',
-            '//div[contains(@class, "tdc-row")]',
-            '//div[contains(@class, "tdb-block-inner td-fix-index")]',
-            '//div[contains(@class, "td_block_wrap")]',
-            '//div[contains(@class, "td-ss-main-content")]',
-            '//div[contains(@class, "tdb-block-inner")]',
-            '//div[contains(@class, "tdb_single_content")]',
-            '//div[contains(@class, "td-post-content tagdiv-type")]',
-            "//div[@class='tdb_single_content']",
-            "//div[@id='td-outer-wrap']",
-            '.', // Fallback: iau conținutul din nodul de context rămas (body)
+            ['//article', 10], // Highest priority
+            ['//main', 9],
+            ['//div[contains(@class, "entry-content")]', 8],
+            ['//div[contains(@class, "post-content")]', 8],
+            ['//div[contains(@class, "article-content")]', 8],
+            ['//div[contains(@class, "td-post-content")]', 7],
+            ['//div[contains(@id, "content")]', 7],
+            ['//div[contains(@class, "content")]', 6],
+            ['//div[contains(@class, "td-container")]', 5],
+            ['//div[contains(@class, "tdc-row")]', 4],
+            ['//div[contains(@class, "tdb-block-inner td-fix-index")]', 3],
+            ['//div[contains(@class, "td_block_wrap")]', 2],
+            ['//div[contains(@class, "td-ss-main-content")]', 2],
+            ['//div[contains(@class, "tdb-block-inner")]', 2],
+            ['//div[contains(@class, "tdb_single_content")]', 8],
+            ["//div[@class='tdb_single_content']", 8],
+            ["//div[@id='td-outer-wrap']", 1],
+            ['.', 0], // Fallback with lowest priority
         ];
 
-        $found_node = null;
-        foreach ($selectors as $selector) {
+        $best_node = null;
+        $best_score = -1;
+
+        foreach ($selectors as $selector_pair) {
+            list($selector, $priority) = $selector_pair;
             $nodes = $xpath_body->query($selector, $context_node_clean);
             if ($nodes->length > 0) {
-                $best_node = null;
-                $max_text_length = 0;
                 foreach ($nodes as $node) {
                     $text_length = strlen(trim($node->textContent));
-                    if ($text_length > $max_text_length) {
-                        $max_text_length = $text_length;
+                    // Calculate a score based on priority and text length
+                    $current_score = $priority * 1000 + $text_length; // Prioritize by score, then length
+
+                    // Add a penalty if the node is likely an ad or irrelevant content
+                    if (self::is_node_irrelevant($node)) {
+                        $current_score -= 5000; // Major penalty for irrelevant content
+                    }
+
+                    if ($current_score > $best_score) {
+                        $best_score = $current_score;
                         $best_node = $node;
                     }
-                }
-                if ($best_node) {
-                    $found_node = $best_node;
-                    break;
                 }
             }
         }
 
-        if ($found_node) {
-            $article_content = $found_node->textContent;
-            error_log('✅ Found content using selector: ' . $selector);
+        if ($best_node && $best_score > 0) { // Ensure a meaningful node with a positive score is found
+            $article_content = $best_node->textContent;
+            error_log('✅ Found content using selector with score: ' . $best_score . ')');
         } else {
             $article_content = $context_node_clean->textContent; // Folosesc textul din body-ul curățat
             error_log('⚠️ No specific content selector matched, using full body content');
@@ -322,5 +326,121 @@ class Auto_AI_News_Poster_Parser
             error_log('❌ Alternative parsing error: ' . $e->getMessage());
             return '';
         }
+    }
+
+    /**
+     * Helper method to check if a node is likely to be an ad or irrelevant content.
+     * This is a heuristic and might need refinement based on specific website patterns.
+     *
+     * @param DOMNode $node The DOM node to check.
+     * @return bool True if the node is likely irrelevant, false otherwise.
+     */
+    private static function is_node_irrelevant($node)
+    {
+        // Common patterns for ads and irrelevant content
+        $irrelevant_classes = [
+            'ad', 'ads', 'sidebar', 'menu', 'widget', 'breadcrumb', 'comment', 'footer', 'header', 'nav', 'form',
+            'iframe', 'noscript', 'meta', 'link', 'img[src*="ad"]', 'svg', 'button', 'input', 'select', 'textarea',
+            'script', 'style', 'aside', 'div[class*="ad"]', 'div[id*="ad"]', 'div[class*="ads"]', 'div[id*="ads"]',
+            'div[class*="sidebar"]', 'div[id*="sidebar"]', 'div[class*="menu"]', 'div[id*="menu"]', 'div[class*="widget"]',
+            'div[id*="widget"]', 'div[class*="breadcrumb"]', 'div[id*="breadcrumb"]',
+        ];
+
+        $node_classes = $node->getAttribute('class');
+        $node_id = $node->getAttribute('id');
+        $node_tag = $node->tagName;
+
+        // Check if the node has any of the irrelevant classes
+        if ($node_classes) {
+            $classes = explode(' ', $node_classes);
+            foreach ($classes as $class) {
+                if (in_array($class, $irrelevant_classes)) {
+                    return true;
+                }
+            }
+        }
+
+        // Check if the node has an irrelevant ID
+        if ($node_id) {
+            if (in_array($node_id, $irrelevant_classes)) { // Reusing the list for IDs
+                return true;
+            }
+        }
+
+        // Check if the node is a script, style, or iframe (often used for ads)
+        if ($node_tag === 'script' || $node_tag === 'style' || $node_tag === 'iframe') {
+            return true;
+        }
+
+        // Check if the node is an image without a src attribute (often used for ads)
+        if ($node_tag === 'img' && !$node->hasAttribute('src')) {
+            return true;
+        }
+
+        // Check if the node is an SVG (often used for ads)
+        if ($node_tag === 'svg') {
+            return true;
+        }
+
+        // Check if the node is a button (often used for ads)
+        if ($node_tag === 'button') {
+            return true;
+        }
+
+        // Check if the node is an input (often used for ads)
+        if ($node_tag === 'input') {
+            return true;
+        }
+
+        // Check if the node is a select (often used for ads)
+        if ($node_tag === 'select') {
+            return true;
+        }
+
+        // Check if the node is a textarea (often used for ads)
+        if ($node_tag === 'textarea') {
+            return true;
+        }
+
+        // Check if the node is a comment (often used for ads)
+        if ($node->nodeType === XML_COMMENT_NODE) {
+            return true;
+        }
+
+        // Check if the node is a meta tag (often used for ads)
+        if ($node_tag === 'meta') {
+            return true;
+        }
+
+        // Check if the node is a link tag (often used for ads)
+        if ($node_tag === 'link') {
+            return true;
+        }
+
+        // Check if the node is a div with a class or ID that indicates it's a sidebar or menu
+        if ($node_tag === 'div' && ($node_classes || $node_id)) {
+            $classes = explode(' ', $node_classes);
+            if (in_array('sidebar', $classes) || in_array('menu', $classes) || $node_id === 'sidebar' || $node_id === 'menu') {
+                return true;
+            }
+        }
+
+        // Check if the node is a widget (often used for ads)
+        if ($node_tag === 'div' && ($node_classes || $node_id)) {
+            $classes = explode(' ', $node_classes);
+            if (in_array('widget', $classes) || $node_id === 'widget') {
+                return true;
+            }
+        }
+
+        // Check if the node is a breadcrumb (often used for ads)
+        if ($node_tag === 'div' && ($node_classes || $node_id)) {
+            $classes = explode(' ', $node_classes);
+            if (in_array('breadcrumb', $classes) || $node_id === 'breadcrumb') {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
