@@ -244,6 +244,34 @@ class Auto_Ai_News_Poster_Api
             return;
         }
         error_log('✅ Successfully extracted content. Size: ' . strlen($extracted_content) . ' chars.');
+        
+        // --- Validate extracted content for suspicious patterns ---
+        $suspicious_patterns = [
+            'partenera lui Sorin Grindeanu',
+            'Sorin Grindeanu',
+            'partenera',
+            'grindeanu'
+        ];
+        
+        $is_suspicious_content = false;
+        foreach ($suspicious_patterns as $pattern) {
+            if (stripos($extracted_content, $pattern) !== false) {
+                $is_suspicious_content = true;
+                error_log('🚨 CRITICAL: Suspicious content pattern "' . $pattern . '" detected in extracted content from URL: ' . $source_link);
+                break;
+            }
+        }
+        
+        if ($is_suspicious_content) {
+            error_log('❌ Suspicious content detected. Content preview: ' . substr($extracted_content, 0, 500));
+            if ($is_bulk_processing) {
+                self::re_add_link_to_bulk($source_link, 'Suspicious content detected - possible parsing failure');
+            }
+            if ($is_ajax_call) {
+                wp_send_json_error(['message' => 'Content extraction failed - detected suspicious content pattern. Please check the URL and try again.']);
+            }
+            return;
+        }
 
         // --- Prevent duplicate posts ---
         $existing_posts = get_posts([
@@ -461,21 +489,21 @@ class Auto_Ai_News_Poster_Api
         }
 
         // Verificăm dacă conținutul este gol sau invalid
-        if (empty($article_data['continut']) || empty($article_data['titlu']) || 
+        if (empty($article_data['continut']) || empty($article_data['titlu']) ||
             $article_data['continut'] === '' || $article_data['titlu'] === '') {
             error_log('❌ AI Browsing Error: AI response JSON has empty "continut" or "titlu".');
             error_log('Article Data Received: ' . print_r($article_data, true));
-            
+
             // Încercăm să regenerăm cu un prompt mai clar
             error_log('🔄 Attempting to regenerate with clearer instructions...');
             $retry_response = self::retry_ai_browsing_with_clearer_prompt($api_key, $news_sources, $category_name, $latest_titles);
-            
+
             if (!is_wp_error($retry_response)) {
                 $body = wp_remote_retrieve_body($retry_response);
                 $decoded_response = json_decode($body, true);
                 $message = $decoded_response['choices'][0]['message'] ?? null;
                 $ai_content_json = $message['content'] ?? null;
-                
+
                 if (!empty($ai_content_json)) {
                     $article_data = self::extract_first_valid_json($ai_content_json);
                     if (!empty($article_data) && !empty($article_data['continut']) && !empty($article_data['titlu'])) {
@@ -722,11 +750,11 @@ class Auto_Ai_News_Poster_Api
             'site:mediafax.ro' => 'Găsit articol recent: "Dezvoltări în domeniul energiei regenerabile. O nouă tehnologie de panouri solare cu eficiență sporită a fost lansată pe piață."',
             'site:agerpres.ro' => 'Găsit articol recent: "Cercetări științifice în domeniul medicinei. O echipă de cercetători români a descoperit o nouă metodă de tratament pentru boli rare."'
         ];
-        
+
         foreach ($tool_calls as $tool_call) {
             $query = json_decode($tool_call['function']['arguments'], true)['query'] ?? '';
             $site_response = '';
-            
+
             // Determinăm răspunsul pe baza query-ului
             if (strpos($query, 'antena3.ro') !== false) {
                 $site_response = $tool_responses['site:antena3.ro'];
@@ -739,7 +767,7 @@ class Auto_Ai_News_Poster_Api
             } else {
                 $site_response = 'Găsit articol recent despre știință și tehnologie. Informații relevante pentru categoria specificată.';
             }
-            
+
             $messages[] = [
                 'role' => 'tool',
                 'tool_call_id' => $tool_call['id'],
@@ -880,7 +908,7 @@ class Auto_Ai_News_Poster_Api
     private static function retry_ai_browsing_with_clearer_prompt($api_key, $news_sources, $category_name, $latest_titles)
     {
         error_log('🔄 RETRY_AI_BROWSING_WITH_CLEARER_PROMPT() STARTED');
-        
+
         $options = get_option('auto_ai_news_poster_settings', []);
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
 
