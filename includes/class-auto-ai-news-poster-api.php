@@ -406,8 +406,8 @@ class Auto_Ai_News_Poster_Api
         $prompt = self::build_ai_browsing_prompt($news_sources, $category_name, $latest_titles);
         error_log('🤖 AI Browsing Prompt built. Length: ' . strlen($prompt) . ' chars.');
 
-        // Apelăm API-ul OpenAI
-        $response = call_openai_api($api_key, $prompt);
+        // Apelăm API-ul OpenAI cu tool calling pentru AI Browsing
+        $response = self::call_openai_api_with_browsing($api_key, $prompt);
 
         if (is_wp_error($response)) {
             error_log('❌ AI Browsing OpenAI API Error: ' . $response->get_error_message());
@@ -490,12 +490,15 @@ class Auto_Ai_News_Poster_Api
         3. **Ultimele articole publicate pe site-ul nostru în această categorie (EVITĂ ACESTE SUBIECTE):**
         - {$latest_titles_str}
 
+        **IMPORTANT - Folosește web browsing:**
+        Pentru a găsi știri recente, FOLOSEȘTE OBLIGATORIU funcția de web browsing pentru a căuta pe site-urile specificate. Nu inventa informații - accesează direct sursele pentru a găsi știri reale din ultimele 24-48 de ore.
+
         **Sarcina ta:**
-        1. **Cercetare:** Consultă sursele de informare pentru a identifica un subiect de știre foarte recent (din ultimele 24-48 de ore), important și relevant pentru categoria specificată.
-        2. **Verificarea unicității:** Asigură-te că subiectul ales NU este similar cu niciunul dintre titlurile deja publicate. Dacă este, alege alt subiect.
+        1. **Cercetare:** Folosește web browsing pentru a accesa și citi articole din sursele specificate. Caută subiecte foarte recente (din ultimele 24-48 de ore), importante și relevante pentru categoria **{$category_name}**.
+        2. **Verificarea unicității:** Asigură-te că subiectul ales NU este similar cu niciunul dintre titlurile deja publicate. Dacă este, alege alt subiect din browsing.
         3. **Scrierea articolului:** {$custom_instructions}
         4. **Generare titlu:** Creează un titlu concis și atractiv pentru articol.
-        5. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol, care ar putea fi folosită într-un generator de imagini AI (ex: DALL-E, Midjourney).
+        5. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol.
 
         **Format de răspuns OBLIGATORIU:**
         Răspunsul tău trebuie să fie exclusiv în format JSON, fără niciun alt text înainte sau după. Structura trebuie să fie următoarea:
@@ -512,9 +515,123 @@ class Auto_Ai_News_Poster_Api
           ]
         }
         ```
+
+        **PASUL 1:** Începe prin a folosi web browsing pentru a căuta pe site-urile specificate și găsi știri recente din categoria {$category_name}.
         ";
 
         return $prompt;
+    }
+
+    /**
+     * Apelăm API-ul OpenAI cu tool calling pentru modul AI Browsing.
+     */
+    private static function call_openai_api_with_browsing($api_key, $prompt)
+    {
+        error_log('🔥 CALL_OPENAI_API_WITH_BROWSING() STARTED');
+
+        // Obținem modelul selectat din setări
+        $options = get_option('auto_ai_news_poster_settings', []);
+        $selected_model = $options['ai_model'] ?? 'gpt-4o';
+
+        error_log('🤖 AI API CONFIGURATION:');
+        error_log('   - Selected model: ' . $selected_model);
+        error_log('   - API URL: ' . URL_API_OPENAI);
+        error_log('   - API Key length: ' . strlen($api_key));
+        error_log('   - Prompt length: ' . strlen($prompt));
+
+        $request_body = [
+            'model' => $selected_model,
+            'messages' => [
+                [
+                    'role' => 'system',
+                    'content' => 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.'
+                ],
+                [
+                    'role' => 'user',
+                    'content' => $prompt
+                ]
+            ],
+            'tools' => [
+                [
+                    'type' => 'function',
+                    'function' => [
+                        'name' => 'web_search',
+                        'description' => 'Search the web for current information',
+                        'parameters' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'query' => [
+                                    'type' => 'string',
+                                    'description' => 'The search query'
+                                ]
+                            ],
+                            'required' => ['query']
+                        ]
+                    ]
+                ]
+            ],
+            'response_format' => [
+                'type' => 'json_schema',
+                'json_schema' => [
+                    'name' => 'article_response',
+                    'strict' => true,
+                    'schema' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'titlu' => [
+                                'type' => 'string',
+                                'description' => 'Titlul articolului generat'
+                            ],
+                            'continut' => [
+                                'type' => 'string',
+                                'description' => 'Conținutul complet al articolului generat'
+                            ],
+                            'imagine_prompt' => [
+                                'type' => 'string',
+                                'description' => 'Prompt pentru generarea imaginii reprezentative'
+                            ],
+                            'meta_descriere' => [
+                                'type' => 'string',
+                                'description' => 'Meta descriere SEO de maximum 160 de caractere'
+                            ],
+                            'cuvinte_cheie' => [
+                                'type' => 'array',
+                                'description' => 'Lista de cuvinte cheie pentru SEO',
+                                'items' => [
+                                    'type' => 'string'
+                                ]
+                            ]
+                        ],
+                        'required' => ['titlu', 'continut', 'imagine_prompt', 'meta_descriere', 'cuvinte_cheie'],
+                        'additionalProperties' => false
+                    ]
+                ]
+            ],
+            'max_completion_tokens' => 9000,
+        ];
+
+        error_log('📤 REQUEST BODY TO OPENAI:');
+        error_log('   - JSON: ' . json_encode($request_body, JSON_PRETTY_PRINT));
+
+        $response = wp_remote_post(URL_API_OPENAI, [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type' => 'application/json',
+            ],
+            'body' => json_encode($request_body),
+            'timeout' => 300, // 5 minute timeout pentru browsing
+        ]);
+
+        error_log('📥 OPENAI API RESPONSE:');
+        if (is_wp_error($response)) {
+            error_log('❌ WP Error: ' . $response->get_error_message());
+        } else {
+            error_log('✅ Response status: ' . wp_remote_retrieve_response_code($response));
+            error_log('📄 Response headers: ' . print_r(wp_remote_retrieve_headers($response), true));
+            error_log('💬 Response body: ' . wp_remote_retrieve_body($response));
+        }
+
+        return $response;
     }
 
 
