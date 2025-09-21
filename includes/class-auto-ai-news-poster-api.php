@@ -63,10 +63,10 @@ class Auto_Ai_News_Poster_Api
         // Verificăm dacă rularea automată a categoriilor este activată și modul este automat
         if ($options['auto_rotate_categories'] === 'yes' && $options['mode'] === 'auto') {
             error_log('🔄 Category rotation is enabled and mode is auto');
-            
+
             $categories = get_categories(['orderby' => 'name', 'order' => 'ASC', 'hide_empty' => false]);
             $category_ids = wp_list_pluck($categories, 'term_id'); // Obținem ID-urile categoriilor
-            
+
             error_log('🔄 Available categories count: ' . count($categories));
             error_log('🔄 Available category IDs: ' . implode(', ', $category_ids));
 
@@ -78,13 +78,13 @@ class Auto_Ai_News_Poster_Api
             $next_category_id = $category_ids[$current_index];
             $next_category = get_category($next_category_id);
             $next_category_name = $next_category ? $next_category->name : 'Unknown';
-            
+
             error_log('🔄 Next category: ' . $next_category_name . ' (ID: ' . $next_category_id . ')');
 
             // Actualizăm indexul pentru următoarea utilizare
             $current_index = ($current_index + 1) % count($category_ids); // Resetăm la 0 când ajungem la finalul listei
             update_option('auto_ai_news_poster_current_category_index', $current_index);
-            
+
             error_log('🔄 Updated category index for next time: ' . $current_index);
 
             return $next_category_name; // Returnăm numele categoriei
@@ -577,7 +577,7 @@ class Auto_Ai_News_Poster_Api
     private static function build_ai_browsing_prompt($news_sources, $category_name, $latest_titles)
     {
         $options = get_option('auto_ai_news_poster_settings');
-        $custom_instructions = $options['ai_browsing_instructions'] ?? 'Scrie un articol de știre original, în limba română, de 300-500 de cuvinte. Articolul trebuie să fie obiectiv, informativ și bine structurat (introducere, cuprins, încheiere).';
+        $custom_instructions = $options['ai_browsing_instructions'] ?? 'Scrie un articol de știre original, în limba română ca un jurnalist. Articolul trebuie să fie obiectiv, informativ și bine structurat (introducere, cuprins, încheiere).';
         $latest_titles_str = !empty($latest_titles) ? implode("\n- ", $latest_titles) : 'Niciun articol recent.';
 
         $prompt = "

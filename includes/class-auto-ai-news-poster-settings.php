@@ -676,7 +676,7 @@ class Auto_Ai_News_Poster_Settings
     public static function ai_browsing_instructions_callback()
     {
         $options = get_option('auto_ai_news_poster_settings');
-        $instructions = $options['ai_browsing_instructions'] ?? 'Scrie un articol de știre original, în limba română, de 300-500 de cuvinte. Articolul trebuie să fie obiectiv, informativ și bine structurat (introducere, cuprins, încheiere).';
+        $instructions = $options['ai_browsing_instructions'] ?? 'Scrie un articol de știre original, în limba română ca un jurnalist. Articolul trebuie să fie obiectiv, informativ și bine structurat (introducere, cuprins, încheiere).';
         ?>
         <div class="settings-group settings-group-ai_browsing">
             <div class="settings-card">
