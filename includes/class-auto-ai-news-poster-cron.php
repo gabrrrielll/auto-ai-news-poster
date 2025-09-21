@@ -124,7 +124,9 @@ class Auto_Ai_News_Poster_Cron
         $latest_titles = array_map('get_the_title', $latest_post_ids);
 
         // Apelează funcția API pentru generare
-        Auto_Ai_News_Poster_Api::generate_article_with_browsing($news_sources, get_cat_name($category_id), $latest_titles);
+        $category = get_category($category_id);
+        $category_name = $category ? $category->name : 'General';
+        Auto_Ai_News_Poster_Api::generate_article_with_browsing($news_sources, $category_name, $latest_titles);
     }
 
 

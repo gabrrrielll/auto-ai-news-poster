@@ -610,13 +610,13 @@ class Auto_Ai_News_Poster_Api
 
             $post_status = $options['status'];
             if ($post_status == 'publish') {
-                Post_Manager::insert_or_update_post($post_id, ['post_status' => $post_status]);
-            }
-
-            if (isset($post_id['error'])) {
-                error_log('❌ Error updating post status after image generation: ' . $post_id['error']);
-                wp_send_json_error(['message' => $post_id['error']]);
-                return;
+                $update_result = Post_Manager::insert_or_update_post($post_id, ['post_status' => $post_status]);
+                
+                if (is_wp_error($update_result)) {
+                    error_log('❌ Error updating post status after image generation: ' . $update_result->get_error_message());
+                    wp_send_json_error(['message' => $update_result->get_error_message()]);
+                    return;
+                }
             }
 
             error_log('✅ Image generated and set successfully for post ID: ' . $post_id);
