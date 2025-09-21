@@ -104,14 +104,42 @@ class Auto_Ai_News_Poster_Cron
     {
         $settings = get_option('auto_ai_news_poster_settings');
         $news_sources = $settings['news_sources'] ?? '';
-        $category_id = $settings['specific_search_category'] ?? '';
-
-        if (empty($news_sources) || empty($category_id)) {
-            error_log('AI Browsing Mode Error: News sources or category is not set.');
+        
+        if (empty($news_sources)) {
+            error_log('AI Browsing Mode Error: News sources is not set.');
             return;
         }
 
-        // Obține ultimele 5 titluri din categoria specificată
+        // Determinăm categoria care trebuie folosită
+        $category_name = '';
+        $category_id = '';
+        
+        // Verificăm dacă rotația automată a categoriilor este activată
+        if (isset($settings['auto_rotate_categories']) && $settings['auto_rotate_categories'] === 'yes' && 
+            isset($settings['mode']) && $settings['mode'] === 'auto') {
+            // Folosim rotația automată a categoriilor
+            error_log('🔄 AI Browsing: Using automatic category rotation');
+            $category_name = Auto_Ai_News_Poster_Api::get_next_category();
+            
+            // Găsim ID-ul categoriei pe baza numelui
+            $category = get_category_by_slug(sanitize_title($category_name));
+            $category_id = $category ? $category->term_id : '';
+            
+            error_log('🔄 AI Browsing: Selected category for rotation: ' . $category_name . ' (ID: ' . $category_id . ')');
+        } else {
+            // Folosim categoria specificată
+            $category_id = $settings['specific_search_category'] ?? '';
+            if (empty($category_id)) {
+                error_log('AI Browsing Mode Error: No category is set and rotation is disabled.');
+                return;
+            }
+            
+            $category = get_category($category_id);
+            $category_name = $category ? $category->name : 'Diverse';
+            error_log('🔄 AI Browsing: Using specific category: ' . $category_name . ' (ID: ' . $category_id . ')');
+        }
+
+        // Obține ultimele 5 titluri din categoria selectată
         $latest_posts_args = [
             'posts_per_page' => 5,
             'cat' => $category_id,
@@ -124,8 +152,6 @@ class Auto_Ai_News_Poster_Cron
         $latest_titles = array_map('get_the_title', $latest_post_ids);
 
         // Apelează funcția API pentru generare
-        $category = get_category($category_id);
-        $category_name = $category ? $category->name : 'Diverse';
         Auto_Ai_News_Poster_Api::generate_article_with_browsing($news_sources, $category_name, $latest_titles);
     }
 

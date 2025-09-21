@@ -15,7 +15,7 @@ class Auto_AI_News_Poster_Parser
     public static function extract_content_from_url($url)
     {
         error_log('🔗 Extracting content from URL: ' . $url);
-        
+
         // Add User-Agent to avoid being blocked by some websites
         // Also add cache-busting parameters to prevent cached responses
         $cache_bust_url = $url;
@@ -24,7 +24,7 @@ class Auto_AI_News_Poster_Parser
         } else {
             $cache_bust_url .= '?_cb=' . time() . '_' . rand(1000, 9999);
         }
-        
+
         $response = wp_remote_get($cache_bust_url, [
             'timeout' => 300,
             'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -198,7 +198,7 @@ class Auto_AI_News_Poster_Parser
 
         error_log('✅ Content extracted. Length: ' . strlen($article_content));
         error_log('📄 First 200 chars of extracted content: ' . substr($article_content, 0, 200));
-        
+
         // Check for suspicious content patterns that might indicate parsing failure
         $suspicious_patterns = [
             'partenera lui Sorin Grindeanu',
@@ -206,7 +206,7 @@ class Auto_AI_News_Poster_Parser
             'partenera',
             'grindeanu'
         ];
-        
+
         $is_suspicious = false;
         foreach ($suspicious_patterns as $pattern) {
             if (stripos($article_content, $pattern) !== false) {
@@ -215,10 +215,10 @@ class Auto_AI_News_Poster_Parser
                 break;
             }
         }
-        
+
         if ($is_suspicious) {
             error_log('🚨 CRITICAL: Content appears to be incorrect/default content. Full content: ' . $article_content);
-            
+
             // Try alternative parsing method
             error_log('🔄 Attempting alternative parsing method...');
             $alternative_content = self::try_alternative_parsing($body, $url);
@@ -227,19 +227,19 @@ class Auto_AI_News_Poster_Parser
                 $article_content = $alternative_content;
             }
         }
-        
+
         $max_content_length = 15000;
         if (strlen($article_content) > $max_content_length) {
             $article_content = substr($article_content, 0, $max_content_length);
             error_log('⚠️ Article content truncated to ' . $max_content_length . ' characters.');
         }
-        
+
         // Verificăm dacă conținutul pare să fie corect
         if (strlen($article_content) < 100) {
             error_log('⚠️ WARNING: Extracted content is very short (' . strlen($article_content) . ' chars). This might indicate a parsing issue.');
             error_log('📄 Full extracted content: ' . $article_content);
         }
-        
+
         return $article_content;
     }
 
@@ -249,7 +249,7 @@ class Auto_AI_News_Poster_Parser
     private static function try_alternative_parsing($html_body, $url)
     {
         error_log('🔄 ALTERNATIVE_PARSING() STARTED for URL: ' . $url);
-        
+
         try {
             // Method 1: Try to extract content using simple regex patterns
             $patterns = [
@@ -261,17 +261,17 @@ class Auto_AI_News_Poster_Parser
                 '/<div[^>]*id="content"[^>]*>(.*?)<\/div>/is',
                 '/<div[^>]*id="post"[^>]*>(.*?)<\/div>/is',
             ];
-            
+
             $best_content = '';
             $max_length = 0;
-            
+
             foreach ($patterns as $pattern) {
                 if (preg_match_all($pattern, $html_body, $matches)) {
                     foreach ($matches[1] as $match) {
                         $clean_content = strip_tags($match);
                         $clean_content = preg_replace('/\s+/', ' ', $clean_content);
                         $clean_content = trim($clean_content);
-                        
+
                         if (strlen($clean_content) > $max_length && strlen($clean_content) > 200) {
                             $max_length = strlen($clean_content);
                             $best_content = $clean_content;
@@ -279,12 +279,12 @@ class Auto_AI_News_Poster_Parser
                     }
                 }
             }
-            
+
             if (!empty($best_content)) {
                 error_log('✅ Alternative parsing found content with length: ' . strlen($best_content));
                 return $best_content;
             }
-            
+
             // Method 2: Try to extract all paragraph content
             if (preg_match_all('/<p[^>]*>(.*?)<\/p>/is', $html_body, $paragraph_matches)) {
                 $paragraphs = [];
@@ -292,32 +292,32 @@ class Auto_AI_News_Poster_Parser
                     $clean_paragraph = strip_tags($paragraph);
                     $clean_paragraph = preg_replace('/\s+/', ' ', $clean_paragraph);
                     $clean_paragraph = trim($clean_paragraph);
-                    
+
                     if (strlen($clean_paragraph) > 50) { // Only keep substantial paragraphs
                         $paragraphs[] = $clean_paragraph;
                     }
                 }
-                
+
                 if (!empty($paragraphs)) {
                     $combined_content = implode("\n\n", $paragraphs);
                     error_log('✅ Alternative parsing found ' . count($paragraphs) . ' paragraphs with total length: ' . strlen($combined_content));
                     return $combined_content;
                 }
             }
-            
+
             // Method 3: Last resort - extract all text content
             $all_text = strip_tags($html_body);
             $all_text = preg_replace('/\s+/', ' ', $all_text);
             $all_text = trim($all_text);
-            
+
             if (strlen($all_text) > 500) {
                 error_log('✅ Alternative parsing using all text content with length: ' . strlen($all_text));
                 return $all_text;
             }
-            
+
             error_log('❌ Alternative parsing failed to extract meaningful content');
             return '';
-            
+
         } catch (Exception $e) {
             error_log('❌ Alternative parsing error: ' . $e->getMessage());
             return '';

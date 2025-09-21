@@ -55,30 +55,46 @@ class Auto_Ai_News_Poster_Api
     // Funcție pentru a obține categoria următoare
     public static function get_next_category()
     {
+        error_log('🔄 GET_NEXT_CATEGORY() STARTED');
 
         // Obținem opțiunile salvate
         $options = get_option('auto_ai_news_poster_settings');
 
         // Verificăm dacă rularea automată a categoriilor este activată și modul este automat
         if ($options['auto_rotate_categories'] === 'yes' && $options['mode'] === 'auto') {
+            error_log('🔄 Category rotation is enabled and mode is auto');
+            
             $categories = get_categories(['orderby' => 'name', 'order' => 'ASC', 'hide_empty' => false]);
             $category_ids = wp_list_pluck($categories, 'term_id'); // Obținem ID-urile categoriilor
+            
+            error_log('🔄 Available categories count: ' . count($categories));
+            error_log('🔄 Available category IDs: ' . implode(', ', $category_ids));
 
             // Obținem indexul ultimei categorii utilizate
             $current_index = get_option('auto_ai_news_poster_current_category_index', 0);
+            error_log('🔄 Current category index: ' . $current_index);
 
             // Calculăm următoarea categorie
             $next_category_id = $category_ids[$current_index];
+            $next_category = get_category($next_category_id);
+            $next_category_name = $next_category ? $next_category->name : 'Unknown';
+            
+            error_log('🔄 Next category: ' . $next_category_name . ' (ID: ' . $next_category_id . ')');
 
             // Actualizăm indexul pentru următoarea utilizare
             $current_index = ($current_index + 1) % count($category_ids); // Resetăm la 0 când ajungem la finalul listei
             update_option('auto_ai_news_poster_current_category_index', $current_index);
+            
+            error_log('🔄 Updated category index for next time: ' . $current_index);
 
-            return get_category($next_category_id)->name; // Returnăm numele categoriei
+            return $next_category_name; // Returnăm numele categoriei
         }
 
+        error_log('🔄 Category rotation is disabled or mode is not auto');
         // Dacă rularea automată a categoriilor nu este activată, folosim categoria selectată manual
-        return $options['categories'][0] ?? ''; // Folosim prima categorie din listă dacă este setată
+        $fallback_category = $options['categories'][0] ?? '';
+        error_log('🔄 Using fallback category: ' . $fallback_category);
+        return $fallback_category; // Folosim prima categorie din listă dacă este setată
     }
 
 
@@ -244,7 +260,7 @@ class Auto_Ai_News_Poster_Api
             return;
         }
         error_log('✅ Successfully extracted content. Size: ' . strlen($extracted_content) . ' chars.');
-        
+
         // --- Validate extracted content for suspicious patterns ---
         $suspicious_patterns = [
             'partenera lui Sorin Grindeanu',
@@ -252,7 +268,7 @@ class Auto_Ai_News_Poster_Api
             'partenera',
             'grindeanu'
         ];
-        
+
         $is_suspicious_content = false;
         foreach ($suspicious_patterns as $pattern) {
             if (stripos($extracted_content, $pattern) !== false) {
@@ -261,7 +277,7 @@ class Auto_Ai_News_Poster_Api
                 break;
             }
         }
-        
+
         if ($is_suspicious_content) {
             error_log('❌ Suspicious content detected. Content preview: ' . substr($extracted_content, 0, 500));
             if ($is_bulk_processing) {
