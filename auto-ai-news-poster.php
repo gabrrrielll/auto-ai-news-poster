@@ -38,9 +38,10 @@ function auto_ai_news_poster_inline_admin_css()
         $screen = get_current_screen();
         $current_screen_id = $screen ? $screen->id : 'no_screen';
 
-        // Verificăm dacă suntem pe pagina de setări
-        if ($current_screen_id !== 'posts_page_auto-ai-news-poster') {
-            return; // Ieșim dacă nu suntem pe pagina corectă
+        // Verificăm dacă suntem pe pagina de setări sau pe pagina de editare articol
+        $allowed_screens = ['posts_page_auto-ai-news-poster', 'post', 'post-new'];
+        if (!in_array($current_screen_id, $allowed_screens)) {
+            return; // Ieșim dacă nu suntem pe paginile corecte
         }
 
         $css_path = plugin_dir_path(__FILE__) . 'includes/css/auto-ai-news-poster.css';
@@ -59,9 +60,10 @@ function auto_ai_news_poster_inline_admin_js()
         $screen = get_current_screen();
         $current_screen_id = $screen ? $screen->id : 'no_screen';
 
-        // Verificăm dacă suntem pe pagina de setări
-        if ($current_screen_id !== 'posts_page_auto-ai-news-poster') {
-            return; // Ieșim dacă nu suntem pe pagina corectă
+        // Verificăm dacă suntem pe pagina de setări sau pe pagina de editare articol
+        $allowed_screens = ['posts_page_auto-ai-news-poster', 'post', 'post-new'];
+        if (!in_array($current_screen_id, $allowed_screens)) {
+            return; // Ieșim dacă nu suntem pe paginile corecte
         }
 
         $js_path = plugin_dir_path(__FILE__) . 'includes/js/auto-ai-news-poster-settings.js';

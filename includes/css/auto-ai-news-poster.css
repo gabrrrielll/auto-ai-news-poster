@@ -58,7 +58,7 @@
 
 .auto-ai-news-poster-header h1 {
     color: white;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
     margin: 0;
     font-size: 2.5rem;
     font-weight: 700;
@@ -315,7 +315,7 @@
 
 .auto-ai-news-poster-metabox .postbox-header h2 {
     color: white;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
     margin: 0;
     font-size: 1.2rem;
     font-weight: 600;
@@ -378,7 +378,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: calc(100% - 30px); /* 30px = 2 * 15px padding */
+    width: calc(100% - 30px);
+    /* 30px = 2 * 15px padding */
     padding: 12px 15px;
     margin: 15px;
     background: linear-gradient(145deg, var(--primary-color), var(--primary-hover));
@@ -413,10 +414,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: calc(100% - 30px); /* 30px = 2 * 15px padding */
+    width: calc(100% - 30px);
+    /* 30px = 2 * 15px padding */
     padding: 12px 15px;
     margin: 15px;
-    background: linear-gradient(145deg, #6c5ce7, #8e44ad); /* O culoare diferit pentru butonul de imagine */
+    background: linear-gradient(145deg, #6c5ce7, #8e44ad);
+    /* O culoare diferit pentru butonul de imagine */
     color: white;
     border: none;
     border-radius: var(--border-radius);

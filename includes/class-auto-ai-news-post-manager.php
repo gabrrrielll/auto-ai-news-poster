@@ -12,7 +12,13 @@ class Post_Manager
 
             // Verificăm dacă inserarea a fost cu succes
             if (is_wp_error($post_id)) {
-                return ['error' => 'Nu am reușit să creez un articol nou.'];
+                return new WP_Error('post_insert_failed', 'Nu am reușit să creez un articol nou: ' . $post_id->get_error_message());
+            }
+            
+            // Verificăm dacă ID-ul este valid (nu 0)
+            if (empty($post_id) || $post_id === 0) {
+                error_log('❌ wp_insert_post returned invalid ID: ' . $post_id);
+                return new WP_Error('post_insert_failed', 'wp_insert_post returned invalid ID: ' . $post_id);
             }
         } else {
             // Asigurăm că 'ID' este setat în $post_data pentru actualizare
@@ -71,7 +77,7 @@ class Post_Manager
             $temp_file = download_url($image_url);
             if (is_wp_error($temp_file)) {
                 error_log('Eroare la descărcarea imaginii: ' . $temp_file->get_error_message());
-                return ['error' => 'Nu am reușit să descarc imaginea.'];
+                return new WP_Error('image_download_failed', 'Nu am reușit să descarc imaginea: ' . $temp_file->get_error_message());
             }
 
 
@@ -106,7 +112,7 @@ class Post_Manager
             if (is_wp_error($image_id)) {
                 @unlink($temp_file); // Ștergem fișierul temporar în caz de eroare
                 error_log('Eroare la încărcarea imaginii: ' . $image_id->get_error_message());
-                return ['error' => 'Nu am reușit să salvez imaginea.'];
+                return new WP_Error('image_upload_failed', 'Nu am reușit să salvez imaginea: ' . $image_id->get_error_message());
             }
 
             // Setăm imaginea reprezentativă și actualizăm atributele alt și description
