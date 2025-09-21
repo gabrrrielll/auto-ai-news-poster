@@ -1,4 +1,4 @@
-jQuery(document).ready(function($) {
+jQuery(document).ready(function ($) {
     console.log("🚀 AANP Settings JS: Document ready. Starting setup.");
 
     const generationModeRadios = $('input[name="auto_ai_news_poster_settings[generation_mode]"]');
@@ -6,7 +6,7 @@ jQuery(document).ready(function($) {
 
     function setupConditionalFields() {
         console.log("🔄 AANP Settings JS: Running setupConditionalFields...");
-        $('.settings-group').each(function(index) {
+        $('.settings-group').each(function (index) {
             const row = $(this).closest('tr');
             let addedClass = '';
             if ($(this).hasClass('settings-group-parse_link')) {

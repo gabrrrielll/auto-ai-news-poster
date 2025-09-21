@@ -28,32 +28,50 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-api
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-hooks.php';
 
 // --- Asset Enqueuing ---
-// Schimbăm hook-ul la admin_head pentru a încerca o altă metodă de încărcare
-add_action('admin_head', 'auto_ai_news_poster_load_assets_inline');
+// Implementarea inline pentru CSS și JS (metodă testată pe server)
+add_action('admin_head', 'auto_ai_news_poster_inline_admin_css');
+add_action('admin_footer', 'auto_ai_news_poster_inline_admin_js');
 
-function auto_ai_news_poster_load_assets_inline()
+function auto_ai_news_poster_inline_admin_css()
 {
-    $screen = get_current_screen();
-    $current_screen_id = $screen ? $screen->id : 'no_screen';
+    if (is_admin()) {
+        $screen = get_current_screen();
+        $current_screen_id = $screen ? $screen->id : 'no_screen';
 
-    // Verificăm dacă suntem pe pagina de setări
-    if ($current_screen_id !== 'posts_page_auto-ai-news-poster') {
-        return; // Ieșim dacă nu suntem pe pagina corectă
+        // Verificăm dacă suntem pe pagina de setări
+        if ($current_screen_id !== 'posts_page_auto-ai-news-poster') {
+            return; // Ieșim dacă nu suntem pe pagina corectă
+        }
+
+        $css_path = plugin_dir_path(__FILE__) . 'includes/css/auto-ai-news-poster.css';
+
+        if (file_exists($css_path)) {
+            echo '<style type="text/css">';
+            echo file_get_contents($css_path);
+            echo '</style>';
+        }
     }
+}
 
-    error_log('✅ AANP: Pagină de setări DETECTATĂ. Se încarcă resursele direct în <head>.');
+function auto_ai_news_poster_inline_admin_js()
+{
+    if (is_admin()) {
+        $screen = get_current_screen();
+        $current_screen_id = $screen ? $screen->id : 'no_screen';
 
-    // Construim URL-urile manual pentru a fi siguri
-    $site_url = site_url();
-    $relative_path = str_replace(ABSPATH, '', plugin_dir_path(__FILE__));
-    $plugin_base_url = $site_url . '/' . $relative_path;
+        // Verificăm dacă suntem pe pagina de setări
+        if ($current_screen_id !== 'posts_page_auto-ai-news-poster') {
+            return; // Ieșim dacă nu suntem pe pagina corectă
+        }
 
-    $css_url = $plugin_base_url . 'includes/css/auto-ai-news-poster.css?ver=' . time();
-    $settings_js_url = $plugin_base_url . 'includes/js/auto-ai-news-poster-settings.js?ver=' . time();
+        $js_path = plugin_dir_path(__FILE__) . 'includes/js/auto-ai-news-poster-settings.js';
 
-    // Încărcăm CSS și JS direct în head
-    echo '<link rel="stylesheet" id="auto-ai-news-poster-styles-css" href="' . esc_url($css_url) . '" type="text/css" media="all" />';
-    echo '<script src="' . esc_url($settings_js_url) . '" id="auto-ai-news-poster-settings-js-js"></script>';
+        if (file_exists($js_path)) {
+            echo '<script type="text/javascript">';
+            echo file_get_contents($js_path);
+            echo '</script>';
+        }
+    }
 }
 
 // Remove the old, problematic inline asset loading method
