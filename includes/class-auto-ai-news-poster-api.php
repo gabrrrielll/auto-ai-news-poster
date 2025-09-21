@@ -598,7 +598,8 @@ class Auto_Ai_News_Poster_Api
         2. **Verificarea unicității:** Asigură-te că subiectul ales NU este similar cu niciunul dintre titlurile deja publicate. Dacă este, alege alt subiect din browsing.
         3. **Scrierea articolului:** {$custom_instructions}
         4. **Generare titlu:** Creează un titlu concis și atractiv pentru articol.
-        5. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol.
+        5. **Generare etichete:** Generează între 1 și 3 etichete relevante (cuvinte_cheie) pentru articol. Fiecare cuvânt trebuie să înceapă cu majusculă.
+        6. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol.
 
         **IMPORTANT - Formatarea articolului:**
         - NU folosi titluri explicite precum \"Introducere\", \"Dezvoltare\", \"Concluzie\" în text
@@ -614,11 +615,7 @@ class Auto_Ai_News_Poster_Api
           \"continut\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie.\",
           \"imagine_prompt\": \"Descrierea detaliată pentru imaginea reprezentativă.\",
           \"meta_descriere\": \"O meta descriere de maximum 160 de caractere, optimizată SEO.\",
-          \"cuvinte_cheie\": [
-            \"cuvant_cheie_1\",
-            \"cuvant_cheie_2\",
-            \"cuvant_cheie_3\"
-          ]
+          \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]
         }
 
         **PASUL 1:** Începe prin a folosi web browsing pentru a căuta pe site-urile specificate și găsi știri recente din categoria {$category_name}.
@@ -944,6 +941,7 @@ Cerințe:
 - Conținut fluent și natural, fără secțiuni marcate explicit
 - NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"
 - Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly
+- Generează între 1 și 3 etichete relevante (cuvinte_cheie)
 - Limbă română
 - Stil jurnalistic obiectiv și informativ
 
@@ -953,7 +951,7 @@ Returnează DOAR acest JSON:
   \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",
   \"imagine_prompt\": \"Descriere pentru imagine\",
   \"meta_descriere\": \"Meta descriere SEO\",
-  \"cuvinte_cheie\": [\"cuvant1\", \"cuvant2\", \"cuvant3\"]
+  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]
 }";
 
         $request_body = [

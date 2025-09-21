@@ -38,8 +38,21 @@ class Post_Manager
         $generate_tags_option = $options['generate_tags'] ?? 'yes';
 
         if ($generate_tags_option === 'yes' && !empty($tags)) {
-            error_log('🏷️ Setting tags for post ID: ' . $post_id . ', Tags: ' . print_r($tags, true));
-            wp_set_post_tags($post_id, $tags);
+            // Validăm numărul de etichete: minim 1, maxim 3
+            if (is_array($tags)) {
+                $tags = array_filter($tags, 'trim'); // Eliminăm etichetele goale
+                $tags = array_slice($tags, 0, 3); // Limităm la maximum 3 etichete
+                
+                if (empty($tags)) {
+                    error_log('🚫 No valid tags found after filtering for post ID: ' . $post_id);
+                    return;
+                }
+                
+                error_log('🏷️ Setting tags for post ID: ' . $post_id . ', Tags: ' . print_r($tags, true) . ' (Count: ' . count($tags) . ')');
+                wp_set_post_tags($post_id, $tags);
+            } else {
+                error_log('🚫 Tags is not an array for post ID: ' . $post_id . ', Type: ' . gettype($tags));
+            }
         } else {
             error_log('🚫 Tags generation is disabled or tags are empty for post ID: ' . $post_id);
         }
