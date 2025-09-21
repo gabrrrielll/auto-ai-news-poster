@@ -289,22 +289,8 @@ class Auto_Ai_News_Poster_Api
             return;
         }
 
-        // --- Prevent duplicate posts ---
-        $existing_posts = get_posts([
-            'meta_key' => '_custom_source_url',
-            'meta_value' => $source_link,
-            'post_type' => 'post',
-            'post_status' => ['publish', 'draft', 'pending', 'future'],
-            'numberposts' => 1
-        ]);
-
-        if (!empty($existing_posts)) {
-            error_log('⚠️ Link already used to generate post ID ' . $existing_posts[0]->ID . ': ' . $source_link . '. Skipping.');
-            if ($is_ajax_call) {
-                wp_send_json_error(['message' => 'This link has already been used to generate an article.']);
-            }
-            return;
-        }
+        // --- Allow reusing the same link multiple times ---
+        // Removed duplicate link prevention to allow regenerating articles from the same source
 
 
         // --- Call OpenAI API ---
