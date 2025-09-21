@@ -125,7 +125,7 @@ class Auto_Ai_News_Poster_Cron
 
         // Apelează funcția API pentru generare
         $category = get_category($category_id);
-        $category_name = $category ? $category->name : 'General';
+        $category_name = $category ? $category->name : 'Diverse';
         Auto_Ai_News_Poster_Api::generate_article_with_browsing($news_sources, $category_name, $latest_titles);
     }
 
