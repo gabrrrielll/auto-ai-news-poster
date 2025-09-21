@@ -428,15 +428,15 @@ class Auto_Ai_News_Poster_Api
         // Verificăm dacă AI-ul a făcut tool calls
         if (isset($message['tool_calls']) && !empty($message['tool_calls'])) {
             error_log('🔍 AI made tool calls for web search. Processing tool calls...');
-            
+
             // Continuăm conversația cu tool calls
             $final_response = self::continue_conversation_with_tool_calls($api_key, $prompt, $message['tool_calls']);
-            
+
             if (is_wp_error($final_response)) {
                 error_log('❌ AI Browsing Error: Failed to continue conversation with tool calls. ' . $final_response->get_error_message());
                 return;
             }
-            
+
             $body = wp_remote_retrieve_body($final_response);
             $decoded_response = json_decode($body, true);
             $message = $decoded_response['choices'][0]['message'] ?? null;
@@ -451,9 +451,11 @@ class Auto_Ai_News_Poster_Api
             return;
         }
 
-        $article_data = json_decode($ai_content_json, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log('❌ AI Browsing Error: Failed to decode JSON from AI response. Error: ' . json_last_error_msg());
+        // Încercăm să extragem primul obiect JSON valid din răspuns
+        $article_data = self::extract_first_valid_json($ai_content_json);
+        
+        if (empty($article_data)) {
+            error_log('❌ AI Browsing Error: Failed to extract valid JSON from AI response.');
             error_log('AI content string was: ' . $ai_content_json);
             return;
         }
@@ -527,8 +529,7 @@ class Auto_Ai_News_Poster_Api
         5. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol.
 
         **Format de răspuns OBLIGATORIU:**
-        Răspunsul tău trebuie să fie exclusiv în format JSON, fără niciun alt text înainte sau după. Structura trebuie să fie următoarea:
-        ```json
+        Răspunsul tău trebuie să fie EXACT UN OBIECT JSON, fără niciun alt text înainte sau după. NU adăuga mai multe obiecte JSON. NU adăuga text explicativ. Structura trebuie să fie următoarea:
         {
           \"titlu\": \"Titlul articolului generat de tine\",
           \"continut\": \"Conținutul complet al articolului, formatat cu paragrafe.\",
@@ -540,7 +541,6 @@ class Auto_Ai_News_Poster_Api
             \"cuvant_cheie_3\"
           ]
         }
-        ```
 
         **PASUL 1:** Începe prin a folosi web browsing pentru a căuta pe site-urile specificate și găsi știri recente din categoria {$category_name}.
         ";
@@ -666,7 +666,7 @@ class Auto_Ai_News_Poster_Api
     private static function continue_conversation_with_tool_calls($api_key, $original_prompt, $tool_calls)
     {
         error_log('🔄 CONTINUE_CONVERSATION_WITH_TOOL_CALLS() STARTED');
-        
+
         $options = get_option('auto_ai_news_poster_settings', []);
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
 
@@ -692,7 +692,7 @@ class Auto_Ai_News_Poster_Api
             $messages[] = [
                 'role' => 'tool',
                 'tool_call_id' => $tool_call['id'],
-                'content' => 'Web search completed. Found relevant news articles from the specified sources. Please proceed with writing the article based on the search results.'
+                'content' => 'Web search completed successfully. Found relevant news articles from the specified sources. Now write a complete news article based on the search results. Return ONLY the JSON object as specified in the instructions.'
             ];
         }
 
@@ -760,6 +760,67 @@ class Auto_Ai_News_Poster_Api
         }
 
         return $response;
+    }
+
+    /**
+     * Extrage primul obiect JSON valid din răspunsul AI.
+     */
+    private static function extract_first_valid_json($content)
+    {
+        error_log('🔍 EXTRACT_FIRST_VALID_JSON() STARTED');
+        error_log('Raw content: ' . $content);
+        
+        // Încercăm să găsim primul obiect JSON valid
+        $json_pattern = '/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/';
+        preg_match_all($json_pattern, $content, $matches);
+        
+        if (!empty($matches[0])) {
+            foreach ($matches[0] as $json_string) {
+                $decoded = json_decode($json_string, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    error_log('✅ Found valid JSON: ' . $json_string);
+                    return $decoded;
+                }
+            }
+        }
+        
+        // Dacă nu găsim cu regex, încercăm să extragem manual
+        $lines = explode("\n", $content);
+        $json_lines = [];
+        $in_json = false;
+        $brace_count = 0;
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            
+            // Verificăm dacă linia începe un obiect JSON
+            if (strpos($line, '{') === 0) {
+                $in_json = true;
+                $json_lines = [];
+                $brace_count = 0;
+            }
+            
+            if ($in_json) {
+                $json_lines[] = $line;
+                $brace_count += substr_count($line, '{') - substr_count($line, '}');
+                
+                // Dacă am închis toate parantezele, încercăm să decodăm
+                if ($brace_count === 0) {
+                    $json_string = implode('', $json_lines);
+                    $decoded = json_decode($json_string, true);
+                    
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        error_log('✅ Found valid JSON by line parsing: ' . $json_string);
+                        return $decoded;
+                    }
+                    
+                    $in_json = false;
+                }
+            }
+        }
+        
+        error_log('❌ No valid JSON found in content');
+        return null;
     }
 
 
