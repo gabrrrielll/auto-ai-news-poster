@@ -737,7 +737,7 @@ class Auto_Ai_News_Poster_Settings
         $max_length = $options['max_length'] ?? '';
 
         ?>
-        <div class="settings-group settings-group-parse_link">
+        <div class="settings-group">
             <div class="settings-card">
                 <div class="settings-card-header">
                     <div class="settings-card-icon">📏</div>
