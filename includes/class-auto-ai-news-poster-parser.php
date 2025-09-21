@@ -163,11 +163,20 @@ class Auto_AI_News_Poster_Parser
         $article_content = trim($article_content);
 
         error_log('✅ Content extracted. Length: ' . strlen($article_content));
+        error_log('📄 First 200 chars of extracted content: ' . substr($article_content, 0, 200));
+        
         $max_content_length = 15000;
         if (strlen($article_content) > $max_content_length) {
             $article_content = substr($article_content, 0, $max_content_length);
             error_log('⚠️ Article content truncated to ' . $max_content_length . ' characters.');
         }
+        
+        // Verificăm dacă conținutul pare să fie corect
+        if (strlen($article_content) < 100) {
+            error_log('⚠️ WARNING: Extracted content is very short (' . strlen($article_content) . ' chars). This might indicate a parsing issue.');
+            error_log('📄 Full extracted content: ' . $article_content);
+        }
+        
         return $article_content;
     }
 }
