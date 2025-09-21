@@ -600,11 +600,18 @@ class Auto_Ai_News_Poster_Api
         4. **Generare titlu:** Creează un titlu concis și atractiv pentru articol.
         5. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol.
 
+        **IMPORTANT - Formatarea articolului:**
+        - NU folosi titluri explicite precum \"Introducere\", \"Dezvoltare\", \"Concluzie\" în text
+        - Articolul trebuie să fie un text fluent și natural, fără secțiuni marcate explicit
+        - Folosește formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly
+        - Subtitlurile H2/H3 trebuie să fie descriptive și relevante pentru conținut, nu generice
+        - Fiecare paragraf să aibă sens complet și să fie bine conectat cu următorul
+
         **Format de răspuns OBLIGATORIU:**
         Răspunsul tău trebuie să fie EXACT UN OBIECT JSON, fără niciun alt text înainte sau după. NU adăuga mai multe obiecte JSON. NU adăuga text explicativ. Structura trebuie să fie următoarea:
         {
           \"titlu\": \"Titlul articolului generat de tine\",
-          \"continut\": \"Conținutul complet al articolului, formatat cu paragrafe.\",
+          \"continut\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie.\",
           \"imagine_prompt\": \"Descrierea detaliată pentru imaginea reprezentativă.\",
           \"meta_descriere\": \"O meta descriere de maximum 160 de caractere, optimizată SEO.\",
           \"cuvinte_cheie\": [
@@ -928,21 +935,22 @@ class Auto_Ai_News_Poster_Api
         $options = get_option('auto_ai_news_poster_settings', []);
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
 
-        $simple_prompt = "Scrie un articol de știri despre știință și tehnologie. 
+        $simple_prompt = "Scrie un articol de știri ca un jurnalist profesionist. 
 
 Categoria: {$category_name}
 
 Cerințe:
 - Titlu atractiv și descriptiv
-- Conținut de 300-500 de cuvinte
-- Structură: introducere, dezvoltare, concluzie
+- Conținut fluent și natural, fără secțiuni marcate explicit
+- NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"
+- Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly
 - Limbă română
-- Focus pe știință și tehnologie
+- Stil jurnalistic obiectiv și informativ
 
 Returnează DOAR acest JSON:
 {
   \"titlu\": \"Titlul articolului\",
-  \"continut\": \"Conținutul complet al articolului\",
+  \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",
   \"imagine_prompt\": \"Descriere pentru imagine\",
   \"meta_descriere\": \"Meta descriere SEO\",
   \"cuvinte_cheie\": [\"cuvant1\", \"cuvant2\", \"cuvant3\"]
