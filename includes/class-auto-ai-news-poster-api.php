@@ -47,8 +47,12 @@ class Auto_Ai_News_Poster_Api
             error_log('🤖 Auto mode - skipping nonce check');
         }
 
+        // Get generation mode from metabox
+        $generation_mode_metabox = isset($_POST['generation_mode_metabox']) ? sanitize_text_field($_POST['generation_mode_metabox']) : 'parse_link';
+        error_log('🔄 Generation Mode selected from metabox: ' . $generation_mode_metabox);
+
         error_log('🔄 Calling process_article_generation()...');
-        return self::process_article_generation();
+        return self::process_article_generation($generation_mode_metabox);
     }
 
 
@@ -174,7 +178,7 @@ class Auto_Ai_News_Poster_Api
     /**
      * Main handler for generating an article. Can be called via AJAX or internally (e.g., cron).
      */
-    public static function process_article_generation()
+    public static function process_article_generation($generation_mode = 'parse_link')
     {
         $is_ajax_call = wp_doing_ajax();
         error_log('🚀 PROCESS_ARTICLE_GENERATION() STARTED. AJAX Call: ' . ($is_ajax_call ? 'Yes' : 'No'));
@@ -191,7 +195,7 @@ class Auto_Ai_News_Poster_Api
         }
 
         // Determinăm modul de generare (relevant mai ales pentru CRON)
-        $generation_mode = $options['generation_mode'] ?? 'parse_link';
+        $generation_mode = $generation_mode;
 
         if ($generation_mode === 'ai_browsing' && !$is_ajax_call) {
             // Pentru CRON în modul AI Browsing, logica este gestionată de Auto_Ai_News_Poster_Cron::trigger_ai_browsing_generation()
@@ -216,7 +220,19 @@ class Auto_Ai_News_Poster_Api
                 wp_send_json_error(['message' => 'Please provide a source URL.']);
                 return;
             }
-            $extracted_content = Auto_AI_News_Poster_Parser::extract_content_from_url($source_link);
+
+            // Handle generation based on selected mode from metabox
+            if ($generation_mode === 'ai_browsing') {
+                error_log('🤖 AI Browsing mode selected from metabox. Calling generate_article_with_browsing.');
+                // For manual AI browsing, we instruct the AI to browse the provided link
+                self::generate_article_with_browsing($source_link, null, null, $additional_instructions); // Pass additional instructions
+                wp_send_json_success(['message' => 'Article generation via AI Browsing initiated!', 'post_id' => get_the_ID()]);
+                return;
+            } else {
+                // Default to 'parse_link' behavior
+                error_log('🔗 Parse Link mode selected from metabox. Extracting content.');
+                $extracted_content = Auto_AI_News_Poster_Parser::extract_content_from_url($source_link);
+            }
 
         } else {
             // Automatic generation from the bulk list (CRON job)
@@ -243,8 +259,22 @@ class Auto_Ai_News_Poster_Api
             set_transient('auto_ai_news_poster_force_refresh', 'yes', MINUTE_IN_SECONDS); // Signal frontend to refresh
             error_log('🤖 CRON JOB: Removed link from list and updated options. Remaining links: ' . count($bulk_links));
 
-            $extracted_content = Auto_AI_News_Poster_Parser::extract_content_from_url($source_link);
+            // For CRON jobs, determine mode from settings. The parameter $generation_mode is from manual metabox.
+            $cron_generation_mode = $options['generation_mode'] ?? 'parse_link';
+            if ($cron_generation_mode === 'ai_browsing') {
+                error_log('🤖 CRON JOB: AI Browsing mode. Calling generate_article_with_browsing.');
+                // In CRON, generate_article_with_browsing will determine categories and titles
+                self::generate_article_with_browsing($source_link, null, null, $options['ai_browsing_instructions'] ?? '');
+                return;
+            } else {
+                error_log('🔗 CRON JOB: Parse Link mode. Extracting content.');
+                $extracted_content = Auto_AI_News_Poster_Parser::extract_content_from_url($source_link);
+            }
         }
+
+        // The rest of this function will only execute for 'parse_link' mode.
+        // If 'ai_browsing' was selected, the function would have returned already.
+
 
         // --- Validate extracted content ---
         if (is_wp_error($extracted_content) || empty(trim($extracted_content))) {
@@ -299,7 +329,7 @@ class Auto_Ai_News_Poster_Api
 
         if (is_wp_error($response)) {
             $error_message = 'OpenAI API Error: ' . $response->get_error_message();
-            error_log('❌ ' . $error_message);
+            error_log($error_message);
             if ($is_bulk_processing) {
                 self::re_add_link_to_bulk($source_link, 'OpenAI API Error');
             }
@@ -420,7 +450,7 @@ class Auto_Ai_News_Poster_Api
      * @param string $category_name Numele categoriei de interes.
      * @param array $latest_titles Lista cu titlurile ultimelor articole pentru a evita duplicarea.
      */
-    public static function generate_article_with_browsing($news_sources, $category_name, $latest_titles)
+    public static function generate_article_with_browsing($news_sources, $category_name, $latest_titles, $additional_instructions = '')
     {
         error_log('🚀 GENERATE_ARTICLE_WITH_BROWSING() STARTED');
         $options = get_option('auto_ai_news_poster_settings');
@@ -432,7 +462,7 @@ class Auto_Ai_News_Poster_Api
         }
 
         // Construim promptul
-        $prompt = self::build_ai_browsing_prompt($news_sources, $category_name, $latest_titles);
+        $prompt = self::build_ai_browsing_prompt($news_sources, $category_name, $latest_titles, $additional_instructions);
         error_log('🤖 AI Browsing Prompt built. Length: ' . strlen($prompt) . ' chars.');
 
         // Apelăm API-ul OpenAI cu tool calling pentru AI Browsing
@@ -559,10 +589,10 @@ class Auto_Ai_News_Poster_Api
     /**
      * Construiește promptul pentru modul AI Browsing.
      */
-    private static function build_ai_browsing_prompt($news_sources, $category_name, $latest_titles)
+    private static function build_ai_browsing_prompt($news_sources, $category_name, $latest_titles, $additional_instructions = '')
     {
         $options = get_option('auto_ai_news_poster_settings');
-        $custom_instructions = $options['ai_browsing_instructions'] ?? 'Scrie un articol de știre original, în limba română ca un jurnalist. Articolul trebuie să fie obiectiv, informativ și bine structurat (introducere, cuprins, încheiere).';
+        $custom_instructions_from_settings = $options['ai_browsing_instructions'] ?? 'Scrie un articol de știre original, în limba română ca un jurnalist. Articolul trebuie să fie obiectiv, informativ și bine structurat (introducere, cuprins, încheiere).';
         $latest_titles_str = !empty($latest_titles) ? implode("\n- ", $latest_titles) : 'Niciun articol recent.';
 
         // Obținem setările de lungime a articolului
@@ -576,6 +606,9 @@ class Auto_Ai_News_Poster_Api
         } else {
             $length_instruction = 'Articolul trebuie să aibă o lungime similară cu un articol de știri tipic.';
         }
+
+        // Prioritizăm instrucțiunile suplimentare din metabox, altfel folosim pe cele din setări
+        $final_instructions = !empty($additional_instructions) ? $additional_instructions : $custom_instructions_from_settings;
 
         $prompt = "
         **Rol:** Ești un redactor de știri expert în domeniul **{$category_name}**, specializat în găsirea celor mai recente și relevante subiecte.
@@ -593,7 +626,7 @@ class Auto_Ai_News_Poster_Api
         **Sarcina ta:**
         1. **Cercetare:** Folosește web browsing pentru a accesa și citi articole din sursele specificate. Caută subiecte foarte recente (din ultimele 24-48 de ore), importante și relevante pentru categoria **{$category_name}**.
         2. **Verificarea unicității:** Asigură-te că subiectul ales NU este similar cu niciunul dintre titlurile deja publicate. Dacă este, alege alt subiect din browsing.
-        3. **Scrierea articolului:** {$custom_instructions} {$length_instruction}
+        3. **Scrierea articolului:** {$final_instructions} {$length_instruction}
         4. **Generare titlu:** Creează un titlu concis și atractiv pentru articol.
         5. **Generare etichete:** Generează între 1 și 3 etichete relevante (cuvinte_cheie) pentru articol. Fiecare cuvânt trebuie să înceapă cu majusculă.
         6. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol.

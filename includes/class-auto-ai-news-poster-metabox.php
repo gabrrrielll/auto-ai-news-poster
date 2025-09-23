@@ -37,11 +37,31 @@ class Auto_Ai_News_Poster_Metabox
         // Preluăm linkul salvat anterior (dacă există)
         $custom_source_url = get_post_meta($post->ID, '_custom_source_url', true);
         $additional_instructions = get_post_meta($post->ID, '_additional_instructions', true);
+        $current_generation_mode = get_post_meta($post->ID, '_generation_mode_metabox', true);
+        if (empty($current_generation_mode)) {
+            $current_generation_mode = 'parse_link'; // Default value
+        }
 
         // Adăugăm nonce-ul pentru securitate
         wp_nonce_field('get_article_from_sources_nonce', 'get_article_from_sources_nonce');
         ?>
         <div class="inside">
+            <div class="metabox-section">
+                <div class="metabox-section-header">
+                    <span class="metabox-section-icon">⚙️</span>
+                    <h4 class="metabox-section-title">Mod de Generare</h4>
+                </div>
+                <div class="mode-switch-container">
+                    <label class="mode-switch-label">
+                        <input type="radio" name="generation_mode_metabox" value="parse_link" <?php checked('parse_link', $current_generation_mode); ?>>
+                        Parsează link
+                    </label>
+                    <label class="mode-switch-label">
+                        <input type="radio" name="generation_mode_metabox" value="ai_browsing" <?php checked('ai_browsing', $current_generation_mode); ?>>
+                        Browsing cu AI
+                    </label>
+                </div>
+            </div>
             <div class="metabox-section">
                 <div class="metabox-section-header">
                     <span class="metabox-section-icon">🤖</span>
@@ -73,7 +93,11 @@ class Auto_Ai_News_Poster_Metabox
                 ajax_url: '<?php echo admin_url('admin-ajax.php'); ?>',
                 admin_url: '<?php echo admin_url(); ?>',
                 get_article_nonce: '<?php echo wp_create_nonce('get_article_from_sources_nonce'); ?>',
-                generate_image_nonce: '<?php echo wp_create_nonce('generate_image_nonce'); ?>'
+                generate_image_nonce: '<?php echo wp_create_nonce('generate_image_nonce'); ?>',
+                get_generation_mode: function() {
+                    const selectedMode = document.querySelector('input[name="generation_mode_metabox"]:checked');
+                    return selectedMode ? selectedMode.value : 'parse_link'; // Default to parse_link
+                }
             };
         }
         </script>
@@ -189,6 +213,11 @@ class Auto_Ai_News_Poster_Metabox
         // Salvăm instrucțiunile suplimentare pentru AI
         if (isset($_POST['additional_instructions'])) {
             update_post_meta($post_id, '_additional_instructions', sanitize_textarea_field($_POST['additional_instructions']));
+        }
+
+        // Salvăm modul de generare selectat în metabox
+        if (isset($_POST['generation_mode_metabox'])) {
+            update_post_meta($post_id, '_generation_mode_metabox', sanitize_text_field($_POST['generation_mode_metabox']));
         }
 
         // Salvăm URL-ul imaginii externe
