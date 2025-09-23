@@ -6,6 +6,8 @@ if (!defined('ABSPATH')) {
 
 class Auto_AI_News_Poster_Parser
 {
+    private static $raw_html_logged_for_request = false;
+
     /**
      * Extracts the main article content from a given URL.
      *
@@ -77,6 +79,12 @@ class Auto_AI_News_Poster_Parser
         if (empty($body)) {
             error_log('⚠️ Extracted body is empty for URL: ' . $url);
             return new WP_Error('empty_body', 'Nu s-a putut extrage conținutul din URL-ul furnizat.');
+        }
+
+        // Log raw HTML body only once per request
+        if (!self::$raw_html_logged_for_request) {
+            error_log('📄 Raw HTML body (full content): ' . $body);
+            self::$raw_html_logged_for_request = true;
         }
 
         error_log('📄 Raw HTML body length: ' . strlen($body) . ' characters');
@@ -345,8 +353,8 @@ class Auto_AI_News_Poster_Parser
         $article_content = preg_replace('/(?:\s*\n\s*){2,}/', "\n\n", $article_content);
         $article_content = trim($article_content);
 
-        error_log('✅ Content extracted. Length: ' . strlen($article_content));
-        error_log('📄 First 200 chars of extracted content: ' . substr($article_content, 0, 200));
+        error_log('✅ Final content extracted (sent to AI). Length: ' . strlen($article_content));
+        error_log('📄 First 200 chars of final content for AI: ' . substr($article_content, 0, 200));
 
         // Check for suspicious content patterns that might indicate parsing failure
         $suspicious_patterns = [
