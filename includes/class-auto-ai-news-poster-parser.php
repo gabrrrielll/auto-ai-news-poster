@@ -51,18 +51,14 @@ class Auto_AI_News_Poster_Parser
             return new WP_Error('unexpected_response', 'Răspuns neașteptat sau gol de la serverul sursă.');
         }
 
-        // Ensure WordPress HTTP API functions are loaded and available.
-        // Adding more robust checks for debugging.
-        if (!function_exists('wp_remote_retrieve_response_code')) {
-            error_log('❌ FATAL ERROR: wp_remote_retrieve_response_code() is UNDEFINED.');
-            error_log('Debug Info: ABSPATH = ' . (defined('ABSPATH') ? ABSPATH : 'UNDEFINED'));
-            error_log('Debug Info: is_wp_error() defined? ' . (function_exists('is_wp_error') ? 'YES' : 'NO'));
-            error_log('Debug Info: wp_remote_get() defined? ' . (function_exists('wp_remote_get') ? 'YES' : 'NO'));
-            die('WordPress HTTP API functions are not available. Please check plugin environment. See logs for more details.');
-        }
-
         // Logăm întregul răspuns înainte de a încerca să extragem detalii din el
         error_log('📥 Full wp_remote_get $response before parsing: ' . print_r($response, true));
+
+        // Adding more robust, targeted checks for debugging the undefined function error.
+        error_log('Debug: Checking function_exists(wp_remote_retrieve_response_code) before call: ' . (function_exists('wp_remote_retrieve_response_code') ? 'YES' : 'NO'));
+        error_log('Debug: Checking function_exists(wp_remote_retrieve_url) before call: ' . (function_exists('wp_remote_retrieve_url') ? 'YES' : 'NO'));
+        error_log('Debug: Type of $response before wp_remote_retrieve_url: ' . gettype($response));
+        error_log('Debug: Value of $response before wp_remote_retrieve_url: ' . print_r($response, true));
 
         $response_code = wp_remote_retrieve_response_code($response);
         $final_url = wp_remote_retrieve_url($response); // Get the final URL after redirects
