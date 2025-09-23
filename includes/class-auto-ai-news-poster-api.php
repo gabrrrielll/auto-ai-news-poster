@@ -565,6 +565,18 @@ class Auto_Ai_News_Poster_Api
         $custom_instructions = $options['ai_browsing_instructions'] ?? 'Scrie un articol de știre original, în limba română ca un jurnalist. Articolul trebuie să fie obiectiv, informativ și bine structurat (introducere, cuprins, încheiere).';
         $latest_titles_str = !empty($latest_titles) ? implode("\n- ", $latest_titles) : 'Niciun articol recent.';
 
+        // Obținem setările de lungime a articolului
+        $article_length_option = $options['article_length_option'] ?? 'same_as_source';
+        $min_length = $options['min_length'] ?? 800; // Default values
+        $max_length = $options['max_length'] ?? 1200; // Default values
+
+        $length_instruction = '';
+        if ($article_length_option === 'set_limits' && $min_length && $max_length) {
+            $length_instruction = "Articolul trebuie să aibă între {$min_length} și {$max_length} de cuvinte.";
+        } else {
+            $length_instruction = 'Articolul trebuie să aibă o lungime similară cu un articol de știri tipic.';
+        }
+
         $prompt = "
         **Rol:** Ești un redactor de știri expert în domeniul **{$category_name}**, specializat în găsirea celor mai recente și relevante subiecte.
 
@@ -581,7 +593,7 @@ class Auto_Ai_News_Poster_Api
         **Sarcina ta:**
         1. **Cercetare:** Folosește web browsing pentru a accesa și citi articole din sursele specificate. Caută subiecte foarte recente (din ultimele 24-48 de ore), importante și relevante pentru categoria **{$category_name}**.
         2. **Verificarea unicității:** Asigură-te că subiectul ales NU este similar cu niciunul dintre titlurile deja publicate. Dacă este, alege alt subiect din browsing.
-        3. **Scrierea articolului:** {$custom_instructions}
+        3. **Scrierea articolului:** {$custom_instructions} {$length_instruction}
         4. **Generare titlu:** Creează un titlu concis și atractiv pentru articol.
         5. **Generare etichete:** Generează între 1 și 3 etichete relevante (cuvinte_cheie) pentru articol. Fiecare cuvânt trebuie să înceapă cu majusculă.
         6. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol.
@@ -619,6 +631,10 @@ class Auto_Ai_News_Poster_Api
         // Obținem modelul selectat din setări
         $options = get_option('auto_ai_news_poster_settings', []);
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
+
+        // Obținem max_length pentru a seta max_completion_tokens
+        $max_length = $options['max_length'] ?? 1200;
+        $max_completion_tokens = ceil($max_length * 1.5); // Estimare: 1 cuvânt ~ 1.5 tokens
 
         error_log('🤖 AI API CONFIGURATION:');
         error_log('   - Selected model: ' . $selected_model);
@@ -694,7 +710,7 @@ class Auto_Ai_News_Poster_Api
                     ]
                 ]
             ],
-            'max_completion_tokens' => 9000,
+            'max_completion_tokens' => $max_completion_tokens,
         ];
 
         error_log('📤 REQUEST BODY TO OPENAI:');
@@ -730,6 +746,10 @@ class Auto_Ai_News_Poster_Api
 
         $options = get_option('auto_ai_news_poster_settings', []);
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
+
+        // Obținem max_length pentru a seta max_completion_tokens
+        $max_length = $options['max_length'] ?? 1200;
+        $max_completion_tokens = ceil($max_length * 1.5); // Estimare: 1 cuvânt ~ 1.5 tokens
 
         // Construim mesajele pentru conversația continuată
         $messages = [
@@ -776,7 +796,7 @@ class Auto_Ai_News_Poster_Api
             $messages[] = [
                 'role' => 'tool',
                 'tool_call_id' => $tool_call['id'],
-                'content' => $site_response . ' Acum scrie un articol complet de 300-500 de cuvinte bazat pe aceste informații. Returnează DOAR obiectul JSON cu titlu, conținut, imagine_prompt, meta_descriere și cuvinte_cheie.'
+                'content' => $site_response . ' Acum scrie un articol complet care să respecte lungimea setată în instrucțiuni și să returneze DOAR obiectul JSON cu titlu, conținut, imagine_prompt, meta_descriere și cuvinte_cheie.'
             ];
         }
 
@@ -820,7 +840,7 @@ class Auto_Ai_News_Poster_Api
                     ]
                 ]
             ],
-            'max_completion_tokens' => 9000,
+            'max_completion_tokens' => $max_completion_tokens,
         ];
 
         error_log('📤 CONTINUED CONVERSATION REQUEST BODY:');

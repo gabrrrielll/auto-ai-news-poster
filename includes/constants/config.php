@@ -7,16 +7,48 @@ const URL_API_IMAGE = 'https://api.openai.com/v1/images/generations';
 function generate_custom_source_prompt($article_text_content, $additional_instructions = '')
 {
     $options = get_option('auto_ai_news_poster_settings');
-    $parse_link_instructions = $options['parse_link_ai_instructions'] ?? 'Creează un articol unic pe baza textului extras. Respectă structura JSON cu titlu, conținut, etichete, și rezumat. Asigură-te că articolul este obiectiv și bine formatat.';
+
+    // Obținem setările de lungime a articolului
+    $article_length_option = $options['article_length_option'] ?? 'same_as_source';
+    $min_length = $options['min_length'] ?? 800; // Default values
+    $max_length = $options['max_length'] ?? 1200; // Default values
+
+    $length_instruction = '';
+    if ($article_length_option === 'set_limits' && $min_length && $max_length) {
+        $length_instruction = "Articolul trebuie să aibă între {$min_length} și {$max_length} de cuvinte.";
+    } else {
+        $length_instruction = 'Articolul trebuie să aibă o lungime similară cu textul sursă.';
+    }
+
+    $parse_link_instructions = $options['parse_link_ai_instructions'] ?? '';
 
     // Construim prompt-ul de bază
     $prompt = "Ești un jurnalist expert care scrie pentru o publicație de știri din România. Sarcina ta este să scrii un articol de știri complet nou și original în limba română, bazat pe informațiile din textul furnizat. Urmează aceste reguli stricte:\n";
     $prompt .= "1. **NU menționa niciodată** 'textul furnizat', 'articolul sursă', 'materialul analizat' sau orice expresie similară. Articolul trebuie să fie independent și să nu facă referire la sursa ta de informație.\n";
     $prompt .= "2. **NU copia și lipi (copy-paste)** fragmente din textul sursă. Toate informațiile trebuie reformulate cu propriile tale cuvinte și integrate natural în noul articol.\n";
-    $prompt .= "3. Scrie un articol obiectiv, bine structurat, cu un titlu captivant, un conținut informativ și o listă de etichete (tags) relevante.\n";
+    $prompt .= "3. Scrie un articol obiectiv, bine structurat, cu un titlu captivant, un conținut informativ și o listă de etichete (tags) relevante. {$length_instruction}\n";
     $prompt .= "4. Scopul este să sintetizezi și să prezinți informațiile într-un format de știre proaspăt și original, nu să comentezi pe marginea textului sursă.\n";
     $prompt .= "5. {$parse_link_instructions}\n";
+    $prompt .= "6. **Generare etichete:** Generează între 1 și 3 etichete relevante (cuvinte_cheie) pentru articol. Fiecare cuvânt trebuie să înceapă cu majusculă.\n";
+    $prompt .= "7. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol.\n";
+    $prompt .= "8. **Generare meta descriere:** Creează o meta descriere de maximum 160 de caractere, optimizată SEO.\n";
 
+    $prompt .= "\n**IMPORTANT - Formatarea articolului:**\n";
+    $prompt .= "- NU folosi titluri explicite precum \"Introducere\", \"Dezvoltare\", \"Concluzie\" în text\n";
+    $prompt .= "- Articolul trebuie să fie un text fluent și natural, fără secțiuni marcate explicit\n";
+    $prompt .= "- Folosește formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly\n";
+    $prompt .= "- Subtitlurile H2/H3 trebuie să fie descriptive și relevante pentru conținut, nu generice\n";
+    $prompt .= "- Fiecare paragraf să aibă sens complet și să fie bine conectat cu următorul\n";
+
+    $prompt .= "\n**Format de răspuns OBLIGATORIU:**\n";
+    $prompt .= "Răspunsul tău trebuie să fie EXACT UN OBIECT JSON, fără niciun alt text înainte sau după. NU adăuga mai multe obiecte JSON. NU adăuga text explicativ. Structura trebuie să fie următoarea:\n";
+    $prompt .= "{\n";
+    $prompt .= "  \"titlu\": \"Titlul articolului generat de tine\",\n";
+    $prompt .= "  \"continut\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie.\",\n";
+    $prompt .= "  \"imagine_prompt\": \"Descrierea detaliată pentru imaginea reprezentativă.\",\n";
+    $prompt .= "  \"meta_descriere\": \"O meta descriere de maximum 160 de caractere, optimizată SEO.\",\n";
+    $prompt .= "  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]\n";
+    $prompt .= "}\n";
 
     // Adăugăm instrucțiuni suplimentare, dacă există (pentru apelurile manuale unde se poate adăuga text extra)
     if (!empty($additional_instructions)) {
