@@ -106,94 +106,66 @@ class Auto_AI_News_Poster_Parser
             '//form',
             '//iframe',
             '//noscript',
-            '//meta',
-            '//link',
-            '//img[not(@src)]',
+            '//meta', // General meta tags
+            '//link', // General link tags
+            '//img[not(@src)]', // Images without a source
             '//svg',
             '//button',
             '//input',
             '//select',
             '//textarea',
-            '//comment()',
-            '//*[contains(@class, "ad")]',
+            '//comment()', // HTML comments
+            '//*[contains(@class, "ad")]', // Generic ad classes
             '//*[contains(@class, "ads")]',
-            '//*[contains(@id, "ad")]',
+            '//*[contains(@id, "ad")]', // Generic ad IDs
             '//*[contains(@id, "ads")]',
             '//*[contains(@class, "sidebar")]',
             '//*[contains(@id, "sidebar")]',
-            '//*[contains(@class, "menu")]',
+            '//*[contains(@class, "menu")]', // Generic menu classes
             '//*[contains(@id, "menu")]',
-            '//*[contains(@class, "widget")]',
+            '//*[contains(@class, "widget")]', // Generic widget classes
             '//*[contains(@id, "widget")]',
-            '//*[contains(@class, "breadcrumb")]',
+            '//*[contains(@class, "breadcrumb")]', // Breadcrumb navigation
             '//*[contains(@id, "breadcrumb")]',
-            '//div[contains(@class, "td-block-row")]',
+            '//div[contains(@class, "td-block-row")]', // TagDiv specific layout/ad blocks
             '//div[contains(@class, "td_block_inner")]',
-            '//div[contains(@class, "td-post-sharing-top")]',
+            '//div[contains(@class, "td-post-sharing-top")]', // Social sharing
             '//div[contains(@class, "td-post-sharing-bottom")]',
             '//div[contains(@class, "td-smp-button")]',
-            '//div[contains(@class, "td-related-articles-header")]',
-            '//div[contains(@class, "td-g-rec")]',
-            '//div[contains(@id, "td_uid_")]',
-            '//div[contains(@class, "td-fix-index")]',
-            '//div[contains(@class, "td-module-thumb")]',
-            '//div[contains(@class, "td_module_wrap")]',
-            '//div[contains(@class, "td_spot_id_")]',
-            '//div[contains(@class, "td-block-ad")]',
-            '//div[contains(@class, "td-block-row")]',
-            '//div[contains(@class, "td-module-container")]',
-            '//div[contains(@class, "td-pb-row")]',
-            '//div[contains(@class, "td-module-image")]',
-            '//div[contains(@class, "td-meta-info-container")]',
-            '//div[contains(@class, "td-read-more")]',
-            '//div[contains(@class, "td-social-sharing-buttons")]',
-            '//div[contains(@class, "td-post-source-tags")]',
-            '//div[contains(@class, "td-post-next-prev")]',
-            '//div[contains(@class, "td-author-name")]',
-            '//div[contains(@class, "td-post-comments")]',
-            '//div[contains(@class, "td_block_template_1")]',
-            '//div[contains(@class, "td_block_template_2")]',
-            '//div[contains(@class, "td_block_template_3")]',
-            '//div[contains(@class, "td_block_template_4")]',
-            '//div[contains(@class, "td_block_template_5")]',
-            '//div[contains(@class, "td_block_template_6")]',
-            '//div[contains(@class, "td_block_template_7")]',
-            '//div[contains(@class, "td_block_template_8")]',
-            '//div[contains(@class, "td_block_template_9")]',
-            '//div[contains(@class, "td_block_template_10")]',
-            '//div[contains(@class, "td-smp-content")]', // Added for specific Antena3 related articles
-            '//div[contains(@class, "td-smp-item")]', // Added for specific Antena3 related articles
-            '//div[contains(@class, "td-trending-now")]', // Added for Antena3 trending articles
-            '//div[contains(@class, "td-pulldown-filter-display-option")]', // Added for Antena3 filter options
-            '//div[contains(@class, "td-pulldown-filter")]', // Added for Antena3 filter
+            '//div[contains(@class, "td-related-articles-header")]', // Related articles headers
+            '//div[contains(@class, "td-g-rec")]', // TagDiv ad placements
+            '//div[contains(@id, "td_uid_")]', // TagDiv unique IDs (often for ads/widgets)
+            '//div[contains(@class, "td-fix-index")]', // TagDiv general cleanup
+            '//div[contains(@class, "td-module-thumb")]', // TagDiv related module thumbnails
+            '//div[contains(@class, "td_module_wrap")]', // TagDiv module wrapper (related articles)
+            '//div[contains(@class, "td_spot_id_")]', // TagDiv ad spot
+            '//div[contains(@class, "td-block-ad")]', // TagDiv ad block
+            '//div[contains(@class, "td-module-container")]', // TagDiv module container (related articles)
+            '//div[contains(@class, "td-pb-row")]', // TagDiv layout row
+            '//div[contains(@class, "td-module-image")]', // TagDiv module image (related articles)
+            '//div[contains(@class, "td-meta-info-container")]', // TagDiv meta info (related articles)
+            '//div[contains(@class, "td-read-more")]', // TagDiv read more button/link
+            '//div[contains(@class, "td-social-sharing-buttons")]', // TagDiv social sharing
+            '//div[contains(@class, "td-post-source-tags")]', // TagDiv source/tags block
+            '//div[contains(@class, "td-post-next-prev")]', // TagDiv next/previous navigation
+            '//div[contains(@class, "td-author-name")]', // TagDiv author name
+            '//div[contains(@class, "td-post-comments")]', // TagDiv comments link/count
+            '//div[contains(@class, "td_block_template_")]', // All TagDiv block templates
+            '//div[contains(@class, "td-smp-content")]', // Specific to Antena3 related articles
+            '//div[contains(@class, "td-smp-item")]', // Specific to Antena3 related articles
+            '//div[contains(@class, "td-trending-now")]', // Antena3 trending articles
+            '//div[contains(@class, "td-pulldown-filter-display-option")]', // Antena3 filter options
+            '//div[contains(@class, "td-pulldown-filter")]', // Antena3 filter
             '//div[contains(@class, "td-gutenberg-block")]', // General Gutenberg block ads/related
             '//div[contains(@class, "tdb_related_articles")]', // Related articles block
-            '//div[contains(@class, "td-module-container")]', // Module container for related articles
             '//div[contains(@id, "single-post-ad")]', // Specific ad ID
-            '//div[contains(@class, "td-post-featured-image")]', // Featured image div (can contain captions)
             '//div[contains(@class, "tdb-author-box")]', // Author box
             '//div[contains(@class, "tdb-post-next-prev")]', // Next/Prev article navigation
-            '//div[contains(@class, "td-fix-index")]', // General cleanup
-            '//div[contains(@class, "td-block-row")]', // General cleanup
-            '//div[contains(@class, "tdb-block-inner")]', // General cleanup
-            '//div[contains(@class, "td-pb-span")]', // General cleanup
             '//div[contains(@class, "td-article-bottom")]', // Bottom of article related content
             '//div[contains(@class, "td-post-related-header")]', // Related articles header
             '//div[contains(@class, "td-post-related-image")]', // Related article image
             '//div[contains(@class, "td-post-related-title")]', // Related article title
-            '//div[contains(@class, "td-block-width")]', // General cleanup
-            '//div[contains(@class, "tdb-full-width-grid")]', // General cleanup
             '//div[contains(@class, "tdb-item")]', // General item for related list
-            '//div[contains(@class, "tdb-single-content-wrapper")]/div[not(contains(@class, "tdb_single_content"))]', // Remove divs within content wrapper that are not the main content
-            '//span[contains(@class, "entry-date")]', // Remove date spans
-            '//span[contains(@class, "td-post-author-name")]', // Remove author name spans
-            '//span[contains(@class, "td-module-comments")]', // Remove comments spans
-            '//span[contains(@class, "td-smp-counter")]', // Remove social share counts
-            '//span[contains(@class, "td-post-views")]', // Remove view counts
-            '//span[contains(@class, "td-nr-views")]', // Remove view counts
-            '//div[contains(@class, "td-category")]', // Remove category labels
-            '//div[contains(@class, "td-module-meta-info")]', // Remove meta info for related articles
-            '//div[contains(@class, "td_block_wrap") and not(contains(@class, "tdb_single_content"))]', // Remove generic block wrappers if not main content
             '//div[contains(@id, "comments")]', // Comments section
             '//div[contains(@class, "comment-respond")]', // Comment form
             '//div[contains(@class, "jp-relatedposts")]', // Jetpack related posts
@@ -201,7 +173,6 @@ class Auto_AI_News_Poster_Parser
             '//div[contains(@class, "sd-social-share")]', // Jetpack sharing buttons
             '//div[contains(@class, "wtr-widget")]', // Generic widgets
             '//div[contains(@class, "gutenberg__widget")]', // Gutenberg widgets
-            '//div[contains(@class, "widget-area")]', // Widget areas
             '//section[contains(@class, "widget")]', // Widget sections
             '//div[contains(@class, "td-container-wrap") and not(contains(@class, "tdb-main-content-wrap"))]', // Specific container wrap cleanup
             '//div[contains(@class, "tdb-head-row")]', // Header row in specific themes
@@ -211,7 +182,6 @@ class Auto_AI_News_Poster_Parser
             '//div[contains(@class, "td-trending-now-title")]', // Trending now title
             '//div[contains(@class, "td-read-next-url")]', // Read next URL
             '//div[contains(@class, "td_wrapper_backend")]', // Backend wrapper
-            '//div[contains(@class, "td_block_template_10")]', // Specific template block
             '//div[contains(@class, "tdb_author_description")]', // Author description
             '//div[contains(@class, "tdb_author_url")]', // Author URL
             '//div[contains(@class, "tdb_about_author")]', // About author block
@@ -276,6 +246,8 @@ class Auto_AI_News_Poster_Parser
             '//div[contains(@class, "td_block_inner")]', // Inner block
             '//div[contains(@class, "td-pb-span")]', // Span for layout
             '//div[contains(@class, "tdb_single_content")]/div[not(contains(@class, "td-post-content"))]', // Remove non-content divs within main content
+            '//p[contains(@class, "gutenberg__widget-title")]', // Gutenberg widget titles
+            '//div[contains(@id, "code-block-")]' // Generic code block, often ads
         ];
 
         foreach ($elements_to_remove as $selector) {
@@ -288,6 +260,9 @@ class Auto_AI_News_Poster_Parser
                 }
             }
         }
+
+        // Add an intermediate log to check content after initial aggressive cleanup
+        error_log('📄 HTML body after removing irrelevant elements (first 1000 chars): ' . mb_substr($dom_body_clean->saveHTML($context_node_clean), 0, 1000) . '...');
 
         // 2. Caută elementul principal de articol (într-o ordine de prioritate) în contextul curățat
         $selectors = [
@@ -486,63 +461,12 @@ class Auto_AI_News_Poster_Parser
      */
     private static function is_node_irrelevant($node)
     {
-        // Common patterns for ads and irrelevant content
-        $irrelevant_classes = [
-            'ad', 'ads', 'sidebar', 'menu', 'widget', 'breadcrumb', 'comment', 'footer', 'header', 'nav', 'form',
-            'iframe', 'noscript', 'meta', 'link', 'img[src*="ad"]', 'svg', 'button', 'input', 'select', 'textarea',
-            'script', 'style', 'aside', 'div[class*="ad"]', 'div[id*="ad"]', 'div[class*="ads"]', 'div[id*="ads"]',
-            'div[class*="sidebar"]', 'div[id*="sidebar"]', 'div[class*="menu"]', 'div[id*="menu"]', 'div[class*="widget"]',
-            'div[id*="widget"]', 'div[class*="breadcrumb"]', 'div[id*="breadcrumb"]',
-        ];
-
-        $irrelevant_id_patterns = [
-            'ad', 'ads', 'sidebar', 'menu', 'widget', 'breadcrumb', 'comment', 'footer', 'header', 'nav', 'form',
-            'iframe', 'noscript', 'meta', 'link', 'img[src*="ad"]', 'svg', 'button', 'input', 'select', 'textarea',
-            'script', 'style', 'aside', 'div[class*="ad"]', 'div[id*="ad"]', 'div[class*="ads"]', 'div[id*="ads"]',
-            'div[class*="sidebar"]', 'div[id*="sidebar"]', 'div[class*="menu"]', 'div[id*="menu"]', 'div[class*="widget"]',
-            'div[id*="widget"]', 'div[class*="breadcrumb"]', 'div[id*="breadcrumb"]',
-        ];
-
-        $irrelevant_text_patterns = [
-            'partenera lui Sorin Grindeanu',
-            'Sorin Grindeanu',
-            'partenera',
-            'grindeanu'
-        ];
-
-        $node_classes = $node->getAttribute('class');
-        $node_id = $node->getAttribute('id');
-        $node_tag = $node->tagName;
-
-        // Check if the node has any of the irrelevant classes
-        if ($node_classes) {
-            $classes = explode(' ', $node_classes);
-            foreach ($classes as $class) {
-                if (in_array($class, $irrelevant_classes)) {
-                    return true;
-                }
-            }
-        }
-
-        // Check if the node has an irrelevant ID
-        if ($node_id) {
-            foreach ($irrelevant_id_patterns as $pattern) {
-                if (strpos($node_id, $pattern) !== false) {
-                    return true;
-                }
-            }
-        }
-
-        // Check if the node's text content contains irrelevant keywords
+        $node_tag = strtolower($node->nodeName);
         $node_text_content = trim($node->textContent);
-        foreach ($irrelevant_text_patterns as $pattern) {
-            if (stripos($node_text_content, $pattern) !== false && strlen($node_text_content) < 500) { // Apply if text content is relatively short
-                return true;
-            }
-        }
 
-        // Check if the node is a script, style, or iframe (often used for ads)
-        if ($node_tag === 'script' || $node_tag === 'style' || $node_tag === 'iframe' || $node_tag === 'ins' || $node_tag === 'noscript' || $node_tag === 'meta' || $node_tag === 'link' || $node_tag === 'svg') {
+        // Check for specific tags that are typically not article content
+        $irrelevant_tags = ['nav', 'footer', 'aside', 'form', 'script', 'style', 'header', 'noscript', 'iframe', 'svg', 'button', 'input', 'select', 'textarea', 'meta', 'link'];
+        if (in_array($node_tag, $irrelevant_tags)) {
             return true;
         }
 
@@ -551,14 +475,45 @@ class Auto_AI_News_Poster_Parser
             return true;
         }
 
-        // Check for specific tag and attribute combinations that indicate irrelevance
-        if (($node_tag === 'a' || $node_tag === 'div' || $node_tag === 'span') && ($node_classes || $node_id)) {
-            foreach ($irrelevant_classes as $pattern) {
-                if (strpos($node_classes, $pattern) !== false || strpos($node_id, $pattern) !== false) {
+        // Check for common irrelevant class/ID patterns directly
+        $attributes_to_check = [];
+        if ($node->hasAttributes()) {
+            foreach ($node->attributes as $attr) {
+                $attributes_to_check[] = $attr->value;
+            }
+        }
+        $attributes_to_check[] = $node_text_content; // Check text content against patterns too
+
+        $irrelevant_patterns = [
+            'ad', 'ads', 'sidebar', 'menu', 'widget', 'breadcrumb', 'comment', 'footer', 'header', 'nav', 'promo',
+            'social', 'share', 'related', 'popular', 'latest-news', 'tag-cloud', 'pagination', 'author', 'meta',
+            'date', 'category', 'subscribe', 'newsletter', 'popup', 'modal', 'overlay', 'cookie', 'gdpr', 'banner',
+            'instory', 'td-block', 'td_block', 'td-post-sharing', 'td-smp-button', 'td-related-articles', 'td-g-rec',
+            'td-module', 'td_module', 'td_spot_id', 'td-block-ad', 'td-module-container', 'td-pb-row',
+            'td-module-image', 'td-meta-info-container', 'td-wrapper-pulldown-filter', 'td-item-details',
+            'td-module-comments', 'td-read-more', 'td-excerpt', 'td-pulldown-filter-display-option', 'td-sub-pull',
+            'td-scroll-wrap', 'td-trending', 'td-smp-widgets', 'td-post-source-url', 'td-post-featured-info',
+            'td-fix-index', 'td_uid', 'td-a-rec', 'tdb_header_mobile', 'tdb_search_form', 'tdb_mobile_menu',
+            'tdb_mobile_user_drop', 'tdb_mobile_user_info', 'td-g-rec-id', 'tdb_shortcode_block_wrap',
+            'Citește și', 'Articole similare', 'Recomandări', 'Publicitate', 'Comentarii', 'Abonează-te',
+            'Newsletter', 'Urmărește-ne', 'Toate drepturile rezervate', 'Termeni și condiții', 'Politica de confidențialitate',
+            'Cookie-uri', 'GDPR', 'Contact', 'Despre noi', 'Parteneri', 'Carieră', 'Arhiva', 'Ultimele știri',
+            'Cele mai citite', 'Vezi galeria foto', 'Video', 'Live', 'Podcast', 'Meteo', 'Horoscop', 'Disclaimer',
+            'Sursa foto', 'Sursa video', 'Distribuie', 'Trimite pe', 'whatsapp', 'facebook', 'twitter', 'linkedin',
+            'telegram', 'instagram', 'youtube', 'tiktok', 'google news', 'digi sport', 'digi fm', 'digi world',
+            'digi life', 'digi animal world', 'digi online', 'alege abonamentul', 'pentru tine', 'vezi cele mai noi'
+        ];
+
+        foreach ($attributes_to_check as $value) {
+            foreach ($irrelevant_patterns as $pattern) {
+                if (stripos($value, $pattern) !== false) {
                     return true;
                 }
             }
         }
+
+        // Removed the overly aggressive short content filtering for non-block elements.
+        // This was a major cause of valid content being removed.
 
         return false;
     }
@@ -588,3 +543,4 @@ class Auto_AI_News_Poster_Parser
         return implode("\n\n", array_filter($filtered_paragraphs));
     }
 }
+
