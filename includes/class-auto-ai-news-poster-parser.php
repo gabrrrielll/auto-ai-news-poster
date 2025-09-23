@@ -52,8 +52,7 @@ class Auto_AI_News_Poster_Parser
         }
 
         // Logăm întregul răspuns înainte de a încerca să extragem detalii din el
-        $response_body = wp_remote_retrieve_body($response);
-        error_log('📥 Full wp_remote_get response body length: ' . strlen($response_body) . ' chars. First 500 chars: ' . substr($response_body, 0, 500) . '...');
+        error_log('📥 Full wp_remote_get $response before parsing: ' . print_r($response, true));
 
         // Get response code. This should be safe as wp_remote_get() returned a valid response.
         $response_code = wp_remote_retrieve_response_code($response);
@@ -346,8 +345,8 @@ class Auto_AI_News_Poster_Parser
         $article_content = preg_replace('/(?:\s*\n\s*){2,}/', "\n\n", $article_content);
         $article_content = trim($article_content);
 
-        error_log('✅ Final content extracted (sent to AI). Length: ' . strlen($article_content));
-        error_log('📄 First 200 chars of final content for AI: ' . substr($article_content, 0, 200));
+        error_log('✅ Content extracted. Length: ' . strlen($article_content));
+        error_log('📄 First 200 chars of extracted content: ' . substr($article_content, 0, 200));
 
         // Check for suspicious content patterns that might indicate parsing failure
         $suspicious_patterns = [
