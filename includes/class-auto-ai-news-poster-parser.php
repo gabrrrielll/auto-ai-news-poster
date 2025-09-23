@@ -53,13 +53,13 @@ class Auto_AI_News_Poster_Parser
 
         // Ensure WordPress HTTP API functions are loaded
         if (!function_exists('wp_remote_retrieve_url')) {
-            // Attempt to load WordPress environment if not already loaded
-            $wp_load_path = ABSPATH . 'wp-load.php';
-            if (file_exists($wp_load_path)) {
-                require_once($wp_load_path);
+            // Attempt to load WordPress HTTP API explicitly
+            $http_api_path = ABSPATH . 'wp-includes/http.php';
+            if (file_exists($http_api_path)) {
+                require_once($http_api_path);
             } else {
-                error_log('❌ wp-load.php not found at: ' . $wp_load_path);
-                return new WP_Error('wordpress_not_loaded', 'WordPress environment not fully loaded.');
+                error_log('❌ wp-includes/http.php not found at: ' . $http_api_path);
+                return new WP_Error('http_api_not_loaded', 'WordPress HTTP API not fully loaded.');
             }
         }
 
