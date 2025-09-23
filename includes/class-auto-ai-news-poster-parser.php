@@ -51,16 +51,14 @@ class Auto_AI_News_Poster_Parser
             return new WP_Error('unexpected_response', 'Răspuns neașteptat sau gol de la serverul sursă.');
         }
 
-        // Ensure WordPress HTTP API functions are loaded
-        if (!function_exists('wp_remote_retrieve_url')) {
-            // Attempt to load WordPress HTTP API explicitly
-            $http_api_path = ABSPATH . 'wp-includes/http.php';
-            if (file_exists($http_api_path)) {
-                require_once($http_api_path);
-            } else {
-                error_log('❌ wp-includes/http.php not found at: ' . $http_api_path);
-                return new WP_Error('http_api_not_loaded', 'WordPress HTTP API not fully loaded.');
-            }
+        // Ensure WordPress HTTP API functions are loaded and available.
+        // Adding more robust checks for debugging.
+        if (!function_exists('wp_remote_retrieve_response_code')) {
+            error_log('❌ FATAL ERROR: wp_remote_retrieve_response_code() is UNDEFINED.');
+            error_log('Debug Info: ABSPATH = ' . (defined('ABSPATH') ? ABSPATH : 'UNDEFINED'));
+            error_log('Debug Info: is_wp_error() defined? ' . (function_exists('is_wp_error') ? 'YES' : 'NO'));
+            error_log('Debug Info: wp_remote_get() defined? ' . (function_exists('wp_remote_get') ? 'YES' : 'NO'));
+            die('WordPress HTTP API functions are not available. Please check plugin environment. See logs for more details.');
         }
 
         // Logăm întregul răspuns înainte de a încerca să extragem detalii din el
