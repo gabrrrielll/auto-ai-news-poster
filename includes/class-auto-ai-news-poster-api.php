@@ -634,7 +634,7 @@ class Auto_Ai_News_Poster_Api
 
         // Obținem max_length pentru a seta max_completion_tokens
         $max_length = $options['max_length'] ?? 1200;
-        $max_completion_tokens = ceil($max_length * 1.5); // Estimare: 1 cuvânt ~ 1.5 tokens
+        $max_completion_tokens = ceil($max_length * 2); // Estimare: 1 cuvânt ~ 2 tokens
 
         error_log('🤖 AI API CONFIGURATION:');
         error_log('   - Selected model: ' . $selected_model);
@@ -677,7 +677,6 @@ class Auto_Ai_News_Poster_Api
                 'type' => 'json_schema',
                 'json_schema' => [
                     'name' => 'article_response',
-                    'strict' => true,
                     'schema' => [
                         'type' => 'object',
                         'properties' => [
@@ -749,7 +748,7 @@ class Auto_Ai_News_Poster_Api
 
         // Obținem max_length pentru a seta max_completion_tokens
         $max_length = $options['max_length'] ?? 1200;
-        $max_completion_tokens = ceil($max_length * 1.5); // Estimare: 1 cuvânt ~ 1.5 tokens
+        $max_completion_tokens = ceil($max_length * 2); // Estimare: 1 cuvânt ~ 2 tokens
 
         // Construim mesajele pentru conversația continuată
         $messages = [
@@ -807,7 +806,6 @@ class Auto_Ai_News_Poster_Api
                 'type' => 'json_schema',
                 'json_schema' => [
                     'name' => 'article_response',
-                    'strict' => true,
                     'schema' => [
                         'type' => 'object',
                         'properties' => [
@@ -937,27 +935,13 @@ class Auto_Ai_News_Poster_Api
         $options = get_option('auto_ai_news_poster_settings', []);
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
 
-        $simple_prompt = "Scrie un articol de știri ca un jurnalist profesionist. 
+        $simple_prompt = "Scrie un articol de știri ca un jurnalist profesionist. \r\n\r\nCategoria: {$category_name}\r\n\r\nCerințe:\r\n- Titlu atractiv și descriptiv\r\n- Conținut fluent și natural, fără secțiuni marcate explicit\r\n- NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"\r\n- Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly\r\n- Generează între 1 și 3 etichete relevante (cuvinte_cheie)\r\n- Limbă română\r\n- Stil jurnalistic obiectiv și informativ\r\n\r\nReturnează DOAR acest JSON:\r\n{\r\n  \"titlu\": \"Titlul articolului\",\r\n  \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",\r\n  \"imagine_prompt\": \"Descriere pentru imagine\",\r\n  \"meta_descriere\": \"Meta descriere SEO\",\r\n  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]\r\n}";
 
-Categoria: {$category_name}
+        // Obținem max_length pentru a seta max_completion_tokens
+        $max_length = $options['max_length'] ?? 1200;
+        $max_completion_tokens = ceil($max_length * 2); // Estimare: 1 cuvânt ~ 2 tokens
 
-Cerințe:
-- Titlu atractiv și descriptiv
-- Conținut fluent și natural, fără secțiuni marcate explicit
-- NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"
-- Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly
-- Generează între 1 și 3 etichete relevante (cuvinte_cheie)
-- Limbă română
-- Stil jurnalistic obiectiv și informativ
-
-Returnează DOAR acest JSON:
-{
-  \"titlu\": \"Titlul articolului\",
-  \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",
-  \"imagine_prompt\": \"Descriere pentru imagine\",
-  \"meta_descriere\": \"Meta descriere SEO\",
-  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]
-}";
+        error_log('📢 PROMPT GENERATED FOR AI (RETRY AI BROWSING MODE): ' . $simple_prompt);
 
         $request_body = [
             'model' => $selected_model,
@@ -971,7 +955,6 @@ Returnează DOAR acest JSON:
                 'type' => 'json_schema',
                 'json_schema' => [
                     'name' => 'article_response',
-                    'strict' => true,
                     'schema' => [
                         'type' => 'object',
                         'properties' => [
@@ -989,7 +972,7 @@ Returnează DOAR acest JSON:
                     ]
                 ]
             ],
-            'max_completion_tokens' => 2000,
+            'max_completion_tokens' => $max_completion_tokens,
         ];
 
         $response = wp_remote_post(URL_API_OPENAI, [
