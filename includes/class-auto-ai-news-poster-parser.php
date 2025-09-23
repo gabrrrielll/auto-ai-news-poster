@@ -54,15 +54,15 @@ class Auto_AI_News_Poster_Parser
         // Logăm întregul răspuns înainte de a încerca să extragem detalii din el
         error_log('📥 Full wp_remote_get $response before parsing: ' . print_r($response, true));
 
-        // Adding more robust, targeted checks for debugging the undefined function error.
-        error_log('Debug: Checking function_exists(wp_remote_retrieve_response_code) before call: ' . (function_exists('wp_remote_retrieve_response_code') ? 'YES' : 'NO'));
-        error_log('Debug: Checking function_exists(wp_remote_retrieve_url) before call: ' . (function_exists('wp_remote_retrieve_url') ? 'YES' : 'NO'));
-        error_log('Debug: Type of $response before wp_remote_retrieve_url: ' . gettype($response));
-        error_log('Debug: Value of $response before wp_remote_retrieve_url: ' . print_r($response, true));
-
+        // Get response code. This should be safe as wp_remote_get() returned a valid response.
         $response_code = wp_remote_retrieve_response_code($response);
-        $final_url = wp_remote_retrieve_url($response); // Get the final URL after redirects
-        $response_headers = wp_remote_retrieve_headers($response); // Get all response headers
+
+        // Manually retrieve the final URL from headers to avoid wp_remote_retrieve_url() if it's undefined.
+        $final_url = $url; // Default to original URL
+        $response_headers = wp_remote_retrieve_headers($response);
+        if (isset($response_headers['location'])) {
+            $final_url = is_array($response_headers['location']) ? end($response_headers['location']) : $response_headers['location'];
+        }
 
         error_log('🌐 Final URL after wp_remote_get: ' . $final_url);
         error_log('📊 Response Headers: ' . print_r($response_headers, true));
