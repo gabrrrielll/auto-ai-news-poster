@@ -543,4 +543,3 @@ class Auto_AI_News_Poster_Parser
         return implode("\n\n", array_filter($filtered_paragraphs));
     }
 }
-

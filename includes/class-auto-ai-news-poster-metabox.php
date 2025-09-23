@@ -37,7 +37,7 @@ class Auto_Ai_News_Poster_Metabox
         // Preluăm linkul salvat anterior (dacă există)
         $custom_source_url = get_post_meta($post->ID, '_custom_source_url', true);
         $additional_instructions = get_post_meta($post->ID, '_additional_instructions', true);
-        
+
         // Adăugăm nonce-ul pentru securitate
         wp_nonce_field('get_article_from_sources_nonce', 'get_article_from_sources_nonce');
         ?>
@@ -71,6 +71,7 @@ class Auto_Ai_News_Poster_Metabox
         if (typeof autoAiNewsPosterAjax === 'undefined') {
             window.autoAiNewsPosterAjax = {
                 ajax_url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                admin_url: '<?php echo admin_url(); ?>',
                 get_article_nonce: '<?php echo wp_create_nonce('get_article_from_sources_nonce'); ?>',
                 generate_image_nonce: '<?php echo wp_create_nonce('generate_image_nonce'); ?>'
             };
