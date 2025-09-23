@@ -31,7 +31,7 @@ class Auto_AI_News_Poster_Parser
             'headers' => [
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language' => 'ro-RO,ro;q=0.9,en;q=0.8',
-                'Accept-Encoding' => 'gzip, deflate',
+                // 'Accept-Encoding' => 'gzip, deflate', // Temporarily removed for debugging content issues
                 'Connection' => 'keep-alive',
                 'Upgrade-Insecure-Requests' => '1',
                 'Cache-Control' => 'no-cache, no-store, must-revalidate',
@@ -46,9 +46,15 @@ class Auto_AI_News_Poster_Parser
         }
 
         $response_code = wp_remote_retrieve_response_code($response);
+        $final_url = wp_remote_retrieve_url($response); // Get the final URL after redirects
+        $response_headers = wp_remote_retrieve_headers($response); // Get all response headers
+
+        error_log('🌐 Final URL after wp_remote_get: ' . $final_url);
+        error_log('📊 Response Headers: ' . print_r($response_headers, true));
+
         if ($response_code !== 200) {
-            error_log('❌ HTTP Error ' . $response_code . ' for URL: ' . $url);
-            return new WP_Error('http_error', 'HTTP Error ' . $response_code . ' when accessing URL.');
+            error_log('❌ HTTP Error ' . $response_code . ' for URL: ' . $final_url);
+            return new WP_Error('http_error', 'HTTP Error ' . $response_code . ' when accessing URL: ' . $final_url);
         }
 
         $body = wp_remote_retrieve_body($response);
