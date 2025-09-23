@@ -26,6 +26,8 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
     // Adăugăm textul articolului sursă
     $prompt .= "\n--- Text Sursă pentru Analiză ---\n" . $article_text_content;
 
+    error_log('📢 PROMPT GENERATED FOR AI (PARSE LINK MODE): ' . $prompt);
+
     return $prompt;
 }
 
