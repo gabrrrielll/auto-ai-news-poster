@@ -45,6 +45,15 @@ class Auto_AI_News_Poster_Parser
             return $response;
         }
 
+        // Adăugăm o verificare suplimentară pentru a ne asigura că $response este un array și nu este gol
+        if (!is_array($response) || empty($response)) {
+            error_log('❌ Unexpected or empty response from wp_remote_get. Type: ' . gettype($response) . ', Value: ' . print_r($response, true));
+            return new WP_Error('unexpected_response', 'Răspuns neașteptat sau gol de la serverul sursă.');
+        }
+
+        // Logăm întregul răspuns înainte de a încerca să extragem detalii din el
+        error_log('📥 Full wp_remote_get $response before parsing: ' . print_r($response, true));
+
         $response_code = wp_remote_retrieve_response_code($response);
         $final_url = wp_remote_retrieve_url($response); // Get the final URL after redirects
         $response_headers = wp_remote_retrieve_headers($response); // Get all response headers
