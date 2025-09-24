@@ -130,6 +130,12 @@ class Auto_AI_News_Poster_Parser
             '//style',
             '//header',
             '//footer',
+            '//*[contains(@class, "ads")]', // Remove elements with class containing "ads"
+            '//*[contains(@id, "ads")]',    // Remove elements with ID containing "ads"
+            '//*[contains(@class, "menu")]',   // Remove elements with class containing "menu"
+            '//*[contains(@id, "menu")]',      // Remove elements with ID containing "menu"
+            '//*[contains(@class, "head")]',   // Remove elements with class containing "head"
+            '//*[contains(@id, "head")]',      // Remove elements with ID containing "head"
         ];
 
         foreach ($elements_to_remove as $selector) {
