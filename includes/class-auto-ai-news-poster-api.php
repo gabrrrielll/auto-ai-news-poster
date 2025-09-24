@@ -291,15 +291,6 @@ class Auto_Ai_News_Poster_Api
         }
         error_log('✅ Successfully extracted content. Size: ' . strlen($extracted_content) . ' chars.');
 
-        // Temporarily blocking API call for parsing tests
-        error_log('--- PARSING TEST MODE ACTIVE --- OpenAI API call is blocked.');
-        error_log('--- Final extracted content for AI (TEST MODE) ---');
-        error_log($extracted_content);
-        if ($is_ajax_call) {
-            wp_send_json_success(['message' => 'Parsing test complete. Check logs for extracted content.', 'extracted_content_preview' => substr($extracted_content, 0, 500)]);
-        }
-        return;
-
         // --- Validate extracted content for suspicious patterns ---
         $suspicious_patterns = [
             'partenera lui Sorin Grindeanu',
