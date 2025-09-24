@@ -130,6 +130,8 @@ class Auto_AI_News_Poster_Parser
             '//style',
             '//header',
             '//footer',
+            '//img',
+            '//svg',
             '//*[contains(@class, "ads")]', // Remove elements with class containing "ads"
             '//*[contains(@id, "ads")]',    // Remove elements with ID containing "ads"
             '//*[contains(@class, "menu")]',   // Remove elements with class containing "menu"
