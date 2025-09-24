@@ -183,6 +183,7 @@ function call_openai_api($api_key, $prompt)
     error_log('   - API URL: ' . URL_API_OPENAI);
     error_log('   - API Key length: ' . strlen($api_key));
     error_log('   - Prompt length: ' . strlen($prompt));
+    error_log('   - Request Body Size: ' . strlen(json_encode($request_body)) . ' bytes');
 
     // Preluăm setările pentru a vedea dacă trebuie să generăm etichete
     // $options = get_option('auto_ai_news_poster_settings', []); // Deja preluat mai sus
@@ -276,8 +277,8 @@ function call_openai_api($api_key, $prompt)
         error_log('❌ WP Error: ' . $response->get_error_message());
     } else {
         error_log('✅ Response status: ' . wp_remote_retrieve_response_code($response));
-        error_log('📄 Response headers: ' . print_r(wp_remote_retrieve_headers($response), true));
-        error_log('💬 Response body: ' . wp_remote_retrieve_body($response));
+        error_log('📄 Response headers (full): ' . print_r(wp_remote_retrieve_headers($response), true));
+        error_log('💬 Response body (full): ' . wp_remote_retrieve_body($response));
     }
 
     return $response;
