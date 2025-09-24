@@ -349,7 +349,7 @@ class Auto_Ai_News_Poster_Api
                 self::re_add_link_to_bulk($source_link, 'Empty AI Response');
             }
             if ($is_ajax_call) {
-                wp_send_json_error(['message' => $error_message, 'response' => $decoded_response]);
+                wp_send_json_error(['message' => $error_message, 'response' => json_encode($decoded_response, JSON_UNESCAPED_UNICODE)]);
             }
             return;
         }
@@ -477,7 +477,7 @@ class Auto_Ai_News_Poster_Api
 
         if (empty($message)) {
             error_log('❌ AI Browsing Error: AI response is empty or in an unexpected format.');
-            error_log('Full API Response: ' . print_r($decoded_response, true));
+            error_log('Full API Response: ' . json_encode($decoded_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             return;
         }
 
@@ -872,7 +872,7 @@ class Auto_Ai_News_Poster_Api
         ];
 
         error_log('📤 CONTINUED CONVERSATION REQUEST BODY:');
-        error_log('   - JSON: ' . json_encode($request_body, JSON_PRETTY_PRINT));
+        error_log('   - JSON: ' . json_encode($request_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
         $response = wp_remote_post(URL_API_OPENAI, [
             'headers' => [
@@ -888,7 +888,7 @@ class Auto_Ai_News_Poster_Api
             error_log('❌ WP Error: ' . $response->get_error_message());
         } else {
             error_log('✅ Response status: ' . wp_remote_retrieve_response_code($response));
-            error_log('💬 Response body: ' . wp_remote_retrieve_body($response));
+            error_log('💬 Response body (full): ' . json_encode(json_decode(wp_remote_retrieve_body($response), true), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         }
 
         return $response;
@@ -910,7 +910,7 @@ class Auto_Ai_News_Poster_Api
             foreach ($matches[0] as $json_string) {
                 $decoded = json_decode($json_string, true);
                 if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                    error_log('✅ Found valid JSON: ' . $json_string);
+                    error_log('✅ Found valid JSON: ' . json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
                     return $decoded;
                 }
             }

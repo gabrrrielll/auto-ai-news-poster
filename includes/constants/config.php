@@ -183,7 +183,6 @@ function call_openai_api($api_key, $prompt)
     error_log('   - API URL: ' . URL_API_OPENAI);
     error_log('   - API Key length: ' . strlen($api_key));
     error_log('   - Prompt length: ' . strlen($prompt));
-    error_log('   - Request Body Size: ' . strlen(json_encode($request_body)) . ' bytes');
 
     // Preluăm setările pentru a vedea dacă trebuie să generăm etichete
     // $options = get_option('auto_ai_news_poster_settings', []); // Deja preluat mai sus
@@ -257,11 +256,13 @@ function call_openai_api($api_key, $prompt)
                 ]
             ]
         ],
-        'max_completion_tokens' => 9000,
+        'max_completion_tokens' => 128000,
     ];
 
+    error_log('   - Request Body Size: ' . strlen(json_encode($request_body)) . ' bytes');
+
     error_log('📤 REQUEST BODY TO OPENAI:');
-    error_log('   - JSON: ' . json_encode($request_body, JSON_PRETTY_PRINT));
+    error_log('   - JSON: ' . json_encode($request_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
     $response = wp_remote_post(URL_API_OPENAI, [
         'headers' => [
