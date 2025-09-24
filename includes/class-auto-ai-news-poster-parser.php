@@ -244,7 +244,7 @@ class Auto_AI_News_Poster_Parser
             }
         }
 
-        $max_content_length = 15000;
+        $max_content_length = 100000;
         if (strlen($article_content) > $max_content_length) {
             $article_content = substr($article_content, 0, $max_content_length);
             error_log('⚠️ Article content truncated to ' . $max_content_length . ' characters.');
