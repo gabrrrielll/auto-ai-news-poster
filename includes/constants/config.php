@@ -25,9 +25,9 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
     // Construim prompt-ul de bază
     $prompt = "Ești un jurnalist expert care scrie pentru o publicație de știri din România. Sarcina ta este să scrii un articol de știri complet nou și original în limba română, bazat pe informațiile din textul furnizat. Urmează aceste reguli stricte:\n";
     $prompt .= "1. **NU menționa niciodată** 'textul furnizat', 'articolul sursă', 'materialul analizat' sau orice expresie similară. Articolul trebuie să fie independent și să nu facă referire la sursa ta de informație.\n";
-    $prompt .= "2. **NU copia și lipi (copy-paste)** fragmente din textul sursă. Toate informațiile trebuie reformulate cu propriile tale cuvinte și integrate natural în noul articol.\n";
-    $prompt .= "3. Scrie un articol obiectiv, bine structurat, cu un titlu captivant, un conținut informativ și o listă de etichete (tags) relevante. {$length_instruction}\n";
-    $prompt .= "4. Scopul este să sintetizezi și să prezinți informațiile într-un format de știre proaspăt și original, nu să comentezi pe marginea textului sursă.\n";
+    $prompt .= "2. **Reformulează** cu propriile tale cuvinte informațiile din textul furnizat, integrându-le natural în noul articol. **NU copia și lipi (copy-paste) fragmente din textul sursă.**\n";
+    $prompt .= "3. Scrie un articol obiectiv, bine structurat, cu un titlu captivant, un conținut informativ și o listă de etichete (tags) relevante. **Păstrează toate faptele, detaliile, numele, numerele și listele (ex: liste de filme, produse, evenimente) EXACT așa cum apar în textul sursă. Nu omite și nu adăuga elemente noi în liste.** {$length_instruction}\n";
+    $prompt .= "4. Articolul trebuie să fie o reformulare fidelă a textului sursă, nu un sumar sau un comentariu personal. Menține tonul și perspectiva originală.\n";
     $prompt .= "5. {$parse_link_instructions}\n";
     $prompt .= "6. **Generare etichete:** Generează între 1 și 3 etichete relevante (cuvinte_cheie) pentru articol. Fiecare cuvânt trebuie să înceapă cu majusculă.\n";
     $prompt .= "7. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol.\n";
@@ -39,6 +39,7 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
     $prompt .= "- Folosește formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly\n";
     $prompt .= "- Subtitlurile H2/H3 trebuie să fie descriptive și relevante pentru conținut, nu generice\n";
     $prompt .= "- Fiecare paragraf să aibă sens complet și să fie bine conectat cu următorul\n";
+    $prompt .= "- **Respectă structura de paragrafe și subtitluri (H2, H3) din textul sursă pentru a menține ierarhia informației.**\n";
 
     $prompt .= "\n**Format de răspuns OBLIGATORIU:**\n";
     $prompt .= "Răspunsul tău trebuie să fie EXACT UN OBIECT JSON, fără niciun alt text înainte sau după. NU adăuga mai multe obiecte JSON. NU adăuga text explicativ. Structura trebuie să fie următoarea:\n";

@@ -293,10 +293,7 @@ class Auto_Ai_News_Poster_Api
 
         // --- Validate extracted content for suspicious patterns ---
         $suspicious_patterns = [
-            'partenera lui Sorin Grindeanu',
-            'Sorin Grindeanu',
-            'partenera',
-            'grindeanu'
+
         ];
 
         $is_suspicious_content = false;
