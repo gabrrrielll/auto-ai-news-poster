@@ -12,7 +12,7 @@ class Post_Manager
             if (is_wp_error($post_id)) {
                 return new WP_Error('post_insert_failed', 'Nu am reușit să creez un articol nou: ' . $post_id->get_error_message());
             }
-            
+
             // Verificăm dacă ID-ul este valid (nu 0)
             if (empty($post_id) || $post_id === 0) {
                 return new WP_Error('post_insert_failed', 'wp_insert_post returned invalid ID: ' . $post_id);
@@ -39,11 +39,11 @@ class Post_Manager
             if (is_array($tags)) {
                 $tags = array_filter($tags, 'trim'); // Eliminăm etichetele goale
                 $tags = array_slice($tags, 0, 3); // Limităm la maximum 3 etichete
-                
+
                 if (empty($tags)) {
                     return;
                 }
-                
+
                 wp_set_post_tags($post_id, $tags);
             } else {
                 error_log('🚫 Tags is not an array for post ID: ' . $post_id . ', Type: ' . gettype($tags));

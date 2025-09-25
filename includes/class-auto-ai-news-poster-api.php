@@ -841,7 +841,7 @@ class Auto_Ai_News_Poster_Api
 
         // Obținem max_length pentru a seta max_completion_tokens
         $max_length = $options['max_length'] ?? 1200;
-        $max_completion_tokens = ceil($max_length * 2); 
+        $max_completion_tokens = ceil($max_length * 2);
         // Estimare: 1 cuvânt ~ 2 tokens
 
         $request_body = [
@@ -900,14 +900,14 @@ class Auto_Ai_News_Poster_Api
      */
     private static function generate_safe_dalle_prompt(string $original_prompt, string $api_key): string
     {
-        $system_message = "Ești un asistent AI specializat în transformarea descrierilor de text în concepte vizuale sigure și abstracte, potrivite pentru generarea de imagini. Elimină orice referință directă la evenimente politice, conflicte militare, violență explicită, sau orice conținut sensibil din promptul furnizat. Concentrează-te pe crearea unei descrieri vizuale simbolice, care să evoce tema sau emoția centrală a textului, fără a fi literală sau a încălca politicile de siguranță ale generatoarelor de imagini. Folosește un limbaj poetic și metaforic. NU menționa nume de persoane, țări sau termeni militari.";
+        $system_message = 'Ești un asistent AI specializat în transformarea descrierilor de text în concepte vizuale sigure și abstracte, potrivite pentru generarea de imagini. Elimină orice referință directă la evenimente politice, conflicte militare, violență explicită, sau orice conținut sensibil din promptul furnizat. Concentrează-te pe crearea unei descrieri vizuale simbolice, care să evoce tema sau emoția centrală a textului, fără a fi literală sau a încălca politicile de siguranță ale generatoarelor de imagini. Folosește un limbaj poetic și metaforic. NU menționa nume de persoane, țări sau termeni militari.';
         $user_message = "Transformă următoarea descriere într-un prompt vizual sigur și abstract pentru DALL-E: \"{$original_prompt}\"";
 
         $prompt_for_ai = generate_simple_text_prompt($system_message, $user_message);
         $response = call_openai_api($api_key, $prompt_for_ai);
 
         if (is_wp_error($response)) {
-            return "Abstract representation of news events."; // Fallback safe prompt
+            return 'Abstract representation of news events.'; // Fallback safe prompt
         }
 
         $body = wp_remote_retrieve_body($response);
