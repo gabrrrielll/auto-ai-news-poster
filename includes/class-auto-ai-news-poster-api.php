@@ -425,9 +425,16 @@ class Auto_Ai_News_Poster_Api
 
 
         // --- Generate Image if enabled ---
-        // Removed automatic image generation from article generation flow.
-        // Image generation should now be triggered explicitly by the 'Generate Image AI' button via its own AJAX call.
-        // This prevents accidental image generation and associated API safety errors when only an article is being generated.
+        if (isset($options['generate_image']) && $options['generate_image'] === 'yes') {
+            if (!empty($article_data['imagine_prompt'])) {
+                error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id . ' using AI-generated prompt.');
+                self::generate_image_for_article($new_post_id, $article_data['imagine_prompt']);
+            } else {
+                error_log('⚠️ Image generation enabled, but no imagine_prompt found in AI response for post ID: ' . $new_post_id);
+            }
+        } else {
+            error_log('🖼️ Auto-image generation is disabled in settings for post ID: ' . $new_post_id);
+        }
 
         if ($is_ajax_call) {
             wp_send_json_success([
@@ -1024,7 +1031,7 @@ class Auto_Ai_News_Poster_Api
     }
 
 
-    public static function generate_image_for_article($post_id = null)
+    public static function generate_image_for_article($post_id = null, $imagine_prompt = '')
     {
         error_log('🖼️ GENERATE_IMAGE_FOR_ARTICLE() STARTED');
         // Folosim var_export pentru a vedea exact tipul variabilei (null, '', etc.)
@@ -1074,21 +1081,21 @@ class Auto_Ai_News_Poster_Api
             return;
         }
 
-        $summary = get_the_excerpt($post_id) ?: wp_trim_words($post->post_content, 100, '...');
-        $tags = wp_get_post_tags($post_id, ['fields' => 'names']);
+        // Use imagine_prompt if provided, otherwise fall back to summary and tags
+        $prompt_for_dalle = !empty($imagine_prompt) ? $imagine_prompt : (
+            get_the_excerpt($post_id) ?: wp_trim_words($post->post_content, 100, '...') . ' ' . implode(', ', $tags)
+        );
 
         error_log('📋 Image generation input:');
         error_log('   - Post ID: ' . $post_id);
-        error_log('   - Summary: ' . $summary);
-        error_log('   - Tags: ' . implode(', ', $tags));
+        error_log('   - Prompt for DALL-E: ' . $prompt_for_dalle);
         error_log('   - Feedback: ' . ($feedback ?: 'EMPTY'));
 
         error_log('🎨 Calling DALL-E API with:');
-        error_log('   - Summary: ' . $summary);
-        error_log('   - Tags: ' . implode(', ', $tags));
+        error_log('   - Prompt: ' . $prompt_for_dalle);
         error_log('   - Feedback: ' . $feedback);
 
-        $image_response = call_openai_image_api($api_key, $summary, $tags, $feedback);
+        $image_response = call_openai_image_api($api_key, $prompt_for_dalle, $feedback);
 
         if (is_wp_error($image_response)) {
             error_log('❌ DALL-E API WP Error: ' . $image_response->get_error_message());

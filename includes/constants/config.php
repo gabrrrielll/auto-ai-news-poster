@@ -287,17 +287,12 @@ function call_openai_api($api_key, $prompt)
 
 
 // Funcție pentru apelarea API-ului OpenAI folosind DALL-E 3 pentru generarea de imagini
-function call_openai_image_api($api_key, $summary, $tags = [], $feedback = '')
+function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
 {
     error_log('🎨 call_openai_image_api() STARTED');
 
     // Creăm un prompt pentru generarea imaginii
-    $prompt = 'Generează o imagine cât mai naturală și realistă, fără a utiliza texte sau cuvinte în interiorul imaginii, având ca temă aceste etichete: ';
-    if (!empty($tags)) {
-        $prompt .=  implode(', ', $tags) . '.';
-    }
-    $prompt .= "Foloseste todata acest rezumat ca si context pentru a desena imaginea:'" . $summary . "'.Evită să desenezi chipurile specifice a oamenilor cănd se face referire la anumite persoane in mod direct, caz in care trebuie sa desenezi personajele din spate . ";
-
+    $prompt = $dalle_prompt;
     if (!empty($feedback)) {
         $prompt .= "\n Utilizează următorul feedback de la imaginea generată anterior pentru a îmbunătăți imaginea: " . $feedback;
     }
