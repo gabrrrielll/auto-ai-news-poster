@@ -166,6 +166,20 @@ function generate_prompt($sources, $additional_instructions, $tags): string
     return $prompt;
 }
 
+/**
+ * Generează un prompt text simplu pentru API-ul OpenAI.
+ *
+ * @param string $system_message Mesajul de sistem pentru AI.
+ * @param string $user_message Mesajul utilizatorului pentru AI.
+ * @return string Promptul formatat pentru apelul OpenAI.
+ */
+function generate_simple_text_prompt(string $system_message, string $user_message): string
+{
+    $prompt = "[SYSTEM]: {$system_message}\n";
+    $prompt .= "[USER]: {$user_message}";
+    return $prompt;
+}
+
 // Funcție pentru apelarea API-ului OpenAI
 function call_openai_api($api_key, $prompt)
 {

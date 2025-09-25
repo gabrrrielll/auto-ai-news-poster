@@ -1021,6 +1021,34 @@ class Auto_Ai_News_Poster_Api
         return $response;
     }
 
+    /**
+     * Generează un prompt sigur și abstract pentru DALL-E, evitând conținutul sensibil.
+     *
+     * @param string $original_prompt Promptul generat inițial.
+     * @param string $api_key Cheia API OpenAI.
+     * @return string Promptul abstractizat pentru DALL-E.
+     */
+    private static function generate_safe_dalle_prompt(string $original_prompt, string $api_key): string
+    {
+        error_log('🛡️ Generating safe DALL-E prompt...');
+        $system_message = "Ești un asistent AI specializat în transformarea descrierilor de text în concepte vizuale sigure și abstracte, potrivite pentru generarea de imagini. Elimină orice referință directă la evenimente politice, conflicte militare, violență explicită, sau orice conținut sensibil din promptul furnizat. Concentrează-te pe crearea unei descrieri vizuale simbolice, care să evoce tema sau emoția centrală a textului, fără a fi literală sau a încălca politicile de siguranță ale generatoarelor de imagini. Folosește un limbaj poetic și metaforic. NU menționa nume de persoane, țări sau termeni militari.";
+        $user_message = "Transformă următoarea descriere într-un prompt vizual sigur și abstract pentru DALL-E: \"{$original_prompt}\"";
+
+        $prompt_for_ai = generate_simple_text_prompt($system_message, $user_message);
+        $response = call_openai_api($api_key, $prompt_for_ai);
+
+        if (is_wp_error($response)) {
+            error_log('❌ Failed to generate safe DALL-E prompt: ' . $response->get_error_message());
+            return "Abstract representation of news events."; // Fallback safe prompt
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $decoded_response = json_decode($body, true);
+        $safe_prompt = $decoded_response['choices'][0]['message']['content'] ?? $original_prompt;
+
+        error_log('✅ Safe DALL-E prompt generated: ' . $safe_prompt);
+        return $safe_prompt;
+    }
 
     public static function generate_image_for_article($post_id = null, $imagine_prompt = '')
     {
@@ -1074,9 +1102,12 @@ class Auto_Ai_News_Poster_Api
 
         // Use imagine_prompt if provided, otherwise fall back to summary and tags
         $summary = get_the_excerpt($post_id);
-        $prompt_for_dalle = !empty($imagine_prompt) ? $imagine_prompt : (
+        $initial_dalle_prompt = !empty($imagine_prompt) ? $imagine_prompt : (
             $summary ?: wp_trim_words($post->post_content, 100, '...')
         );
+
+        // Generează un prompt sigur pentru DALL-E
+        $prompt_for_dalle = self::generate_safe_dalle_prompt($initial_dalle_prompt, $api_key);
 
         error_log('📋 Image generation input:');
         error_log('   - Post ID: ' . $post_id);
