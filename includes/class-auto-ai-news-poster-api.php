@@ -428,13 +428,13 @@ class Auto_Ai_News_Poster_Api
         if (isset($options['generate_image']) && $options['generate_image'] === 'yes') {
             $prompt_for_dalle = !empty($post_data['post_excerpt']) ? $post_data['post_excerpt'] : wp_trim_words($post_data['post_content'], 100, '...');
             if (!empty($prompt_for_dalle)) {
-                error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id . ' using article summary/content.');
+                // error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id . ' using article summary/content.');
                 self::generate_image_for_article($new_post_id, $prompt_for_dalle);
             } else {
-                error_log('⚠️ Image generation enabled, but no summary/content available for DALL-E prompt for post ID: ' . $new_post_id);
+                // error_log('⚠️ Image generation enabled, but no summary/content available for DALL-E prompt for post ID: ' . $new_post_id);
             }
         } else {
-            error_log('🖼️ Auto-image generation is disabled in settings for post ID: ' . $new_post_id);
+            // error_log('🖼️ Auto-image generation is disabled in settings for post ID: ' . $new_post_id);
         }
 
         if ($is_ajax_call) {
@@ -585,7 +585,7 @@ class Auto_Ai_News_Poster_Api
         // Generăm imaginea dacă este activată opțiunea
         $prompt_for_dalle_browsing = !empty($article_data['meta_descriere']) ? $article_data['meta_descriere'] : wp_trim_words($article_data['continut'], 100, '...');
         if (!empty($prompt_for_dalle_browsing) && isset($options['generate_image']) && $options['generate_image'] === 'yes') {
-            error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id . ' using AI-generated meta_descriere/content.');
+            // error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id . ' using AI-generated meta_descriere/content.');
             self::generate_image_for_article($new_post_id, $prompt_for_dalle_browsing);
         }
     }
@@ -964,7 +964,7 @@ class Auto_Ai_News_Poster_Api
         $options = get_option('auto_ai_news_poster_settings', []);
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
 
-        $simple_prompt = "Scrie un articol de știri ca un jurnalist profesionist. \r\n\r\nCategoria: {$category_name}\r\n\r\nCerințe:\r\n- Titlu atractiv și descriptiv\r\n- Conținut fluent și natural, fără secțiuni marcate explicit\r\n- NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"\r\n- Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly\r\n- Generează între 1 și 3 etichete relevante (cuvinte_cheie)\r\n- Limbă română\r\n- Stil jurnalistic obiectiv și informativ\r\n\r\nReturnează DOAR acest JSON:\r\n{\r\n  \"titlu\": \"Titlul articolului\",\r\n  \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",\r\n  \"meta_descriere\": \"Meta descriere SEO\",\r\n  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]\r\n}";
+        $simple_prompt = "Scrie un articol de știri ca un jurnalist profesionist. \r\n\r\nCategoria: {$category_name}\r\n\r\nCerințe:\r\n- Titlu atractiv și descriptiv\r\n- Conținut fluent și natural, fără secțiuni marcate explicit\r\n- NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"\r\n- Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly\r\n- Generează între 1 și 3 etichete relevante (cuvinte_cheie)\r\n- Limbă română\r\n- Stil jurnalistic obiectiv și informativ\r\n\r\nReturnează DOAR acest JSON:\r\n{\r\n  \"titlu\": \"Titlul articolului\",\r\n  \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",\r\n  \"meta_descriere\": \"Meta descriere SEO\",\r\n  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]\r\n}\";
 
         // Obținem max_length pentru a seta max_completion_tokens
         $max_length = $options['max_length'] ?? 1200;
@@ -1030,7 +1030,7 @@ class Auto_Ai_News_Poster_Api
      */
     private static function generate_safe_dalle_prompt(string $original_prompt, string $api_key): string
     {
-        error_log('🛡️ Generating safe DALL-E prompt...');
+        // error_log('🛡️ Generating safe DALL-E prompt...');
         $system_message = "Ești un asistent AI specializat în transformarea descrierilor de text în concepte vizuale sigure și abstracte, potrivite pentru generarea de imagini. Elimină orice referință directă la evenimente politice, conflicte militare, violență explicită, sau orice conținut sensibil din promptul furnizat. Concentrează-te pe crearea unei descrieri vizuale simbolice, care să evoce tema sau emoția centrală a textului, fără a fi literală sau a încălca politicile de siguranță ale generatoarelor de imagini. Folosește un limbaj poetic și metaforic. NU menționa nume de persoane, țări sau termeni militari.";
         $user_message = "Transformă următoarea descriere într-un prompt vizual sigur și abstract pentru DALL-E: \"{$original_prompt}\"";
 
@@ -1046,15 +1046,15 @@ class Auto_Ai_News_Poster_Api
         $decoded_response = json_decode($body, true);
         $safe_prompt = $decoded_response['choices'][0]['message']['content'] ?? $original_prompt;
 
-        error_log('✅ Safe DALL-E prompt generated: ' . $safe_prompt);
+        // error_log('✅ Safe DALL-E prompt generated: ' . $safe_prompt);
         return $safe_prompt;
     }
 
     public static function generate_image_for_article($post_id = null, $imagine_prompt = '')
     {
-        error_log('🖼️ GENERATE_IMAGE_FOR_ARTICLE() STARTED');
+        // error_log('🖼️ GENERATE_IMAGE_FOR_ARTICLE() STARTED');
         // Folosim var_export pentru a vedea exact tipul variabilei (null, '', etc.)
-        error_log('📥 Initial call state: post_id argument=' . var_export($post_id, true) . ', $_POST=' . print_r($_POST, true));
+        // error_log('📥 Initial call state: post_id argument=' . var_export($post_id, true) . ', $_POST=' . print_r($_POST, true));
 
         // Corectăm detecția apelului AJAX. empty() va trata corect atât null cât și string-urile goale.
         $is_ajax = empty($post_id);
@@ -1062,22 +1062,22 @@ class Auto_Ai_News_Poster_Api
         if ($is_ajax) {
             // This is an AJAX call, get post_id from $_POST
             $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-            error_log('--- AJAX Call --- Assigned post_id from $_POST. New value: [' . $post_id . ']');
+            // error_log('--- AJAX Call --- Assigned post_id from $_POST. New value: [' . $post_id . ']');
 
             try {
                 check_ajax_referer('generate_image_nonce', 'security');
-                error_log('✅ Nonce verification successful for image generation.');
+                // error_log('✅ Nonce verification successful for image generation.');
             } catch (Exception $e) {
-                error_log('❌ Nonce verification failed for image generation: ' . $e->getMessage());
+                // error_log('❌ Nonce verification failed for image generation: ' . $e->getMessage());
                 wp_send_json_error(['message' => 'Nonce verification failed: ' . $e->getMessage()]);
                 return;
             }
         } else {
-            error_log('--- Internal Call --- Using provided post_id: [' . $post_id . ']');
+            // error_log('--- Internal Call --- Using provided post_id: [' . $post_id . ']');
         }
 
         if (empty($post_id) || !is_numeric($post_id) || $post_id <= 0) {
-            error_log('❌ Invalid or zero post ID (' . $post_id . '). Aborting.');
+            // error_log('❌ Invalid or zero post ID (' . $post_id . '). Aborting.');
             wp_send_json_error(['message' => 'ID-ul postării lipsește sau este invalid.']);
             return;
         }
@@ -1086,7 +1086,7 @@ class Auto_Ai_News_Poster_Api
         $post = get_post($post_id);
 
         if (!$post) {
-            error_log('❌ Article not found for ID: ' . $post_id);
+            // error_log('❌ Article not found for ID: ' . $post_id);
             wp_send_json_error(['message' => 'Articolul nu a fost găsit.']);
             return;
         }
@@ -1095,7 +1095,7 @@ class Auto_Ai_News_Poster_Api
         $api_key = $options['chatgpt_api_key'];
 
         if (empty($api_key)) {
-            error_log('❌ API key is empty - cannot generate image.');
+            // error_log('❌ API key is empty - cannot generate image.');
             wp_send_json_error(['message' => 'Cheia API lipsește pentru generarea imaginii.']);
             return;
         }
@@ -1109,36 +1109,36 @@ class Auto_Ai_News_Poster_Api
         // Generează un prompt sigur pentru DALL-E
         $prompt_for_dalle = self::generate_safe_dalle_prompt($initial_dalle_prompt, $api_key);
 
-        error_log('📋 Image generation input:');
-        error_log('   - Post ID: ' . $post_id);
-        error_log('   - Prompt for DALL-E: ' . $prompt_for_dalle);
-        error_log('   - Feedback: ' . ($feedback ?: 'EMPTY'));
+        // error_log('📋 Image generation input:');
+        // error_log('   - Post ID: ' . $post_id);
+        // error_log('   - Prompt for DALL-E: ' . $prompt_for_dalle);
+        // error_log('   - Feedback: ' . ($feedback ?: 'EMPTY'));
 
-        error_log('🎨 Calling DALL-E API with:');
-        error_log('   - Prompt: ' . $prompt_for_dalle);
-        error_log('   - Feedback: ' . $feedback);
+        // error_log('🎨 Calling DALL-E API with:');
+        // error_log('   - Prompt: ' . $prompt_for_dalle);
+        // error_log('   - Feedback: ' . $feedback);
 
         $image_response = call_openai_image_api($api_key, $prompt_for_dalle, $feedback);
 
         if (is_wp_error($image_response)) {
-            error_log('❌ DALL-E API WP Error: ' . $image_response->get_error_message());
+            // error_log('❌ DALL-E API WP Error: ' . $image_response->get_error_message());
             wp_send_json_error(['message' => 'Eroare la apelul DALL-E API: ' . $image_response->get_error_message()]);
             return;
         }
 
         $response_code = wp_remote_retrieve_response_code($image_response);
-        error_log('📊 DALL-E API Response Code: ' . $response_code);
+        // error_log('📊 DALL-E API Response Code: ' . $response_code);
 
         $image_body = wp_remote_retrieve_body($image_response);
-        error_log('📥 DALL-E API RAW RESPONSE BODY: ' . $image_body);
+        // error_log('📥 DALL-E API RAW RESPONSE BODY: ' . $image_body);
 
         $image_json = json_decode($image_body, true);
-        error_log('🔍 DALL-E API DECODED RESPONSE: ' . print_r($image_json, true));
+        // error_log('🔍 DALL-E API DECODED RESPONSE: ' . print_r($image_json, true));
 
         $image_url = $image_json['data'][0]['url'] ?? '';
         $title = get_the_title($post_id);
 
-        error_log('🖼️ Generated image URL: ' . ($image_url ?: 'NONE'));
+        // error_log('🖼️ Generated image URL: ' . ($image_url ?: 'NONE'));
 
         $post_tags = get_the_terms($post_id, 'post_tag');
         $tags = !empty($post_tags) ? wp_list_pluck($post_tags, 'name') : [];
@@ -1152,13 +1152,13 @@ class Auto_Ai_News_Poster_Api
                 $update_result = Post_Manager::insert_or_update_post($post_id, ['post_status' => $post_status]);
 
                 if (is_wp_error($update_result)) {
-                    error_log('❌ Error updating post status after image generation: ' . $update_result->get_error_message());
+                    // error_log('❌ Error updating post status after image generation: ' . $update_result->get_error_message());
                     wp_send_json_error(['message' => $update_result->get_error_message()]);
                     return;
                 }
             }
 
-            error_log('✅ Image generated and set successfully for post ID: ' . $post_id);
+            // error_log('✅ Image generated and set successfully for post ID: ' . $post_id);
             wp_send_json_success([
                     'post_id' => $post_id,
                     'tags' => $tags, // Variabila $tags va fi definită mai sus
@@ -1173,7 +1173,7 @@ class Auto_Ai_News_Poster_Api
             } elseif (isset($image_json['error'])) {
                 $error_message = print_r($image_json['error'], true);
             }
-            error_log('❌ Failed to generate image for post ID ' . $post_id . ': ' . $error_message);
+            // error_log('❌ Failed to generate image for post ID ' . $post_id . ': ' . $error_message);
             wp_send_json_error(['message' => 'Eroare la generarea imaginii: ' . $error_message]);
         }
     }

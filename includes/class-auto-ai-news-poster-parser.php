@@ -16,8 +16,6 @@ class Auto_AI_News_Poster_Parser
      */
     public static function extract_content_from_url($url)
     {
-        // error_log('🔗 Extracting content from URL: ' . $url);
-
         // Add User-Agent to avoid being blocked by some websites
         // Also add cache-busting parameters to prevent cached responses
         $cache_bust_url = $url;
@@ -43,13 +41,13 @@ class Auto_AI_News_Poster_Parser
         ]);
 
         if (is_wp_error($response)) {
-            error_log('❌ WP_Remote_Get error: ' . $response->get_error_message());
+            // error_log('❌ WP_Remote_Get error: ' . $response->get_error_message());
             return $response;
         }
 
         // Adăugăm o verificare suplimentară pentru a ne asigura că $response este un array și nu este gol
         if (!is_array($response) || empty($response)) {
-            error_log('❌ Unexpected or empty response from wp_remote_get. Type: ' . gettype($response) . ', Value: ' . print_r($response, true));
+            // error_log('❌ Unexpected or empty response from wp_remote_get. Type: ' . gettype($response) . ', Value: ' . print_r($response, true));
             return new WP_Error('unexpected_response', 'Răspuns neașteptat sau gol de la serverul sursă.');
         }
 
@@ -70,14 +68,14 @@ class Auto_AI_News_Poster_Parser
         // error_log('📊 Response Headers: ' . print_r($response_headers, true));
 
         if ($response_code !== 200) {
-            error_log('❌ HTTP Error ' . $response_code . ' for URL: ' . $final_url);
+            // error_log('❌ HTTP Error ' . $response_code . ' for URL: ' . $final_url);
             return new WP_Error('http_error', 'HTTP Error ' . $response_code . ' when accessing URL: ' . $final_url);
         }
 
         $body = wp_remote_retrieve_body($response);
 
         if (empty($body)) {
-            error_log('⚠️ Extracted body is empty for URL: ' . $url);
+            // error_log('⚠️ Extracted body is empty for URL: ' . $url);
             return new WP_Error('empty_body', 'Nu s-a putut extrage conținutul din URL-ul furnizat.');
         }
 
@@ -120,7 +118,7 @@ class Auto_AI_News_Poster_Parser
         // Nodul de context pentru căutările ulterioare este acum elementul body din noul document
         $context_node_clean = $xpath_body->query('//body')->item(0);
         if (!$context_node_clean) {
-            error_log('❌ Failed to re-parse body content after innerHTML extraction.');
+            // error_log('❌ Failed to re-parse body content after innerHTML extraction.');
             return new WP_Error('body_reparse_failed', 'Eroare internă la procesarea conținutului articolului.');
         }
 
@@ -161,7 +159,6 @@ class Auto_AI_News_Poster_Parser
             ['//div[contains(@class, "entry-content")]', 8],
             ['//div[contains(@class, "post-content")]', 8],
             ['//div[contains(@class, "article-content")]', 8],
-            ['//div[contains(@class, "td-post-content")]', 7],
             ['//div[contains(@id, "content")]', 7],
             ['//div[contains(@class, "content")]', 6],
             ['//div[contains(@class, "td-container")]', 5],
@@ -229,13 +226,13 @@ class Auto_AI_News_Poster_Parser
         foreach ($suspicious_patterns as $pattern) {
             if (stripos($article_content, $pattern) !== false) {
                 $is_suspicious = true;
-                error_log('⚠️ WARNING: Suspicious content pattern detected: "' . $pattern . '"');
+                // error_log('⚠️ WARNING: Suspicious content pattern detected: "' . $pattern . '"');
                 break;
             }
         }
 
         if ($is_suspicious) {
-            error_log('🚨 CRITICAL: Content appears to be incorrect/default content. Full content: ' . $article_content);
+            // error_log('🚨 CRITICAL: Content appears to be incorrect/default content. Full content: ' . $article_content);
 
             // Try alternative parsing method
             // error_log('🔄 Attempting alternative parsing method...');
@@ -249,13 +246,13 @@ class Auto_AI_News_Poster_Parser
         $max_content_length = 50000;
         if (strlen($article_content) > $max_content_length) {
             $article_content = substr($article_content, 0, $max_content_length);
-            error_log('⚠️ Article content truncated to ' . $max_content_length . ' characters.');
+            // error_log('⚠️ Article content truncated to ' . $max_content_length . ' characters.');
         }
 
         // Verificăm dacă conținutul pare să fie corect
         if (strlen($article_content) < 100) {
-            error_log('⚠️ WARNING: Extracted content is very short (' . strlen($article_content) . ' chars). This might indicate a parsing issue.');
-            error_log('📄 Full extracted content: ' . $article_content);
+            // error_log('⚠️ WARNING: Extracted content is very short (' . strlen($article_content) . ' chars). This might indicate a parsing issue.');
+            // error_log('📄 Full extracted content: ' . $article_content);
         }
 
         return $article_content;
@@ -337,7 +334,7 @@ class Auto_AI_News_Poster_Parser
             return '';
 
         } catch (Exception $e) {
-            error_log('❌ Alternative parsing error: ' . $e->getMessage());
+            // error_log('❌ Alternative parsing error: ' . $e->getMessage());
             return '';
         }
     }

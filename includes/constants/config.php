@@ -30,7 +30,7 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
     $prompt .= "4. Articolul trebuie să fie o reformulare fidelă a textului sursă, nu un sumar sau un comentariu personal. Menține tonul și perspectiva originală.\n";
     $prompt .= "5. **ATENȚIE la conținutul non-articolistic:** Identifică și ignoră blocurile de text care reprezintă liste de servicii, recomandări de produse, reclame, secțiuni de navigare, subsoluri, anteturi sau orice alt conținut care nu face parte direct din articolul principal. Nu le reproduce în textul generat, chiar dacă apar în textul sursă.{$parse_link_instructions}\n";
     $prompt .= "6. **Generare etichete:** Generează între 1 și 3 etichete relevante (cuvinte_cheie) pentru articol. Fiecare cuvânt trebuie să înceapă cu majusculă.\n";
-    $prompt .= "8. **Generare meta descriere:** Creează o meta descriere de maximum 160 de caractere, optimizată SEO.\n";
+    $prompt .= "7. **Generare meta descriere:** Creează o meta descriere de maximum 160 de caractere, optimizată SEO.\n";
 
     $prompt .= "\n**IMPORTANT - Formatarea articolului:**\n";
     $prompt .= "- NU folosi titluri explicite precum \"Introducere\", \"Dezvoltare\", \"Concluzie\" în text\n";
@@ -293,7 +293,7 @@ function call_openai_api($api_key, $prompt)
 // Funcție pentru apelarea API-ului OpenAI folosind DALL-E 3 pentru generarea de imagini
 function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
 {
-    error_log('🎨 call_openai_image_api() STARTED');
+    // error_log('🎨 call_openai_image_api() STARTED');
 
     // Creăm un prompt pentru generarea imaginii
     $prompt = $dalle_prompt;
@@ -301,10 +301,10 @@ function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
         $prompt .= "\n Utilizează următorul feedback de la imaginea generată anterior pentru a îmbunătăți imaginea: " . $feedback;
     }
 
-    error_log('🎨 DALL-E API Configuration:');
-    error_log('   - API Key length: ' . strlen($api_key));
-    error_log('   - Prompt: ' . $prompt);
-    error_log('   - Prompt length: ' . strlen($prompt) . ' characters');
+    // error_log('🎨 DALL-E API Configuration:');
+    // error_log('   - API Key length: ' . strlen($api_key));
+    // error_log('   - Prompt: ' . $prompt);
+    // error_log('   - Prompt length: ' . strlen($prompt) . ' characters');
 
     $request_body = [
         'model' => 'dall-e-3',  // Modelul DALL-E 3 pentru imagini
@@ -315,7 +315,7 @@ function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
         'style' => 'natural'
     ];
 
-    error_log('📤 DALL-E API Request Body: ' . json_encode($request_body));
+    // error_log('📤 DALL-E API Request Body: ' . json_encode($request_body));
 
     // Apelăm API-ul OpenAI pentru generarea imaginii
     $response = wp_remote_post(URL_API_IMAGE, [
@@ -328,9 +328,9 @@ function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
     ]);
 
     if (is_wp_error($response)) {
-        error_log('❌ DALL-E API Error: ' . $response->get_error_message());
+        // error_log('❌ DALL-E API Error: ' . $response->get_error_message());
     } else {
-        error_log('✅ DALL-E API Response status: ' . wp_remote_retrieve_response_code($response));
+        // error_log('✅ DALL-E API Response status: ' . wp_remote_retrieve_response_code($response));
     }
 
     return $response;
