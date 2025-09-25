@@ -41,18 +41,13 @@ class Auto_AI_News_Poster_Parser
         ]);
 
         if (is_wp_error($response)) {
-            // error_log('❌ WP_Remote_Get error: ' . $response->get_error_message());
             return $response;
         }
 
         // Adăugăm o verificare suplimentară pentru a ne asigura că $response este un array și nu este gol
         if (!is_array($response) || empty($response)) {
-            // error_log('❌ Unexpected or empty response from wp_remote_get. Type: ' . gettype($response) . ', Value: ' . print_r($response, true));
             return new WP_Error('unexpected_response', 'Răspuns neașteptat sau gol de la serverul sursă.');
         }
-
-        // Logăm întregul răspuns înainte de a încerca să extragem detalii din el
-        // error_log('📥 Full wp_remote_get $response before parsing: ' . print_r($response, true));
 
         // Get response code. This should be safe as wp_remote_get() returned a valid response.
         $response_code = wp_remote_retrieve_response_code($response);
@@ -64,29 +59,20 @@ class Auto_AI_News_Poster_Parser
             $final_url = is_array($response_headers['location']) ? end($response_headers['location']) : $response_headers['location'];
         }
 
-        // error_log('🌐 Final URL after wp_remote_get: ' . $final_url);
-        // error_log('📊 Response Headers: ' . print_r($response_headers, true));
-
         if ($response_code !== 200) {
-            // error_log('❌ HTTP Error ' . $response_code . ' for URL: ' . $final_url);
             return new WP_Error('http_error', 'HTTP Error ' . $response_code . ' when accessing URL: ' . $final_url);
         }
 
         $body = wp_remote_retrieve_body($response);
 
         if (empty($body)) {
-            // error_log('⚠️ Extracted body is empty for URL: ' . $url);
             return new WP_Error('empty_body', 'Nu s-a putut extrage conținutul din URL-ul furnizat.');
         }
 
         // Log raw HTML body only once per request
         if (!self::$raw_html_logged_for_request) {
-            // error_log('📄 Raw HTML body (full content): ' . $body);
             self::$raw_html_logged_for_request = true;
         }
-
-        // error_log('📄 Raw HTML body length: ' . strlen($body) . ' characters');
-        // error_log('📄 First 500 chars of raw HTML: ' . substr($body, 0, 500));
 
         $article_content = '';
         $dom = new DOMDocument();
@@ -96,7 +82,6 @@ class Auto_AI_News_Poster_Parser
         // Extrage conținutul din elementul <body>
         $body_node = $xpath->query('//body')->item(0);
         if (!$body_node) {
-            // error_log('⚠️ No <body> tag found. Returning raw body content after basic cleanup.');
             $article_content = preg_replace('/[ \t]+/', ' ', $body);
             $article_content = preg_replace('/(?:\s*\n\s*){2,}/', "\n\n", $article_content);
             $article_content = trim(strip_tags($article_content));
@@ -118,7 +103,6 @@ class Auto_AI_News_Poster_Parser
         // Nodul de context pentru căutările ulterioare este acum elementul body din noul document
         $context_node_clean = $xpath_body->query('//body')->item(0);
         if (!$context_node_clean) {
-            // error_log('❌ Failed to re-parse body content after innerHTML extraction.');
             return new WP_Error('body_reparse_failed', 'Eroare internă la procesarea conținutului articolului.');
         }
 
@@ -148,9 +132,6 @@ class Auto_AI_News_Poster_Parser
                 }
             }
         }
-
-        // Add an intermediate log to check content after initial aggressive cleanup
-        // error_log('📄 HTML body after removing irrelevant elements (first 1000 chars): ' . mb_substr($dom_body_clean->saveHTML($context_node_clean), 0, 1000) . '...');
 
         // 2. Caută elementul principal de articol (într-o ordine de prioritate) în contextul curățat
         $selectors = [
@@ -200,19 +181,14 @@ class Auto_AI_News_Poster_Parser
 
         if ($best_node && $best_score > 0) { // Ensure a meaningful node with a positive score is found
             $article_content = $best_node->textContent;
-            // error_log('✅ Found content using selector with score: ' . $best_score . ')');
         } else {
             $article_content = $context_node_clean->textContent; // Fallback: iau conținutul din nodul de context rămas (body)
-            // error_log('⚠️ No specific content selector matched, using full body content');
         }
 
         // 3. Post-procesare pentru curățarea textului
         $article_content = preg_replace('/[ \t]+/', ' ', $article_content);
         $article_content = preg_replace('/(?:\s*\n\s*){2,}/', "\n\n", $article_content);
         $article_content = trim($article_content);
-
-        // error_log('✅ Final content extracted (sent to AI). Length: ' . strlen($article_content));
-        // error_log('📄 First 200 chars of final content for AI: ' . substr($article_content, 0, 200));
 
         // Check for suspicious content patterns that might indicate parsing failure
         $suspicious_patterns = [
@@ -226,19 +202,15 @@ class Auto_AI_News_Poster_Parser
         foreach ($suspicious_patterns as $pattern) {
             if (stripos($article_content, $pattern) !== false) {
                 $is_suspicious = true;
-                // error_log('⚠️ WARNING: Suspicious content pattern detected: "' . $pattern . '"');
                 break;
             }
         }
 
         if ($is_suspicious) {
-            // error_log('🚨 CRITICAL: Content appears to be incorrect/default content. Full content: ' . $article_content);
 
             // Try alternative parsing method
-            // error_log('🔄 Attempting alternative parsing method...');
             $alternative_content = self::try_alternative_parsing($body, $url);
             if (!empty($alternative_content) && strlen($alternative_content) > 100) {
-                // error_log('✅ Alternative parsing successful. Using alternative content.');
                 $article_content = $alternative_content;
             }
         }
@@ -246,13 +218,10 @@ class Auto_AI_News_Poster_Parser
         $max_content_length = 50000;
         if (strlen($article_content) > $max_content_length) {
             $article_content = substr($article_content, 0, $max_content_length);
-            // error_log('⚠️ Article content truncated to ' . $max_content_length . ' characters.');
         }
 
         // Verificăm dacă conținutul pare să fie corect
         if (strlen($article_content) < 100) {
-            // error_log('⚠️ WARNING: Extracted content is very short (' . strlen($article_content) . ' chars). This might indicate a parsing issue.');
-            // error_log('📄 Full extracted content: ' . $article_content);
         }
 
         return $article_content;
@@ -263,7 +232,6 @@ class Auto_AI_News_Poster_Parser
      */
     private static function try_alternative_parsing($html_body, $url)
     {
-        // error_log('🔄 ALTERNATIVE_PARSING() STARTED for URL: ' . $url);
 
         try {
             // Method 1: Try to extract content using simple regex patterns
@@ -296,7 +264,6 @@ class Auto_AI_News_Poster_Parser
             }
 
             if (!empty($best_content)) {
-                // error_log('✅ Alternative parsing found content with length: ' . strlen($best_content));
                 return $best_content;
             }
 
@@ -315,7 +282,6 @@ class Auto_AI_News_Poster_Parser
 
                 if (!empty($paragraphs)) {
                     $combined_content = implode("\n\n", $paragraphs);
-                    // error_log('✅ Alternative parsing found ' . count($paragraphs) . ' paragraphs with total length: ' . strlen($combined_content));
                     return $combined_content;
                 }
             }
@@ -326,15 +292,12 @@ class Auto_AI_News_Poster_Parser
             $all_text = trim($all_text);
 
             if (strlen($all_text) > 500) {
-                // error_log('✅ Alternative parsing using all text content with length: ' . strlen($all_text));
                 return $all_text;
             }
 
-            // error_log('❌ Alternative parsing failed to extract meaningful content');
             return '';
 
         } catch (Exception $e) {
-            // error_log('❌ Alternative parsing error: ' . $e->getMessage());
             return '';
         }
     }

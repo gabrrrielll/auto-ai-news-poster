@@ -57,8 +57,6 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
     // Adăugăm textul articolului sursă
     $prompt .= "\n--- Text Sursă pentru Analiză ---\n" . $article_text_content;
 
-    // error_log('📢 PROMPT GENERATED FOR AI (PARSE LINK MODE): ' . $prompt);
-
     return $prompt;
 }
 
@@ -183,17 +181,11 @@ function generate_simple_text_prompt(string $system_message, string $user_messag
 // Funcție pentru apelarea API-ului OpenAI
 function call_openai_api($api_key, $prompt)
 {
-    // error_log('🔥 CALL_OPENAI_API() STARTED');
 
     // Obținem modelul selectat din setări
     $options = get_option('auto_ai_news_poster_settings', []);
     $selected_model = $options['ai_model'] ?? 'gpt-4o';
 
-    // error_log('🤖 AI API CONFIGURATION:');
-    // error_log('   - Selected model: ' . $selected_model);
-    // error_log('   - API URL: ' . URL_API_OPENAI);
-    // error_log('   - API Key length: ' . strlen($api_key));
-    // error_log('   - Prompt length: ' . strlen($prompt));
 
     // Preluăm setările pentru a vedea dacă trebuie să generăm etichete
     // $options = get_option('auto_ai_news_poster_settings', []); // Deja preluat mai sus
@@ -263,10 +255,6 @@ function call_openai_api($api_key, $prompt)
         'max_completion_tokens' => 128000,
     ];
 
-    // error_log('   - Request Body Size: ' . strlen(json_encode($request_body)) . ' bytes');
-
-    // error_log('📤 REQUEST BODY TO OPENAI:');
-    // error_log('   - JSON: ' . json_encode($request_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
     $response = wp_remote_post(URL_API_OPENAI, [
         'headers' => [
@@ -277,15 +265,6 @@ function call_openai_api($api_key, $prompt)
         'timeout' => 300, // Mărit timeout-ul la 300 de secunde (5 minute)
     ]);
 
-    // error_log('📥 OPENAI API RESPONSE:');
-    if (is_wp_error($response)) {
-        // error_log('❌ WP Error: ' . $response->get_error_message());
-    } else {
-        // error_log('✅ Response status: ' . wp_remote_retrieve_response_code($response));
-        // error_log('📄 Response headers (full): ' . print_r(wp_remote_retrieve_headers($response), true));
-        // error_log('💬 Response body (full): ' . wp_remote_retrieve_body($response));
-    }
-
     return $response;
 }
 
@@ -293,7 +272,6 @@ function call_openai_api($api_key, $prompt)
 // Funcție pentru apelarea API-ului OpenAI folosind DALL-E 3 pentru generarea de imagini
 function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
 {
-    // error_log('🎨 call_openai_image_api() STARTED');
 
     // Creăm un prompt pentru generarea imaginii
     $prompt = $dalle_prompt;
@@ -301,10 +279,6 @@ function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
         $prompt .= "\n Utilizează următorul feedback de la imaginea generată anterior pentru a îmbunătăți imaginea: " . $feedback;
     }
 
-    // error_log('🎨 DALL-E API Configuration:');
-    // error_log('   - API Key length: ' . strlen($api_key));
-    // error_log('   - Prompt: ' . $prompt);
-    // error_log('   - Prompt length: ' . strlen($prompt) . ' characters');
 
     $request_body = [
         'model' => 'dall-e-3',  // Modelul DALL-E 3 pentru imagini
@@ -315,7 +289,6 @@ function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
         'style' => 'natural'
     ];
 
-    // error_log('📤 DALL-E API Request Body: ' . json_encode($request_body));
 
     // Apelăm API-ul OpenAI pentru generarea imaginii
     $response = wp_remote_post(URL_API_IMAGE, [
@@ -326,12 +299,6 @@ function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
         'body' => json_encode($request_body),
         'timeout' => 90,
     ]);
-
-    if (is_wp_error($response)) {
-        // error_log('❌ DALL-E API Error: ' . $response->get_error_message());
-    } else {
-        // error_log('✅ DALL-E API Response status: ' . wp_remote_retrieve_response_code($response));
-    }
 
     return $response;
 }

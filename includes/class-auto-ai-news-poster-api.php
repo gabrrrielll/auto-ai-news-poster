@@ -22,36 +22,21 @@ class Auto_Ai_News_Poster_Api
 
     public static function get_article_from_sources()
     {
-        // error_log('🚀 AUTO AI NEWS POSTER - get_article_from_sources() STARTED');
-        // error_log('📥 Received POST data: ' . print_r($_POST, true));
-
         $options = get_option('auto_ai_news_poster_settings');
         $publication_mode = $options['mode']; // Verificăm dacă este 'manual' sau 'auto'
 
-        // error_log('⚙️ Plugin options loaded:');
-        // error_log('   - Publication mode: ' . $publication_mode);
-        // error_log('   - API key exists: ' . (!empty($options['chatgpt_api_key']) ? 'YES' : 'NO'));
-        // error_log('   - News sources count: ' . (isset($options['news_sources']) ? substr_count($options['news_sources'], "\n") + 1 : 0));
-
         if ($publication_mode === 'manual') {
-            // error_log('🔐 Manual mode - checking nonce...');
             try {
                 check_ajax_referer('get_article_from_sources_nonce', 'security');
-                // error_log('✅ Nonce verification successful');
             } catch (Exception $e) {
-                error_log('❌ Nonce verification failed: ' . $e->getMessage());
                 wp_send_json_error(['message' => 'Nonce verification failed']);
                 return;
             }
-        } else {
-            // error_log('🤖 Auto mode - skipping nonce check');
         }
 
         // Get generation mode from metabox
         $generation_mode_metabox = isset($_POST['generation_mode_metabox']) ? sanitize_text_field($_POST['generation_mode_metabox']) : 'parse_link';
-        // error_log('🔄 Generation Mode selected from metabox: ' . $generation_mode_metabox);
 
-        // error_log('🔄 Calling process_article_generation()...');
         return self::process_article_generation($generation_mode_metabox);
     }
 
@@ -59,45 +44,31 @@ class Auto_Ai_News_Poster_Api
     // Funcție pentru a obține categoria următoare
     public static function get_next_category()
     {
-        // error_log('🔄 GET_NEXT_CATEGORY() STARTED');
-
-        // Obținem opțiunile salvate
         $options = get_option('auto_ai_news_poster_settings');
 
         // Verificăm dacă rularea automată a categoriilor este activată și modul este automat
         if ($options['auto_rotate_categories'] === 'yes' && $options['mode'] === 'auto') {
-            // error_log('🔄 Category rotation is enabled and mode is auto');
 
             $categories = get_categories(['orderby' => 'name', 'order' => 'ASC', 'hide_empty' => false]);
             $category_ids = wp_list_pluck($categories, 'term_id'); // Obținem ID-urile categoriilor
 
-            // error_log('🔄 Available categories count: ' . count($categories));
-            // error_log('🔄 Available category IDs: ' . implode(', ', $category_ids));
-
             // Obținem indexul ultimei categorii utilizate
             $current_index = get_option('auto_ai_news_poster_current_category_index', 0);
-            // error_log('🔄 Current category index: ' . $current_index);
 
             // Calculăm următoarea categorie
             $next_category_id = $category_ids[$current_index];
             $next_category = get_category($next_category_id);
             $next_category_name = $next_category ? $next_category->name : 'Unknown';
 
-            // error_log('🔄 Next category: ' . $next_category_name . ' (ID: ' . $next_category_id . ')');
-
             // Actualizăm indexul pentru următoarea utilizare
             $current_index = ($current_index + 1) % count($category_ids); // Resetăm la 0 când ajungem la finalul listei
             update_option('auto_ai_news_poster_current_category_index', $current_index);
 
-            // error_log('🔄 Updated category index for next time: ' . $current_index);
-
             return $next_category_name; // Returnăm numele categoriei
         }
 
-        // error_log('🔄 Category rotation is disabled or mode is not auto');
         // Dacă rularea automată a categoriilor nu este activată, folosim categoria selectată manual
         $fallback_category = $options['categories'][0] ?? '';
-        // error_log('🔄 Using fallback category: ' . $fallback_category);
         return $fallback_category; // Folosim prima categorie din listă dacă este setată
     }
 
@@ -105,13 +76,11 @@ class Auto_Ai_News_Poster_Api
     public static function getLastCategoryTitles($selected_category_name = null, $titlesNumber = 3)
     {
         $titles = [];
-        // error_log('CALL getLastCategoryTitles -> $selected_category_name: ' . $selected_category_name . ' $titlesNumber: ' . $titlesNumber);
         if ($selected_category_name === null) {
             // Obține toate categoriile
             $categories = get_categories(['hide_empty' => false]);
 
             if (empty($categories)) {
-                // error_log('Nu există categorii disponibile.');
                 return;
             }
 
@@ -133,7 +102,6 @@ class Auto_Ai_News_Poster_Api
                     $titles[] = get_the_title($post_id);
                 }
             } else {
-                // error_log('Nu există articole în categorii.');
                 return ;
             }
         } else {
@@ -141,7 +109,6 @@ class Auto_Ai_News_Poster_Api
             $category = get_category_by_slug(sanitize_title($selected_category_name));
 
             if (!$category) {
-                // error_log('Categoria nu există.');
                 return;
             }
 
@@ -163,7 +130,6 @@ class Auto_Ai_News_Poster_Api
                     $titles[] = get_the_title($post_id);
                 }
             } else {
-                // error_log("Nu există articole în această categorie ->  $category_id" .  $category_id);
                 return ;
             }
         }
@@ -181,13 +147,10 @@ class Auto_Ai_News_Poster_Api
     public static function process_article_generation($generation_mode = 'parse_link')
     {
         $is_ajax_call = wp_doing_ajax();
-        // error_log('🚀 PROCESS_ARTICLE_GENERATION() STARTED. AJAX Call: ' . ($is_ajax_call ? 'Yes' : 'No'));
 
         // Load settings
         $options = get_option('auto_ai_news_poster_settings');
         if (empty($options['chatgpt_api_key'])) {
-            $error_msg = 'Error: ChatGPT API Key is not set.';
-            error_log($error_msg);
             if ($is_ajax_call) {
                 wp_send_json_error(['message' => $error_msg]);
             }
@@ -200,7 +163,6 @@ class Auto_Ai_News_Poster_Api
         if ($generation_mode === 'ai_browsing' && !$is_ajax_call) {
             // Pentru CRON în modul AI Browsing, logica este gestionată de Auto_Ai_News_Poster_Cron::trigger_ai_browsing_generation()
             // Această funcție (process_article_generation) este acum dedicată modului parse_link
-            // error_log('🤖 Skipping process_article_generation for ai_browsing CRON job. It is handled separately.');
             return;
         }
 
@@ -223,26 +185,22 @@ class Auto_Ai_News_Poster_Api
 
             // Handle generation based on selected mode from metabox
             if ($generation_mode === 'ai_browsing') {
-                // error_log('🤖 AI Browsing mode selected from metabox. Calling generate_article_with_browsing.');
                 // For manual AI browsing, we instruct the AI to browse the provided link
                 self::generate_article_with_browsing($source_link, null, null, $additional_instructions); // Pass additional instructions
                 wp_send_json_success(['message' => 'Article generation via AI Browsing initiated!', 'post_id' => get_the_ID()]);
                 return;
             } else {
                 // Default to 'parse_link' behavior
-                // error_log('🔗 Parse Link mode selected from metabox. Extracting content.');
                 $extracted_content = Auto_AI_News_Poster_Parser::extract_content_from_url($source_link);
             }
 
         } else {
             // Automatic generation from the bulk list (CRON job)
             $is_bulk_processing = true;
-            // error_log('🤖 CRON JOB: Starting bulk processing run.');
             $bulk_links_str = $options['bulk_custom_source_urls'] ?? '';
             $bulk_links = array_filter(explode("\n", trim($bulk_links_str)), 'trim');
 
             if (empty($bulk_links)) {
-                // error_log('🤖 CRON JOB: Bulk list is empty. Nothing to process.');
                 if (isset($options['run_until_bulk_exhausted']) && $options['run_until_bulk_exhausted']) {
                     self::force_mode_change_to_manual();
                 }
@@ -251,23 +209,19 @@ class Auto_Ai_News_Poster_Api
 
             // Take the first link from the list
             $source_link = array_shift($bulk_links);
-            // error_log('🤖 CRON JOB: Picked link from bulk list: ' . $source_link);
 
             // Immediately update the option with the shortened list to prevent race conditions
             $options['bulk_custom_source_urls'] = implode("\n", $bulk_links);
             update_option('auto_ai_news_poster_settings', $options);
             set_transient('auto_ai_news_poster_force_refresh', 'yes', MINUTE_IN_SECONDS); // Signal frontend to refresh
-            // error_log('🤖 CRON JOB: Removed link from list and updated options. Remaining links: ' . count($bulk_links));
 
             // For CRON jobs, determine mode from settings. The parameter $generation_mode is from manual metabox.
             $cron_generation_mode = $options['generation_mode'] ?? 'parse_link';
             if ($cron_generation_mode === 'ai_browsing') {
-                // error_log('🤖 CRON JOB: AI Browsing mode. Calling generate_article_with_browsing.');
                 // In CRON, generate_article_with_browsing will determine categories and titles
                 self::generate_article_with_browsing($source_link, null, null, $options['ai_browsing_instructions'] ?? '');
                 return;
             } else {
-                // error_log('🔗 CRON JOB: Parse Link mode. Extracting content.');
                 $extracted_content = Auto_AI_News_Poster_Parser::extract_content_from_url($source_link);
             }
         }
@@ -279,7 +233,6 @@ class Auto_Ai_News_Poster_Api
         // --- Validate extracted content ---
         if (is_wp_error($extracted_content) || empty(trim($extracted_content))) {
             $error_message = is_wp_error($extracted_content) ? $extracted_content->get_error_message() : 'Extracted content is empty.';
-            error_log('❌ Content Extraction Failed for ' . $source_link . ': ' . $error_message);
 
             if ($is_bulk_processing) {
                 self::re_add_link_to_bulk($source_link, 'Failed to extract content');
@@ -289,7 +242,6 @@ class Auto_Ai_News_Poster_Api
             }
             return;
         }
-        // error_log('✅ Successfully extracted content. Size: ' . strlen($extracted_content) . ' chars.');
 
         // --- Validate extracted content for suspicious patterns ---
         $suspicious_patterns = [
@@ -300,13 +252,11 @@ class Auto_Ai_News_Poster_Api
         foreach ($suspicious_patterns as $pattern) {
             if (stripos($extracted_content, $pattern) !== false) {
                 $is_suspicious_content = true;
-                error_log('🚨 CRITICAL: Suspicious content pattern "' . $pattern . '" detected in extracted content from URL: ' . $source_link);
                 break;
             }
         }
 
         if ($is_suspicious_content) {
-            error_log('❌ Suspicious content detected. Content preview: ' . substr($extracted_content, 0, 500));
             if ($is_bulk_processing) {
                 self::re_add_link_to_bulk($source_link, 'Suspicious content detected - possible parsing failure');
             }
@@ -326,7 +276,7 @@ class Auto_Ai_News_Poster_Api
 
         if (is_wp_error($response)) {
             $error_message = 'OpenAI API Error: ' . $response->get_error_message();
-            error_log($error_message);
+
             if ($is_bulk_processing) {
                 self::re_add_link_to_bulk($source_link, 'OpenAI API Error');
             }
@@ -343,8 +293,7 @@ class Auto_Ai_News_Poster_Api
 
         if (empty($ai_content_json)) {
             $error_message = '❌ AI response is empty or in an unexpected format.';
-            error_log($error_message);
-            // error_log('Full API Response: ' . print_r($decoded_response, true));
+
             if ($is_bulk_processing) {
                 self::re_add_link_to_bulk($source_link, 'Empty AI Response');
             }
@@ -358,8 +307,7 @@ class Auto_Ai_News_Poster_Api
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             $error_message = '❌ Failed to decode article data JSON from AI response. Error: ' . json_last_error_msg();
-            error_log($error_message);
-            // error_log('AI content string was: ' . $ai_content_json);
+
             if ($is_bulk_processing) {
                 self::re_add_link_to_bulk($source_link, 'JSON Decode Error');
             }
@@ -371,8 +319,7 @@ class Auto_Ai_News_Poster_Api
 
         if (empty($article_data['content']) || empty($article_data['title'])) {
             $error_message = '❌ AI response was valid JSON but missing required "content" or "title".';
-            error_log($error_message);
-            // error_log('Article Data Received: ' . print_r($article_data, true));
+
             if ($is_bulk_processing) {
                 self::re_add_link_to_bulk($source_link, 'Missing Content in AI JSON');
             }
@@ -397,16 +344,11 @@ class Auto_Ai_News_Poster_Api
             $post_data['ID'] = $post_id;
         }
 
-        // error_log('--- ✅ PREPARING TO SAVE POST ---');
-        // error_log('Source Link: ' . $source_link);
-        // error_log('Post Data: ' . print_r($post_data, true));
-        // error_log('--- END SAVE PREPARATION ---');
-
         $new_post_id = Post_Manager::insert_or_update_post($post_id, $post_data);
 
         if (is_wp_error($new_post_id)) {
             $error_message = '❌ Failed to save post to database: ' . $new_post_id->get_error_message();
-            error_log($error_message);
+
             if ($is_bulk_processing) {
                 self::re_add_link_to_bulk($source_link, 'DB Save Error');
             }
@@ -415,8 +357,6 @@ class Auto_Ai_News_Poster_Api
             }
             return;
         }
-
-        // error_log("✅ Successfully generated and saved post ID: {$new_post_id} from source: {$source_link}");
 
         // --- Set Taxonomies and Meta ---
         Post_Manager::set_post_tags($new_post_id, $article_data['tags'] ?? []);
@@ -428,13 +368,10 @@ class Auto_Ai_News_Poster_Api
         if (isset($options['generate_image']) && $options['generate_image'] === 'yes') {
             $prompt_for_dalle = !empty($post_data['post_excerpt']) ? $post_data['post_excerpt'] : wp_trim_words($post_data['post_content'], 100, '...');
             if (!empty($prompt_for_dalle)) {
-                // error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id . ' using article summary/content.');
                 self::generate_image_for_article($new_post_id, $prompt_for_dalle);
             } else {
-                // error_log('⚠️ Image generation enabled, but no summary/content available for DALL-E prompt for post ID: ' . $new_post_id);
             }
         } else {
-            // error_log('🖼️ Auto-image generation is disabled in settings for post ID: ' . $new_post_id);
         }
 
         if ($is_ajax_call) {
@@ -457,24 +394,20 @@ class Auto_Ai_News_Poster_Api
      */
     public static function generate_article_with_browsing($news_sources, $category_name, $latest_titles, $additional_instructions = '')
     {
-        // error_log('🚀 GENERATE_ARTICLE_WITH_BROWSING() STARTED');
         $options = get_option('auto_ai_news_poster_settings');
         $api_key = $options['chatgpt_api_key'];
 
         if (empty($api_key)) {
-            error_log('❌ AI Browsing Error: API Key is not set.');
             return;
         }
 
         // Construim promptul
         $prompt = self::build_ai_browsing_prompt($news_sources, $category_name, $latest_titles, $additional_instructions);
-        // error_log('🤖 AI Browsing Prompt built. Length: ' . strlen($prompt) . ' chars.');
 
         // Apelăm API-ul OpenAI cu tool calling pentru AI Browsing
         $response = self::call_openai_api_with_browsing($api_key, $prompt);
 
         if (is_wp_error($response)) {
-            error_log('❌ AI Browsing OpenAI API Error: ' . $response->get_error_message());
             return;
         }
 
@@ -484,20 +417,16 @@ class Auto_Ai_News_Poster_Api
         $message = $decoded_response['choices'][0]['message'] ?? null;
 
         if (empty($message)) {
-            error_log('❌ AI Browsing Error: AI response is empty or in an unexpected format.');
-            // error_log('Full API Response: ' . json_encode($decoded_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             return;
         }
 
         // Verificăm dacă AI-ul a făcut tool calls
         if (isset($message['tool_calls']) && !empty($message['tool_calls'])) {
-            // error_log('🔍 AI made tool calls for web search. Processing tool calls...');
 
             // Continuăm conversația cu tool calls
             $final_response = self::continue_conversation_with_tool_calls($api_key, $prompt, $message['tool_calls']);
 
             if (is_wp_error($final_response)) {
-                error_log('❌ AI Browsing Error: Failed to continue conversation with tool calls. ' . $final_response->get_error_message());
                 return;
             }
 
@@ -510,8 +439,6 @@ class Auto_Ai_News_Poster_Api
         $ai_content_json = $message['content'] ?? null;
 
         if (empty($ai_content_json)) {
-            error_log('❌ AI Browsing Error: AI response is empty or in an unexpected format.');
-            // error_log('Full API Response: ' . print_r($decoded_response, true));
             return;
         }
 
@@ -519,19 +446,14 @@ class Auto_Ai_News_Poster_Api
         $article_data = self::extract_first_valid_json($ai_content_json);
 
         if (empty($article_data)) {
-            error_log('❌ AI Browsing Error: Failed to extract valid JSON from AI response.');
-            // error_log('AI content string was: ' . $ai_content_json);
             return;
         }
 
         // Verificăm dacă conținutul este gol sau invalid
         if (empty($article_data['continut']) || empty($article_data['titlu']) ||
             $article_data['continut'] === '' || $article_data['titlu'] === '') {
-            error_log('❌ AI Browsing Error: AI response JSON has empty "continut" or "titlu".');
-            // error_log('Article Data Received: ' . print_r($article_data, true));
 
             // Încercăm să regenerăm cu un prompt mai clar
-            // error_log('🔄 Attempting to regenerate with clearer instructions...');
             $retry_response = self::retry_ai_browsing_with_clearer_prompt($api_key, $news_sources, $category_name, $latest_titles);
 
             if (!is_wp_error($retry_response)) {
@@ -543,17 +465,13 @@ class Auto_Ai_News_Poster_Api
                 if (!empty($ai_content_json)) {
                     $article_data = self::extract_first_valid_json($ai_content_json);
                     if (!empty($article_data) && !empty($article_data['continut']) && !empty($article_data['titlu'])) {
-                        // error_log('✅ Retry successful - got valid content');
                     } else {
-                        error_log('❌ Retry also failed - giving up');
                         return;
                     }
                 } else {
-                    error_log('❌ Retry failed - no content in response');
                     return;
                 }
             } else {
-                error_log('❌ Retry failed: ' . $retry_response->get_error_message());
                 return;
             }
         }
@@ -571,11 +489,8 @@ class Auto_Ai_News_Poster_Api
         $new_post_id = Post_Manager::insert_or_update_post(null, $post_data);
 
         if (is_wp_error($new_post_id)) {
-            error_log('❌ AI Browsing Error: Failed to save post. ' . $new_post_id->get_error_message());
             return;
         }
-
-        // error_log("✅ Successfully generated and saved post ID: {$new_post_id} using AI Browsing for category: {$category_name}");
 
         // Setăm tag-uri și meta
         $tags = $article_data['cuvinte_cheie'] ?? [];
@@ -585,7 +500,6 @@ class Auto_Ai_News_Poster_Api
         // Generăm imaginea dacă este activată opțiunea
         $prompt_for_dalle_browsing = !empty($article_data['meta_descriere']) ? $article_data['meta_descriere'] : wp_trim_words($article_data['continut'], 100, '...');
         if (!empty($prompt_for_dalle_browsing) && isset($options['generate_image']) && $options['generate_image'] === 'yes') {
-            // error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id . ' using AI-generated meta_descriere/content.');
             self::generate_image_for_article($new_post_id, $prompt_for_dalle_browsing);
         }
     }
@@ -663,8 +577,6 @@ class Auto_Ai_News_Poster_Api
      */
     private static function call_openai_api_with_browsing($api_key, $prompt)
     {
-        // error_log('🔥 CALL_OPENAI_API_WITH_BROWSING() STARTED');
-
         // Obținem modelul selectat din setări
         $options = get_option('auto_ai_news_poster_settings', []);
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
@@ -672,12 +584,6 @@ class Auto_Ai_News_Poster_Api
         // Obținem max_length pentru a seta max_completion_tokens
         $max_length = $options['max_length'] ?? 1200;
         $max_completion_tokens = ceil($max_length * 2); // Estimare: 1 cuvânt ~ 2 tokens
-
-        // error_log('🤖 AI API CONFIGURATION:');
-        // error_log('   - Selected model: ' . $selected_model);
-        // error_log('   - API URL: ' . URL_API_OPENAI);
-        // error_log('   - API Key length: ' . strlen($api_key));
-        // error_log('   - Prompt length: ' . strlen($prompt));
 
         $request_body = [
             'model' => $selected_model,
@@ -745,9 +651,6 @@ class Auto_Ai_News_Poster_Api
             'max_completion_tokens' => $max_completion_tokens,
         ];
 
-        // error_log('📤 REQUEST BODY TO OPENAI:');
-        // error_log('   - JSON: ' . json_encode($request_body, JSON_PRETTY_PRINT));
-
         $response = wp_remote_post(URL_API_OPENAI, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $api_key,
@@ -757,15 +660,6 @@ class Auto_Ai_News_Poster_Api
             'timeout' => 300, // 5 minute timeout pentru browsing
         ]);
 
-        // error_log('📥 OPENAI API RESPONSE:');
-        if (is_wp_error($response)) {
-            // error_log('❌ WP Error: ' . $response->get_error_message());
-        } else {
-            // error_log('✅ Response status: ' . wp_remote_retrieve_response_code($response));
-            // error_log('📄 Response headers: ' . print_r(wp_remote_retrieve_headers($response), true));
-            // error_log('💬 Response body: ' . wp_remote_retrieve_body($response));
-        }
-
         return $response;
     }
 
@@ -774,8 +668,6 @@ class Auto_Ai_News_Poster_Api
      */
     private static function continue_conversation_with_tool_calls($api_key, $original_prompt, $tool_calls)
     {
-        // error_log('🔄 CONTINUE_CONVERSATION_WITH_TOOL_CALLS() STARTED');
-
         $options = get_option('auto_ai_news_poster_settings', []);
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
 
@@ -870,9 +762,6 @@ class Auto_Ai_News_Poster_Api
             'max_completion_tokens' => $max_completion_tokens,
         ];
 
-        // error_log('📤 CONTINUED CONVERSATION REQUEST BODY:');
-        // error_log('   - JSON: ' . json_encode($request_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-
         $response = wp_remote_post(URL_API_OPENAI, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $api_key,
@@ -882,14 +771,6 @@ class Auto_Ai_News_Poster_Api
             'timeout' => 300,
         ]);
 
-        // error_log('📥 CONTINUED CONVERSATION RESPONSE:');
-        if (is_wp_error($response)) {
-            error_log('❌ WP Error: ' . $response->get_error_message());
-        } else {
-            // error_log('✅ Response status: ' . wp_remote_retrieve_response_code($response));
-            // error_log('💬 Response body (full): ' . json_encode(json_decode(wp_remote_retrieve_body($response), true), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        }
-
         return $response;
     }
 
@@ -898,9 +779,6 @@ class Auto_Ai_News_Poster_Api
      */
     private static function extract_first_valid_json($content)
     {
-        // error_log('🔍 EXTRACT_FIRST_VALID_JSON() STARTED');
-        // error_log('Raw content: ' . $content);
-
         // Încercăm să găsim primul obiect JSON valid
         $json_pattern = '/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/';
         preg_match_all($json_pattern, $content, $matches);
@@ -909,7 +787,6 @@ class Auto_Ai_News_Poster_Api
             foreach ($matches[0] as $json_string) {
                 $decoded = json_decode($json_string, true);
                 if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                    // error_log('✅ Found valid JSON: ' . json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
                     return $decoded;
                 }
             }
@@ -941,7 +818,6 @@ class Auto_Ai_News_Poster_Api
                     $decoded = json_decode($json_string, true);
 
                     if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                        // error_log('✅ Found valid JSON by line parsing: ' . $json_string);
                         return $decoded;
                     }
 
@@ -950,7 +826,6 @@ class Auto_Ai_News_Poster_Api
             }
         }
 
-        // error_log('❌ No valid JSON found in content');
         return null;
     }
 
@@ -959,18 +834,15 @@ class Auto_Ai_News_Poster_Api
      */
     private static function retry_ai_browsing_with_clearer_prompt($api_key, $news_sources, $category_name, $latest_titles)
     {
-        // error_log('🔄 RETRY_AI_BROWSING_WITH_CLEARER_PROMPT() STARTED');
-
         $options = get_option('auto_ai_news_poster_settings', []);
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
 
-        $simple_prompt = "Scrie un articol de știri ca un jurnalist profesionist. \r\n\r\nCategoria: {$category_name}\r\n\r\nCerințe:\r\n- Titlu atractiv și descriptiv\r\n- Conținut fluent și natural, fără secțiuni marcate explicit\r\n- NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"\r\n- Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly\r\n- Generează între 1 și 3 etichete relevante (cuvinte_cheie)\r\n- Limbă română\r\n- Stil jurnalistic obiectiv și informativ\r\n\r\nReturnează DOAR acest JSON:\r\n{\r\n  \"titlu\": \"Titlul articolului\",\r\n  \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",\r\n  \"meta_descriere\": \"Meta descriere SEO\",\r\n  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]\r\n}\";
+        $simple_prompt = "Scrie un articol de știri ca un jurnalist profesionist. \r\n\r\nCategoria: {$category_name}\r\n\r\nCerințe:\r\n- Titlu atractiv și descriptiv\r\n- Conținut fluent și natural, fără secțiuni marcate explicit\r\n- NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"\r\n- Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly\r\n- Generează între 1 și 3 etichete relevante (cuvinte_cheie)\r\n- Limbă română\r\n- Stil jurnalistic obiectiv și informativ\r\n\r\nReturnează DOAR acest JSON:\r\n{\r\n  \"titlu\": \"Titlul articolului\",\r\n  \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",\r\n  \"meta_descriere\": \"Meta descriere SEO\",\r\n  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]\r\n}";
 
         // Obținem max_length pentru a seta max_completion_tokens
         $max_length = $options['max_length'] ?? 1200;
-        $max_completion_tokens = ceil($max_length * 2); // Estimare: 1 cuvânt ~ 2 tokens
-
-        // error_log('📢 PROMPT GENERATED FOR AI (RETRY AI BROWSING MODE): ' . $simple_prompt);
+        $max_completion_tokens = ceil($max_length * 2); 
+        // Estimare: 1 cuvânt ~ 2 tokens
 
         $request_body = [
             'model' => $selected_model,
@@ -1013,11 +885,9 @@ class Auto_Ai_News_Poster_Api
         ]);
 
         if (is_wp_error($response)) {
-            error_log('❌ Retry API Error: ' . $response->get_error_message());
             return $response;
         }
 
-        // error_log('✅ Retry API Response status: ' . wp_remote_retrieve_response_code($response));
         return $response;
     }
 
@@ -1030,7 +900,6 @@ class Auto_Ai_News_Poster_Api
      */
     private static function generate_safe_dalle_prompt(string $original_prompt, string $api_key): string
     {
-        // error_log('🛡️ Generating safe DALL-E prompt...');
         $system_message = "Ești un asistent AI specializat în transformarea descrierilor de text în concepte vizuale sigure și abstracte, potrivite pentru generarea de imagini. Elimină orice referință directă la evenimente politice, conflicte militare, violență explicită, sau orice conținut sensibil din promptul furnizat. Concentrează-te pe crearea unei descrieri vizuale simbolice, care să evoce tema sau emoția centrală a textului, fără a fi literală sau a încălca politicile de siguranță ale generatoarelor de imagini. Folosește un limbaj poetic și metaforic. NU menționa nume de persoane, țări sau termeni militari.";
         $user_message = "Transformă următoarea descriere într-un prompt vizual sigur și abstract pentru DALL-E: \"{$original_prompt}\"";
 
@@ -1038,7 +907,6 @@ class Auto_Ai_News_Poster_Api
         $response = call_openai_api($api_key, $prompt_for_ai);
 
         if (is_wp_error($response)) {
-            error_log('❌ Failed to generate safe DALL-E prompt: ' . $response->get_error_message());
             return "Abstract representation of news events."; // Fallback safe prompt
         }
 
@@ -1046,38 +914,28 @@ class Auto_Ai_News_Poster_Api
         $decoded_response = json_decode($body, true);
         $safe_prompt = $decoded_response['choices'][0]['message']['content'] ?? $original_prompt;
 
-        // error_log('✅ Safe DALL-E prompt generated: ' . $safe_prompt);
         return $safe_prompt;
     }
 
     public static function generate_image_for_article($post_id = null, $imagine_prompt = '')
     {
-        // error_log('🖼️ GENERATE_IMAGE_FOR_ARTICLE() STARTED');
         // Folosim var_export pentru a vedea exact tipul variabilei (null, '', etc.)
-        // error_log('📥 Initial call state: post_id argument=' . var_export($post_id, true) . ', $_POST=' . print_r($_POST, true));
-
         // Corectăm detecția apelului AJAX. empty() va trata corect atât null cât și string-urile goale.
         $is_ajax = empty($post_id);
 
         if ($is_ajax) {
             // This is an AJAX call, get post_id from $_POST
             $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-            // error_log('--- AJAX Call --- Assigned post_id from $_POST. New value: [' . $post_id . ']');
 
             try {
                 check_ajax_referer('generate_image_nonce', 'security');
-                // error_log('✅ Nonce verification successful for image generation.');
             } catch (Exception $e) {
-                // error_log('❌ Nonce verification failed for image generation: ' . $e->getMessage());
                 wp_send_json_error(['message' => 'Nonce verification failed: ' . $e->getMessage()]);
                 return;
             }
-        } else {
-            // error_log('--- Internal Call --- Using provided post_id: [' . $post_id . ']');
         }
 
         if (empty($post_id) || !is_numeric($post_id) || $post_id <= 0) {
-            // error_log('❌ Invalid or zero post ID (' . $post_id . '). Aborting.');
             wp_send_json_error(['message' => 'ID-ul postării lipsește sau este invalid.']);
             return;
         }
@@ -1086,7 +944,6 @@ class Auto_Ai_News_Poster_Api
         $post = get_post($post_id);
 
         if (!$post) {
-            // error_log('❌ Article not found for ID: ' . $post_id);
             wp_send_json_error(['message' => 'Articolul nu a fost găsit.']);
             return;
         }
@@ -1095,7 +952,6 @@ class Auto_Ai_News_Poster_Api
         $api_key = $options['chatgpt_api_key'];
 
         if (empty($api_key)) {
-            // error_log('❌ API key is empty - cannot generate image.');
             wp_send_json_error(['message' => 'Cheia API lipsește pentru generarea imaginii.']);
             return;
         }
@@ -1109,36 +965,21 @@ class Auto_Ai_News_Poster_Api
         // Generează un prompt sigur pentru DALL-E
         $prompt_for_dalle = self::generate_safe_dalle_prompt($initial_dalle_prompt, $api_key);
 
-        // error_log('📋 Image generation input:');
-        // error_log('   - Post ID: ' . $post_id);
-        // error_log('   - Prompt for DALL-E: ' . $prompt_for_dalle);
-        // error_log('   - Feedback: ' . ($feedback ?: 'EMPTY'));
-
-        // error_log('🎨 Calling DALL-E API with:');
-        // error_log('   - Prompt: ' . $prompt_for_dalle);
-        // error_log('   - Feedback: ' . $feedback);
-
         $image_response = call_openai_image_api($api_key, $prompt_for_dalle, $feedback);
 
         if (is_wp_error($image_response)) {
-            // error_log('❌ DALL-E API WP Error: ' . $image_response->get_error_message());
             wp_send_json_error(['message' => 'Eroare la apelul DALL-E API: ' . $image_response->get_error_message()]);
             return;
         }
 
         $response_code = wp_remote_retrieve_response_code($image_response);
-        // error_log('📊 DALL-E API Response Code: ' . $response_code);
 
         $image_body = wp_remote_retrieve_body($image_response);
-        // error_log('📥 DALL-E API RAW RESPONSE BODY: ' . $image_body);
 
         $image_json = json_decode($image_body, true);
-        // error_log('🔍 DALL-E API DECODED RESPONSE: ' . print_r($image_json, true));
 
         $image_url = $image_json['data'][0]['url'] ?? '';
         $title = get_the_title($post_id);
-
-        // error_log('🖼️ Generated image URL: ' . ($image_url ?: 'NONE'));
 
         $post_tags = get_the_terms($post_id, 'post_tag');
         $tags = !empty($post_tags) ? wp_list_pluck($post_tags, 'name') : [];
@@ -1152,13 +993,11 @@ class Auto_Ai_News_Poster_Api
                 $update_result = Post_Manager::insert_or_update_post($post_id, ['post_status' => $post_status]);
 
                 if (is_wp_error($update_result)) {
-                    // error_log('❌ Error updating post status after image generation: ' . $update_result->get_error_message());
                     wp_send_json_error(['message' => $update_result->get_error_message()]);
                     return;
                 }
             }
 
-            // error_log('✅ Image generated and set successfully for post ID: ' . $post_id);
             wp_send_json_success([
                     'post_id' => $post_id,
                     'tags' => $tags, // Variabila $tags va fi definită mai sus
@@ -1173,7 +1012,6 @@ class Auto_Ai_News_Poster_Api
             } elseif (isset($image_json['error'])) {
                 $error_message = print_r($image_json['error'], true);
             }
-            // error_log('❌ Failed to generate image for post ID ' . $post_id . ': ' . $error_message);
             wp_send_json_error(['message' => 'Eroare la generarea imaginii: ' . $error_message]);
         }
     }
@@ -1193,15 +1031,12 @@ class Auto_Ai_News_Poster_Api
     {
         check_ajax_referer('auto_ai_news_poster_check_settings', 'security');
 
-        // error_log('AJAX Polling: Checking for refresh transient...');
         $force_refresh = get_transient('auto_ai_news_poster_force_refresh');
 
         if ($force_refresh === 'yes') {
-            // error_log('AJAX Polling: Refresh transient FOUND. Instructing client to reload.');
             delete_transient('auto_ai_news_poster_force_refresh'); // Consume the transient
             wp_send_json_success(['needs_refresh' => true, 'reason' => 'A bulk link was processed or mode changed.']);
         } else {
-            // error_log('AJAX Polling: No refresh transient. No action needed.');
             wp_send_json_success(['needs_refresh' => false, 'reason' => 'No change detected.']);
         }
     }
@@ -1212,7 +1047,6 @@ class Auto_Ai_News_Poster_Api
     public static function force_refresh_test()
     {
         check_ajax_referer('auto_ai_news_poster_check_settings', 'security');
-        // error_log('DEBUG: Forcing refresh transient via AJAX call.');
         set_transient('auto_ai_news_poster_force_refresh', 'yes', MINUTE_IN_SECONDS);
         wp_send_json_success(['message' => 'Refresh transient set!']);
     }
@@ -1222,19 +1056,14 @@ class Auto_Ai_News_Poster_Api
         // Verificăm nonce-ul pentru securitate
         check_ajax_referer('clear_transient_nonce', 'security');
 
-        // error_log('clear_transient() called');
-
         // Ștergem transient-ul
         delete_transient('auto_ai_news_poster_last_bulk_check');
-
-        // error_log('clear_transient: transient deleted');
 
         wp_send_json_success(['message' => 'Transient cleared successfully']);
     }
 
     private static function force_mode_change_to_manual()
     {
-        // error_log('🔄 Forcing mode change to manual.');
         $options = get_option('auto_ai_news_poster_settings');
         $options['mode'] = 'manual';
         // Uncheck the "run until exhausted" checkbox
@@ -1245,7 +1074,6 @@ class Auto_Ai_News_Poster_Api
 
         // Set a transient to notify the frontend to refresh
         set_transient('auto_ai_news_poster_force_refresh', 'yes', MINUTE_IN_SECONDS);
-        // error_log('✅ Mode changed to manual and refresh transient set.');
     }
 
     public static function force_refresh_now()
@@ -1253,12 +1081,8 @@ class Auto_Ai_News_Poster_Api
         // Verificăm nonce-ul pentru securitate
         check_ajax_referer('force_refresh_now_nonce', 'security');
 
-        // error_log('force_refresh_now() called');
-
         // Forțăm un refresh imediat
         set_transient('auto_ai_news_poster_force_refresh', true, 60);
-
-        // error_log('force_refresh_now: Force refresh set');
 
         wp_send_json_success(['message' => 'Force refresh triggered']);
     }
@@ -1275,7 +1099,6 @@ class Auto_Ai_News_Poster_Api
             return;
         }
 
-        // error_log("🔄 Failure processing link: {$link}. Reason: {$reason}. Re-adding to list for retry.");
         $options = get_option('auto_ai_news_poster_settings');
         // Ensure the array key exists and is an array. The links are stored as a string, so we need to convert.
         $bulk_links_str = $options['bulk_custom_source_urls'] ?? '';
@@ -1286,7 +1109,6 @@ class Auto_Ai_News_Poster_Api
             $bulk_links[] = $link;
             $options['bulk_custom_source_urls'] = implode("\n", $bulk_links);
             update_option('auto_ai_news_poster_settings', $options);
-            // error_log('✅ Link re-added to bulk list. Total links: ' . count($bulk_links));
         }
     }
 

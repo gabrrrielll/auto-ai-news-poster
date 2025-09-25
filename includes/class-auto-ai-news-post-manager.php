@@ -4,8 +4,6 @@ class Post_Manager
 {
     public static function insert_or_update_post($post_id, $post_data)
     {
-        error_log('insert_or_update_post for post ID: ' . $post_id);
-
         if (!get_post($post_id)) {
             // Inserăm articolul nou și obținem ID-ul acestuia
             $post_id = wp_insert_post($post_data);
@@ -17,7 +15,6 @@ class Post_Manager
             
             // Verificăm dacă ID-ul este valid (nu 0)
             if (empty($post_id) || $post_id === 0) {
-                error_log('❌ wp_insert_post returned invalid ID: ' . $post_id);
                 return new WP_Error('post_insert_failed', 'wp_insert_post returned invalid ID: ' . $post_id);
             }
         } else {
@@ -44,11 +41,9 @@ class Post_Manager
                 $tags = array_slice($tags, 0, 3); // Limităm la maximum 3 etichete
                 
                 if (empty($tags)) {
-                    error_log('🚫 No valid tags found after filtering for post ID: ' . $post_id);
                     return;
                 }
                 
-                error_log('🏷️ Setting tags for post ID: ' . $post_id . ', Tags: ' . print_r($tags, true) . ' (Count: ' . count($tags) . ')');
                 wp_set_post_tags($post_id, $tags);
             } else {
                 error_log('🚫 Tags is not an array for post ID: ' . $post_id . ', Type: ' . gettype($tags));
@@ -76,7 +71,6 @@ class Post_Manager
         $image_handling_mode = $options['use_external_images'] ?? 'import';
         $title_slug = sanitize_title($title); // Transformăm titlul într-un slug URL-friendly
         $author_id = $options['author_name'] ?? get_current_user_id();
-        error_log('set_featured_image for post ID: ' . $post_id . ', ' . $image_url . ', ' . $image_handling_mode);
 
         // Verificăm și includem fișierul necesar pentru media_sideload_image
         if (!function_exists('media_sideload_image')) {
@@ -89,7 +83,6 @@ class Post_Manager
             // Descarcă imaginea și redenumește-o
             $temp_file = download_url($image_url);
             if (is_wp_error($temp_file)) {
-                error_log('Eroare la descărcarea imaginii: ' . $temp_file->get_error_message());
                 return new WP_Error('image_download_failed', 'Nu am reușit să descarc imaginea: ' . $temp_file->get_error_message());
             }
 
@@ -116,15 +109,12 @@ class Post_Manager
                 'tmp_name' => $temp_file,
             ];
 
-            error_log('Încărcăm fișierul în biblioteca media: ' . $post_id . '   $file_extension = ' . $file_extension . '   $new_file_name:'.  $new_file_name);
-
             // Încărcăm fișierul în biblioteca media
             $image_id = media_handle_sideload($file_array, $post_id, $summary);
 
             // Verificăm dacă încărcarea a fost cu succes
             if (is_wp_error($image_id)) {
                 @unlink($temp_file); // Ștergem fișierul temporar în caz de eroare
-                error_log('Eroare la încărcarea imaginii: ' . $image_id->get_error_message());
                 return new WP_Error('image_upload_failed', 'Nu am reușit să salvez imaginea: ' . $image_id->get_error_message());
             }
 
@@ -142,7 +132,6 @@ class Post_Manager
             update_post_meta($image_id, '_wp_attachment_image_alt', $title); // Setăm atributul "alt" cu titlul articolului
 
             // Curățăm metadatele externe, deoarece imaginea a fost importată
-            error_log('🖼️ Image imported. Deleting external image meta for post ID: ' . $post_id);
             delete_post_meta($post_id, '_external_image_url');
             delete_post_meta($post_id, '_external_image_source');
 
@@ -153,7 +142,6 @@ class Post_Manager
             update_post_meta($post_id, '_external_image_alt', $title); // Atribuim "alt" extern cu titlul articolului
             update_post_meta($post_id, '_external_image_description', $summary); // Atribuim "description" extern cu rezumatul
 
-            error_log('Setăm imaginea reprezentativă externă folosind URL-ul direct. ' . $post_id . ', ' . $image_url);
         }
     }
 

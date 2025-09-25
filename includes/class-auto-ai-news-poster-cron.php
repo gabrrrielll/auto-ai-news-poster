@@ -56,11 +56,8 @@ class Auto_Ai_News_Poster_Cron
                     $bulk_links = explode("\n", trim($settings['bulk_custom_source_urls'] ?? ''));
                     $bulk_links = array_filter($bulk_links, 'trim'); // Eliminăm rândurile goale
 
-                    error_log('CRON DEBUG: $run_until_bulk_exhausted:'.$run_until_bulk_exhausted.' count($bulk_links):'. count($bulk_links).' $bulk_links:'. print_r($bulk_links, true));
-
                     if (empty($bulk_links)) {
                         // Lista de linkuri s-a epuizat, oprim cron job-ul și schimbăm modul pe manual
-                        error_log('Lista de linkuri personalizate a fost epuizată. Oprirea cron job-ului.');
 
                         // Dezactivăm cron job-ul
                         wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
@@ -80,21 +77,17 @@ class Auto_Ai_News_Poster_Cron
                 }
 
                 // Log the auto post execution
-                error_log('Auto post cron triggered for "parse_link" mode.');
 
                 try {
                     // Apelează direct process_article_generation() în loc de get_article_from_sources()
                     Auto_Ai_News_Poster_Api::process_article_generation();
                 } catch (Exception $e) {
                     // Log any errors that occur during posting
-                    error_log('Error during auto post ("parse_link" mode): ' . $e->getMessage());
                 }
             } elseif ($generation_mode === 'ai_browsing') {
-                error_log('Auto post cron triggered for "ai_browsing" mode.');
                 try {
                     self::trigger_ai_browsing_generation();
                 } catch (Exception $e) {
-                    error_log('Error during auto post ("ai_browsing" mode): ' . $e->getMessage());
                 }
             }
         }
@@ -106,7 +99,6 @@ class Auto_Ai_News_Poster_Cron
         $news_sources = $settings['news_sources'] ?? '';
 
         if (empty($news_sources)) {
-            error_log('AI Browsing Mode Error: News sources is not set.');
             return;
         }
 
@@ -118,25 +110,21 @@ class Auto_Ai_News_Poster_Cron
         if (isset($settings['auto_rotate_categories']) && $settings['auto_rotate_categories'] === 'yes' &&
             isset($settings['mode']) && $settings['mode'] === 'auto') {
             // Folosim rotația automată a categoriilor
-            error_log('🔄 AI Browsing: Using automatic category rotation');
             $category_name = Auto_Ai_News_Poster_Api::get_next_category();
 
             // Găsim ID-ul categoriei pe baza numelui
             $category = get_category_by_slug(sanitize_title($category_name));
             $category_id = $category ? $category->term_id : '';
 
-            error_log('🔄 AI Browsing: Selected category for rotation: ' . $category_name . ' (ID: ' . $category_id . ')');
         } else {
             // Folosim categoria specificată
             $category_id = $settings['specific_search_category'] ?? '';
             if (empty($category_id)) {
-                error_log('AI Browsing Mode Error: No category is set and rotation is disabled.');
                 return;
             }
 
             $category = get_category($category_id);
             $category_name = $category ? $category->name : 'Diverse';
-            error_log('🔄 AI Browsing: Using specific category: ' . $category_name . ' (ID: ' . $category_id . ')');
         }
 
         // Obține ultimele 5 titluri din categoria selectată
