@@ -1140,6 +1140,9 @@ class Auto_Ai_News_Poster_Api
 
         error_log('🖼️ Generated image URL: ' . ($image_url ?: 'NONE'));
 
+        $post_tags = get_the_terms($post_id, 'post_tag');
+        $tags = !empty($post_tags) ? wp_list_pluck($post_tags, 'name') : [];
+
         if (!empty($image_url)) {
             Post_Manager::set_featured_image($post_id, $image_url, $title, $summary);
             update_post_meta($post_id, '_external_image_source', 'Imagine generată AI');
@@ -1158,7 +1161,7 @@ class Auto_Ai_News_Poster_Api
             error_log('✅ Image generated and set successfully for post ID: ' . $post_id);
             wp_send_json_success([
                     'post_id' => $post_id,
-                    'tags' => $tags,
+                    'tags' => $tags, // Variabila $tags va fi definită mai sus
                     'summary' => $summary,
                     'image_url' => $image_url, // Returnăm URL-ul imaginii generate
                     'message' => 'Imaginea a fost generată și setată!.'
