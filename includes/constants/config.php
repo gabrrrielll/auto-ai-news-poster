@@ -30,7 +30,6 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
     $prompt .= "4. Articolul trebuie să fie o reformulare fidelă a textului sursă, nu un sumar sau un comentariu personal. Menține tonul și perspectiva originală.\n";
     $prompt .= "5. **ATENȚIE la conținutul non-articolistic:** Identifică și ignoră blocurile de text care reprezintă liste de servicii, recomandări de produse, reclame, secțiuni de navigare, subsoluri, anteturi sau orice alt conținut care nu face parte direct din articolul principal. Nu le reproduce în textul generat, chiar dacă apar în textul sursă.{$parse_link_instructions}\n";
     $prompt .= "6. **Generare etichete:** Generează între 1 și 3 etichete relevante (cuvinte_cheie) pentru articol. Fiecare cuvânt trebuie să înceapă cu majusculă.\n";
-    $prompt .= "7. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol.\n";
     $prompt .= "8. **Generare meta descriere:** Creează o meta descriere de maximum 160 de caractere, optimizată SEO.\n";
 
     $prompt .= "\n**IMPORTANT - Formatarea articolului:**\n";
@@ -46,7 +45,6 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
     $prompt .= "{\n";
     $prompt .= "  \"titlu\": \"Titlul articolului generat de tine\",\n";
     $prompt .= "  \"continut\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie.\",\n";
-    $prompt .= "  \"imagine_prompt\": \"Descrierea detaliată pentru imaginea reprezentativă.\",\n";
     $prompt .= "  \"meta_descriere\": \"O meta descriere de maximum 160 de caractere, optimizată SEO.\",\n";
     $prompt .= "  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]\n";
     $prompt .= "}\n";
@@ -59,7 +57,7 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
     // Adăugăm textul articolului sursă
     $prompt .= "\n--- Text Sursă pentru Analiză ---\n" . $article_text_content;
 
-    error_log('📢 PROMPT GENERATED FOR AI (PARSE LINK MODE): ' . $prompt);
+    // error_log('📢 PROMPT GENERATED FOR AI (PARSE LINK MODE): ' . $prompt);
 
     return $prompt;
 }
@@ -164,7 +162,6 @@ function generate_prompt($sources, $additional_instructions, $tags): string
     $prompt .= " Structura articolului (poate să includă dacă consideri necesar - una, două sau trei subtitluri semantice de tip H2, H3) și să fie formatată în HTML pentru o structură SEO-friendly astfel încât să aibă și un design plăcut (content).\n";
     $prompt .= "6. Copiază adresele URL complete ale articolelor pe care le-ai parsat și de unde ai extras informația (sources).\n";
     $prompt .= "7. Copiază identic titlurile articolelor pe care le-ai parsat și de unde ai extras informația (source_titles).\n";
-    $prompt .= "8. Copiază adresele URL complete ale imaginilor reprezentative ale articolelor de unde ai extras informația (images).\n";
 
     return $prompt;
 }
@@ -172,24 +169,24 @@ function generate_prompt($sources, $additional_instructions, $tags): string
 // Funcție pentru apelarea API-ului OpenAI
 function call_openai_api($api_key, $prompt)
 {
-    error_log('🔥 CALL_OPENAI_API() STARTED');
+    // error_log('🔥 CALL_OPENAI_API() STARTED');
 
     // Obținem modelul selectat din setări
     $options = get_option('auto_ai_news_poster_settings', []);
     $selected_model = $options['ai_model'] ?? 'gpt-4o';
 
-    error_log('🤖 AI API CONFIGURATION:');
-    error_log('   - Selected model: ' . $selected_model);
-    error_log('   - API URL: ' . URL_API_OPENAI);
-    error_log('   - API Key length: ' . strlen($api_key));
-    error_log('   - Prompt length: ' . strlen($prompt));
+    // error_log('🤖 AI API CONFIGURATION:');
+    // error_log('   - Selected model: ' . $selected_model);
+    // error_log('   - API URL: ' . URL_API_OPENAI);
+    // error_log('   - API Key length: ' . strlen($api_key));
+    // error_log('   - Prompt length: ' . strlen($prompt));
 
     // Preluăm setările pentru a vedea dacă trebuie să generăm etichete
     // $options = get_option('auto_ai_news_poster_settings', []); // Deja preluat mai sus
     // $generate_tags_option = $options['generate_tags'] ?? 'yes'; // Nu mai este necesar aici pentru a condiționa required
 
     // Setăm toate proprietățile ca fiind obligatorii (inclusiv tags)
-    $required_properties = ['title', 'content', 'summary', 'category', 'tags', 'images', 'sources', 'source_titles'];
+    $required_properties = ['title', 'content', 'summary', 'category', 'tags', 'sources', 'source_titles'];
 
     $request_body = [
         'model' => $selected_model,  // Model selectat din setări
@@ -224,14 +221,7 @@ function call_openai_api($api_key, $prompt)
                         ],
                         'tags' => [
                             'type' => 'array',
-                            'description' => 'Etichete relevante pentru articol (opțional)',
-                            'items' => [
-                                'type' => 'string'
-                            ]
-                        ],
-                        'images' => [
-                            'type' => 'array',
-                            'description' => 'URL-urile imaginilor relevante din articolele sursă',
+                            'description' => 'Etichete relevante pentru articol',
                             'items' => [
                                 'type' => 'string'
                             ]
@@ -259,10 +249,10 @@ function call_openai_api($api_key, $prompt)
         'max_completion_tokens' => 128000,
     ];
 
-    error_log('   - Request Body Size: ' . strlen(json_encode($request_body)) . ' bytes');
+    // error_log('   - Request Body Size: ' . strlen(json_encode($request_body)) . ' bytes');
 
-    error_log('📤 REQUEST BODY TO OPENAI:');
-    error_log('   - JSON: ' . json_encode($request_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    // error_log('📤 REQUEST BODY TO OPENAI:');
+    // error_log('   - JSON: ' . json_encode($request_body, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
     $response = wp_remote_post(URL_API_OPENAI, [
         'headers' => [
@@ -273,13 +263,13 @@ function call_openai_api($api_key, $prompt)
         'timeout' => 300, // Mărit timeout-ul la 300 de secunde (5 minute)
     ]);
 
-    error_log('📥 OPENAI API RESPONSE:');
+    // error_log('📥 OPENAI API RESPONSE:');
     if (is_wp_error($response)) {
-        error_log('❌ WP Error: ' . $response->get_error_message());
+        // error_log('❌ WP Error: ' . $response->get_error_message());
     } else {
-        error_log('✅ Response status: ' . wp_remote_retrieve_response_code($response));
-        error_log('📄 Response headers (full): ' . print_r(wp_remote_retrieve_headers($response), true));
-        error_log('💬 Response body (full): ' . wp_remote_retrieve_body($response));
+        // error_log('✅ Response status: ' . wp_remote_retrieve_response_code($response));
+        // error_log('📄 Response headers (full): ' . print_r(wp_remote_retrieve_headers($response), true));
+        // error_log('💬 Response body (full): ' . wp_remote_retrieve_body($response));
     }
 
     return $response;

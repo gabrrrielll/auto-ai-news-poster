@@ -426,11 +426,12 @@ class Auto_Ai_News_Poster_Api
 
         // --- Generate Image if enabled ---
         if (isset($options['generate_image']) && $options['generate_image'] === 'yes') {
-            if (!empty($article_data['imagine_prompt'])) {
-                error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id . ' using AI-generated prompt.');
-                self::generate_image_for_article($new_post_id, $article_data['imagine_prompt']);
+            $prompt_for_dalle = !empty($post_data['post_excerpt']) ? $post_data['post_excerpt'] : wp_trim_words($post_data['post_content'], 100, '...');
+            if (!empty($prompt_for_dalle)) {
+                error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id . ' using article summary/content.');
+                self::generate_image_for_article($new_post_id, $prompt_for_dalle);
             } else {
-                error_log('⚠️ Image generation enabled, but no imagine_prompt found in AI response for post ID: ' . $new_post_id);
+                error_log('⚠️ Image generation enabled, but no summary/content available for DALL-E prompt for post ID: ' . $new_post_id);
             }
         } else {
             error_log('🖼️ Auto-image generation is disabled in settings for post ID: ' . $new_post_id);
@@ -582,11 +583,10 @@ class Auto_Ai_News_Poster_Api
         update_post_meta($new_post_id, '_generation_mode', 'ai_browsing');
 
         // Generăm imaginea dacă este activată opțiunea
-        if (!empty($article_data['imagine_prompt']) && isset($options['generate_image']) && $options['generate_image'] === 'yes') {
-            error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id . ' using custom prompt.');
-            // Aici ar trebui să apelăm o funcție care generează imaginea folosind promptul custom
-            // Momentan, funcția existentă se bazează pe conținutul postării, o vom folosi pe aceea
-            self::generate_image_for_article($new_post_id);
+        $prompt_for_dalle_browsing = !empty($article_data['meta_descriere']) ? $article_data['meta_descriere'] : wp_trim_words($article_data['continut'], 100, '...');
+        if (!empty($prompt_for_dalle_browsing) && isset($options['generate_image']) && $options['generate_image'] === 'yes') {
+            error_log('🖼️ Auto-generating image for post ID: ' . $new_post_id . ' using AI-generated meta_descriere/content.');
+            self::generate_image_for_article($new_post_id, $prompt_for_dalle_browsing);
         }
     }
 
@@ -725,10 +725,6 @@ class Auto_Ai_News_Poster_Api
                                 'type' => 'string',
                                 'description' => 'Conținutul complet al articolului generat'
                             ],
-                            'imagine_prompt' => [
-                                'type' => 'string',
-                                'description' => 'Prompt pentru generarea imaginii reprezentative'
-                            ],
                             'meta_descriere' => [
                                 'type' => 'string',
                                 'description' => 'Meta descriere SEO de maximum 160 de caractere'
@@ -741,7 +737,7 @@ class Auto_Ai_News_Poster_Api
                                 ]
                             ]
                         ],
-                        'required' => ['titlu', 'continut', 'imagine_prompt', 'meta_descriere', 'cuvinte_cheie'],
+                        'required' => ['titlu', 'continut', 'meta_descriere', 'cuvinte_cheie'],
                         'additionalProperties' => false
                     ]
                 ]
@@ -854,10 +850,6 @@ class Auto_Ai_News_Poster_Api
                                 'type' => 'string',
                                 'description' => 'Conținutul complet al articolului generat'
                             ],
-                            'imagine_prompt' => [
-                                'type' => 'string',
-                                'description' => 'Prompt pentru generarea imaginii reprezentative'
-                            ],
                             'meta_descriere' => [
                                 'type' => 'string',
                                 'description' => 'Meta descriere SEO de maximum 160 de caractere'
@@ -870,7 +862,7 @@ class Auto_Ai_News_Poster_Api
                                 ]
                             ]
                         ],
-                        'required' => ['titlu', 'continut', 'imagine_prompt', 'meta_descriere', 'cuvinte_cheie'],
+                        'required' => ['titlu', 'continut', 'meta_descriere', 'cuvinte_cheie'],
                         'additionalProperties' => false
                     ]
                 ]
@@ -972,7 +964,7 @@ class Auto_Ai_News_Poster_Api
         $options = get_option('auto_ai_news_poster_settings', []);
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
 
-        $simple_prompt = "Scrie un articol de știri ca un jurnalist profesionist. \r\n\r\nCategoria: {$category_name}\r\n\r\nCerințe:\r\n- Titlu atractiv și descriptiv\r\n- Conținut fluent și natural, fără secțiuni marcate explicit\r\n- NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"\r\n- Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly\r\n- Generează între 1 și 3 etichete relevante (cuvinte_cheie)\r\n- Limbă română\r\n- Stil jurnalistic obiectiv și informativ\r\n\r\nReturnează DOAR acest JSON:\r\n{\r\n  \"titlu\": \"Titlul articolului\",\r\n  \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",\r\n  \"imagine_prompt\": \"Descriere pentru imagine\",\r\n  \"meta_descriere\": \"Meta descriere SEO\",\r\n  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]\r\n}";
+        $simple_prompt = "Scrie un articol de știri ca un jurnalist profesionist. \r\n\r\nCategoria: {$category_name}\r\n\r\nCerințe:\r\n- Titlu atractiv și descriptiv\r\n- Conținut fluent și natural, fără secțiuni marcate explicit\r\n- NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"\r\n- Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly\r\n- Generează între 1 și 3 etichete relevante (cuvinte_cheie)\r\n- Limbă română\r\n- Stil jurnalistic obiectiv și informativ\r\n\r\nReturnează DOAR acest JSON:\r\n{\r\n  \"titlu\": \"Titlul articolului\",\r\n  \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",\r\n  \"meta_descriere\": \"Meta descriere SEO\",\r\n  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]\r\n}";
 
         // Obținem max_length pentru a seta max_completion_tokens
         $max_length = $options['max_length'] ?? 1200;
@@ -997,14 +989,13 @@ class Auto_Ai_News_Poster_Api
                         'properties' => [
                             'titlu' => ['type' => 'string'],
                             'continut' => ['type' => 'string'],
-                            'imagine_prompt' => ['type' => 'string'],
                             'meta_descriere' => ['type' => 'string'],
                             'cuvinte_cheie' => [
                                 'type' => 'array',
                                 'items' => ['type' => 'string']
                             ]
                         ],
-                        'required' => ['titlu', 'continut', 'imagine_prompt', 'meta_descriere', 'cuvinte_cheie'],
+                        'required' => ['titlu', 'continut', 'meta_descriere', 'cuvinte_cheie'],
                         'additionalProperties' => false
                     ]
                 ]
@@ -1082,8 +1073,9 @@ class Auto_Ai_News_Poster_Api
         }
 
         // Use imagine_prompt if provided, otherwise fall back to summary and tags
+        $summary = get_the_excerpt($post_id);
         $prompt_for_dalle = !empty($imagine_prompt) ? $imagine_prompt : (
-            get_the_excerpt($post_id) ?: wp_trim_words($post->post_content, 100, '...') . ' ' . implode(', ', $tags)
+            $summary ?: wp_trim_words($post->post_content, 100, '...')
         );
 
         error_log('📋 Image generation input:');
