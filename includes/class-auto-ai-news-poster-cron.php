@@ -151,6 +151,9 @@ class Auto_Ai_News_Poster_Cron
         // Validate hours and minutes
         $hours = isset($options['cron_interval_hours']) ? (int)$options['cron_interval_hours'] : 1;
         $minutes = isset($options['cron_interval_minutes']) ? (int)$options['cron_interval_minutes'] : 0;
+        // Temporary logs for debugging
+        error_log('CRON INTERVAL DEBUG: Raw options for cron: ' . print_r($options, true));
+        error_log('CRON INTERVAL DEBUG: Hours read: ' . $hours . ', Minutes read: ' . $minutes);
 
         // Ensure valid range for hours and minutes
         if ($hours < 0 || $hours > 24) {
@@ -162,11 +165,13 @@ class Auto_Ai_News_Poster_Cron
 
         // Calculate interval in seconds
         $interval = ($hours * 3600) + ($minutes * 60);
+        error_log('CRON INTERVAL DEBUG: Calculated interval (seconds): ' . $interval);
 
         // Ensure the interval is at least 1 minute
         if ($interval < 60) {
             $interval = 60;
         }
+        error_log('CRON INTERVAL DEBUG: Final interval after min check (seconds): ' . $interval);
 
         // Add custom interval
         $schedules['custom_interval'] = [
