@@ -33,12 +33,23 @@ class Auto_Ai_News_Poster_Cron
 
     public static function reset_cron()
     {
+        error_log('CRON RESET DEBUG: reset_cron() called');
+
         // Dezactivează cronul existent
         wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
+
+        $next_scheduled = wp_next_scheduled('auto_ai_news_poster_cron_hook');
+        error_log('CRON RESET DEBUG: Next scheduled time BEFORE clearing: ' . ($next_scheduled ? date('Y-m-d H:i:s', $next_scheduled) : 'NONE'));
+
         // Reprogramează cronul cu noul interval
         if (!wp_next_scheduled('auto_ai_news_poster_cron_hook')) {
-            wp_schedule_event(time(), 'custom_interval', 'auto_ai_news_poster_cron_hook');
+            $scheduled_time = time();
+            wp_schedule_event($scheduled_time, 'custom_interval', 'auto_ai_news_poster_cron_hook');
+            error_log('CRON RESET DEBUG: Cron rescheduled to: ' . date('Y-m-d H:i:s', $scheduled_time));
         }
+
+        $next_scheduled = wp_next_scheduled('auto_ai_news_poster_cron_hook');
+        error_log('CRON RESET DEBUG: Next scheduled time AFTER reset: ' . ($next_scheduled ? date('Y-m-d H:i:s', $next_scheduled) : 'NONE'));
     }
 
     public static function auto_post()

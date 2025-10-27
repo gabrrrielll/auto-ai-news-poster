@@ -22,6 +22,19 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
 
     $parse_link_instructions = $options['parse_link_ai_instructions'] ?? '';
 
+    // Preluăm categoriile din baza de date și le adăugăm la prompt
+    $categories = get_categories([
+        'orderby' => 'name',
+        'order' => 'ASC',
+        'hide_empty' => false,
+    ]);
+
+    $category_names = [];
+    foreach ($categories as $category) {
+        $category_names[] = $category->name;
+    }
+    $category_list = implode(', ', $category_names);
+
     // Construim prompt-ul de bază
     $prompt = "Ești un jurnalist expert care scrie pentru o publicație de știri din România. Sarcina ta este să scrii un articol de știri complet nou și original în limba română, bazat pe informațiile din textul furnizat. Urmează aceste reguli stricte:\n";
     $prompt .= "1. **NU menționa niciodată** 'textul furnizat', 'articolul sursă', 'materialul analizat' sau orice expresie similară. Articolul trebuie să fie independent și să nu facă referire la sursa ta de informație.\n";
@@ -31,6 +44,7 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
     $prompt .= "5. **ATENȚIE la conținutul non-articolistic:** Identifică și ignoră blocurile de text care reprezintă liste de servicii, recomandări de produse, reclame, secțiuni de navigare, subsoluri, anteturi sau orice alt conținut care nu face parte direct din articolul principal. Nu le reproduce în textul generat, chiar dacă apar în textul sursă.{$parse_link_instructions}\n";
     $prompt .= "6. **Generare etichete:** Generează între 1 și 3 etichete relevante (cuvinte_cheie) pentru articol. Fiecare cuvânt trebuie să înceapă cu majusculă.\n";
     $prompt .= "7. **Generare meta descriere:** Creează o meta descriere de maximum 160 de caractere, optimizată SEO.\n";
+    $prompt .= "8. **Selectare categorie:** Analizează conținutul articolului și selectează categoria care se potrivește cel mai bine din următoarea listă de categorii existente pe site: '$category_list'. IMPORTANT: Nu inventa o categorie nouă, trebuie să alegi DOAR una dintre categoriile din listă.\n";
 
     $prompt .= "\n**IMPORTANT - Formatarea articolului:**\n";
     $prompt .= "- NU folosi titluri explicite precum \"Introducere\", \"Dezvoltare\", \"Concluzie\" în text\n";
@@ -43,10 +57,11 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
     $prompt .= "\n**Format de răspuns OBLIGATORIU:**\n";
     $prompt .= "Răspunsul tău trebuie să fie EXACT UN OBIECT JSON, fără niciun alt text înainte sau după. NU adăuga mai multe obiecte JSON. NU adăuga text explicativ. Structura trebuie să fie următoarea:\n";
     $prompt .= "{\n";
-    $prompt .= "  \"titlu\": \"Titlul articolului generat de tine\",\n";
-    $prompt .= "  \"continut\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie.\",\n";
-    $prompt .= "  \"meta_descriere\": \"O meta descriere de maximum 160 de caractere, optimizată SEO.\",\n";
-    $prompt .= "  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]\n";
+    $prompt .= "  \"title\": \"Titlul articolului generat de tine\",\n";
+    $prompt .= "  \"content\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie.\",\n";
+    $prompt .= "  \"summary\": \"O meta descriere de maximum 160 de caractere, optimizată SEO.\",\n";
+    $prompt .= "  \"tags\": [\"intre_1_si_3_etichete_relevante\"],\n";
+    $prompt .= "  \"category\": \"Numele categoriei selectate din lista de categorii existente\"\n";
     $prompt .= "}\n";
 
     // Adăugăm instrucțiuni suplimentare, dacă există (pentru apelurile manuale unde se poate adăuga text extra)

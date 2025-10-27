@@ -360,7 +360,16 @@ class Auto_Ai_News_Poster_Api
 
         // --- Set Taxonomies and Meta ---
         Post_Manager::set_post_tags($new_post_id, $article_data['tags'] ?? []);
-        Post_Manager::set_post_categories($new_post_id, $article_data['category'] ?? '');
+
+        // Set category based on AI's choice from the parsed content
+        if (!empty($article_data['category'])) {
+            $category_name = $article_data['category'];
+            $category_id = get_cat_ID($category_name);
+            if ($category_id) {
+                wp_set_post_categories($new_post_id, [$category_id]);
+            }
+        }
+
         update_post_meta($new_post_id, '_custom_source_url', $source_link);
 
 
