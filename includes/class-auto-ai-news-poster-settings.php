@@ -45,24 +45,26 @@ class Auto_Ai_News_Poster_Settings
             <div class="wrap">
                 <!-- Header modern -->
                 <div class="auto-ai-news-poster-header">
-                    <h1>🤖 Auto AI News Poster</h1>
-                    <p>Configurează-ți plugin-ul pentru publicarea automată de articole AI</p>
+                    <div class="header-content">
+                        <div class="header-text">
+                            <h1>🤖 Auto AI News Poster</h1>
+                            <p>Configurează-ți plugin-ul pentru publicarea automată de articole AI</p>
+                        </div>
+                        <div class="header-actions">
+                            <button type="submit" form="auto-ai-news-poster-settings-form" class="btn btn-primary btn-save-header">
+                                💾 Salvează setările
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Formular modern -->
                 <div class="auto-ai-news-poster-form">
-                    <form method="post" action="options.php">
+                    <form method="post" action="options.php" id="auto-ai-news-poster-settings-form">
                         <?php
                         settings_fields('auto_ai_news_poster_settings_group');
         do_settings_sections('auto_ai_news_poster_settings_page');
         ?>
-                        
-                        <!-- Buton de salvare modern -->
-                        <div style="text-align: center; margin-top: 40px; padding-top: 30px; border-top: 2px solid var(--border-color);">
-                            <button type="submit" class="btn btn-primary">
-                                💾 Salvează setările
-                            </button>
-                        </div>
                     </form>
                 </div>
             </div>
