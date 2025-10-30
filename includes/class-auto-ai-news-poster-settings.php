@@ -134,6 +134,24 @@ class Auto_Ai_News_Poster_Settings
             'main_section'
         );
 
+        // Selectare provider AI (OpenAI / Gemini)
+        add_settings_field(
+            'ai_provider',
+            'Provider AI folosit',
+            [self::class, 'ai_provider_callback'],
+            'auto_ai_news_poster_settings_page',
+            'main_section'
+        );
+
+        // Câmpuri pentru Gemini (Google)
+        add_settings_field(
+            'gemini_api_key',
+            'Cheia API Gemini (Google)',
+            [self::class, 'gemini_api_key_callback'],
+            'auto_ai_news_poster_settings_page',
+            'main_section'
+        );
+
         // Camp pentru setarea intervalului cron
         add_settings_field(
             'cron_interval',
@@ -1058,10 +1076,10 @@ class Auto_Ai_News_Poster_Settings
 
         // Lista checkbox-urilor care trebuie să fie setate explicit
         $checkbox_fields = ['auto_rotate_categories', 'generate_image',
-                           'run_until_bulk_exhausted', 'generate_tags'];
+                           'run_until_bulk_exhausted', 'generate_tags', 'use_openai', 'use_gemini'];
 
         // Câmpurile de tip <select> care trebuie validate
-        $select_fields = ['mode', 'status', 'specific_search_category', 'author_name', 'article_length_option', 'use_external_images', 'ai_model', 'generation_mode'];
+        $select_fields = ['mode', 'status', 'specific_search_category', 'author_name', 'article_length_option', 'use_external_images', 'ai_model', 'generation_mode', 'gemini_model'];
 
         // Setăm toate checkbox-urile la 'no' înainte de a procesa input-ul
         foreach ($checkbox_fields as $checkbox_field) {
@@ -1090,7 +1108,89 @@ class Auto_Ai_News_Poster_Settings
             }
         }
 
+        // Mutual exclusivity pentru provider: dacă ambele sunt yes, păstrăm doar OpenAI implicit
+        if (($sanitized['use_openai'] ?? 'no') === 'yes' && ($sanitized['use_gemini'] ?? 'no') === 'yes') {
+            $sanitized['use_gemini'] = 'no';
+        }
+
         return $sanitized;
+    }
+
+    // Provider AI
+    public static function ai_provider_callback()
+    {
+        $options = get_option('auto_ai_news_poster_settings');
+        $use_openai = $options['use_openai'] ?? 'yes';
+        $use_gemini = $options['use_gemini'] ?? 'no';
+        ?>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">🤝</div>
+                <h3 class="settings-card-title">Selectare Provider AI</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <div class="custom-checkbox">
+                        <input type="checkbox" id="use_openai" name="auto_ai_news_poster_settings[use_openai]" value="yes" <?php checked($use_openai, 'yes'); ?>>
+                        <label for="use_openai" class="checkbox-label">Folosește OpenAI</label>
+                    </div>
+                    <div class="custom-checkbox" style="margin-top:8px;">
+                        <input type="checkbox" id="use_gemini" name="auto_ai_news_poster_settings[use_gemini]" value="yes" <?php checked($use_gemini, 'yes'); ?>>
+                        <label for="use_gemini" class="checkbox-label">Folosește Gemini (Google)</label>
+                    </div>
+                    <small class="form-text text-muted">Selecție exclusivă: când bifezi unul, celălalt se debifează automat.</small>
+                </div>
+            </div>
+        </div>
+        <script>
+            (function(){
+                const openai = document.getElementById('use_openai');
+                const gemini = document.getElementById('use_gemini');
+                function syncExclusive(changed){
+                    if (changed === openai && openai.checked) { gemini.checked = false; }
+                    if (changed === gemini && gemini.checked) { openai.checked = false; }
+                }
+                if (openai && gemini) {
+                    openai.addEventListener('change', ()=>syncExclusive(openai));
+                    gemini.addEventListener('change', ()=>syncExclusive(gemini));
+                }
+            })();
+        </script>
+        <?php
+    }
+
+    // Configurare API Gemini
+    public static function gemini_api_key_callback()
+    {
+        $options = get_option('auto_ai_news_poster_settings');
+        $api_key = $options['gemini_api_key'] ?? '';
+        $selected_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
+        ?>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">🔑</div>
+                <h3 class="settings-card-title">Configurare API Gemini</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <label for="gemini_api_key" class="control-label">Cheia API Gemini</label>
+                    <input type="password" name="auto_ai_news_poster_settings[gemini_api_key]" value="<?php echo esc_attr($api_key); ?>" class="form-control" id="gemini_api_key" placeholder="AIza...">
+                    <span class="info-icon tooltip">
+                        i
+                        <span class="tooltiptext">Creează o cheie pe console.cloud.google.com - Generative Language API</span>
+                    </span>
+                </div>
+                <div class="form-group">
+                    <label for="gemini_model" class="control-label">Model Gemini</label>
+                    <select name="auto_ai_news_poster_settings[gemini_model]" class="form-control" id="gemini_model">
+                        <option value="gemini-1.5-pro" <?php selected($selected_model, 'gemini-1.5-pro'); ?>>Gemini 1.5 Pro</option>
+                        <option value="gemini-1.5-flash" <?php selected($selected_model, 'gemini-1.5-flash'); ?>>Gemini 1.5 Flash</option>
+                        <option value="gemini-1.0-pro" <?php selected($selected_model, 'gemini-1.0-pro'); ?>>Gemini 1.0 Pro</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <?php
     }
 
 }

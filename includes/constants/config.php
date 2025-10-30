@@ -204,6 +204,21 @@ function generate_simple_text_prompt(string $system_message, string $user_messag
 }
 
 // Funcție pentru apelarea API-ului OpenAI
+// Provider selection wrapper for text generation
+function call_ai_api($prompt)
+{
+    $options = get_option('auto_ai_news_poster_settings');
+    $use_gemini = isset($options['use_gemini']) && $options['use_gemini'] === 'yes';
+    if ($use_gemini) {
+        $api_key = $options['gemini_api_key'] ?? '';
+        $model = $options['gemini_model'] ?? 'gemini-1.5-pro';
+        return call_gemini_api($api_key, $model, $prompt);
+    }
+    // default to OpenAI
+    $api_key = $options['chatgpt_api_key'] ?? '';
+    return call_openai_api($api_key, $prompt);
+}
+
 function call_openai_api($api_key, $prompt)
 {
 
@@ -295,6 +310,14 @@ function call_openai_api($api_key, $prompt)
 
 
 // Funcție pentru apelarea API-ului OpenAI folosind DALL-E 3 pentru generarea de imagini
+// Image generation wrapper (currently uses OpenAI even when Gemini is selected)
+function call_ai_image_api($dalle_prompt, $feedback = '')
+{
+    $options = get_option('auto_ai_news_poster_settings');
+    $api_key = $options['chatgpt_api_key'] ?? '';
+    return call_openai_image_api($api_key, $dalle_prompt, $feedback);
+}
+
 function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
 {
 
@@ -326,4 +349,47 @@ function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
     ]);
 
     return $response;
+}
+
+// --- Google Gemini (text) ---
+function call_gemini_api($api_key, $model, $prompt)
+{
+    if (empty($api_key)) {
+        return ['error' => 'Missing Gemini API key'];
+    }
+
+    $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . urlencode($model) . ':generateContent?key=' . urlencode($api_key);
+
+    $body = [
+        'contents' => [
+            [
+                'parts' => [ ['text' => $prompt] ]
+            ]
+        ]
+    ];
+
+    $response = wp_remote_post($endpoint, [
+        'headers' => [ 'Content-Type' => 'application/json' ],
+        'body' => wp_json_encode($body),
+        'timeout' => 60,
+    ]);
+
+    if (is_wp_error($response)) {
+        return ['error' => $response->get_error_message()];
+    }
+
+    $code = wp_remote_retrieve_response_code($response);
+    $raw = wp_remote_retrieve_body($response);
+    $data = json_decode($raw, true);
+
+    if ($code !== 200) {
+        return ['error' => 'Gemini HTTP ' . $code, 'raw' => $raw];
+    }
+
+    // Extract text
+    $text = '';
+    if (!empty($data['candidates'][0]['content']['parts'][0]['text'])) {
+        $text = $data['candidates'][0]['content']['parts'][0]['text'];
+    }
+    return [ 'choices' => [ ['message' => ['content' => $text]] ] ];
 }
