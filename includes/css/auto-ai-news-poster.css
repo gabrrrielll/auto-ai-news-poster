@@ -33,7 +33,7 @@
     background: var(--card-background);
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-lg);
-    overflow: hidden;
+    overflow: visible;
 }
 
 .auto-ai-news-poster-header {
