@@ -125,29 +125,11 @@ class Auto_Ai_News_Poster_Settings
             'main_section'
         );
 
-        // Camp pentru cheia API OpenAI
+        // Configurare API AI (OpenAI + Gemini + selector provider)
         add_settings_field(
-            'chatgpt_api_key',
-            'Cheia API ChatGPT',
+            'ai_providers',
+            'Configurare API AI',
             [self::class, 'chatgpt_api_key_callback'],
-            'auto_ai_news_poster_settings_page',
-            'main_section'
-        );
-
-        // Selectare provider AI (OpenAI / Gemini)
-        add_settings_field(
-            'ai_provider',
-            'Provider AI folosit',
-            [self::class, 'ai_provider_callback'],
-            'auto_ai_news_poster_settings_page',
-            'main_section'
-        );
-
-        // Câmpuri pentru Gemini (Google)
-        add_settings_field(
-            'gemini_api_key',
-            'Cheia API Gemini (Google)',
-            [self::class, 'gemini_api_key_callback'],
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
@@ -392,6 +374,10 @@ class Auto_Ai_News_Poster_Settings
         $options = get_option('auto_ai_news_poster_settings');
         $api_key = $options['chatgpt_api_key'] ?? '';
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
+        $use_openai = $options['use_openai'] ?? (empty($api_key) ? 'no' : 'yes');
+        $use_gemini = $options['use_gemini'] ?? 'no';
+        $gemini_api_key = $options['gemini_api_key'] ?? '';
+        $gemini_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
 
         // Obținem lista de modele disponibile
         $available_models = self::get_cached_openai_models($api_key);
@@ -402,84 +388,126 @@ class Auto_Ai_News_Poster_Settings
         <div class="settings-card">
             <div class="settings-card-header">
                 <div class="settings-card-icon">🔑</div>
-                <h3 class="settings-card-title">Configurare API</h3>
+                <h3 class="settings-card-title">Configurare API AI</h3>
             </div>
             <div class="settings-card-content">
-                <div class="form-group">
-                    <label for="chatgpt_api_key" class="control-label">Cheia API OpenAI</label>
-                    <input type="password" name="auto_ai_news_poster_settings[chatgpt_api_key]"
-                           value="<?php echo esc_attr($api_key); ?>" class="form-control"
-                           id="chatgpt_api_key" placeholder="sk-..." onchange="refreshModelsList()">
-                    <span class="info-icon tooltip">
-                        i
-                        <span class="tooltiptext">Pentru a obține cheia API OpenAI, accesați https://platform.openai.com/settings/organization/api-keys</span>
-                    </span>
-                </div>
-                
-                <div class="form-group">
-                    <label for="ai_model" class="control-label">Model AI</label>
-                    <select name="auto_ai_news_poster_settings[ai_model]" class="form-control" id="ai_model">
-                        <?php if (!$has_error && !empty($available_models)): ?>
-                            <optgroup label="🌟 Recomandate">
-                                <?php
-                                $recommended_models = ['gpt-5', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini'];
-                            foreach ($recommended_models as $model_id) {
-                                if (isset($available_models[$model_id])) {
-                                    $model = $available_models[$model_id];
-                                    $description = self::get_model_description($model_id);
-                                    $selected = selected($selected_model, $model_id, false);
-                                    echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
-                                }
-                            }
-                            ?>
-                            </optgroup>
-                            <optgroup label="📊 Toate modelele disponibile">
-                                <?php
-                            foreach ($available_models as $model_id => $model) {
-                                if (!in_array($model_id, $recommended_models)) {
-                                    $description = self::get_model_description($model_id);
-                                    $selected = selected($selected_model, $model_id, false);
-                                    echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
-                                }
-                            }
-                            ?>
-                            </optgroup>
-                        <?php else: ?>
-                            <option value="" disabled>
-                                <?php if ($has_error): ?>
-                                    ❌ Eroare la încărcarea modelelor
-                                <?php else: ?>
-                                    ⏳ Se încarcă modelele...
-                                <?php endif; ?>
-                            </option>
-                        <?php endif; ?>
-                    </select>
-                    
-                    <?php if ($has_error): ?>
-                        <div class="alert alert-danger" style="margin-top: 10px; padding: 10px; background: #fee; border: 1px solid #fcc; border-radius: 4px;">
-                            <strong>❌ Eroare la încărcarea modelelor:</strong><br>
-                            <strong>Motivul:</strong> <?php echo esc_html($error_message); ?><br>
-                            <strong>Tipul erorii:</strong> <?php echo esc_html($error_type); ?><br>
-                            <small>Verificați cheia API și încercați din nou.</small>
+                <div class="form-grid">
+                    <div>
+                        <div class="form-group">
+                            <label for="chatgpt_api_key" class="control-label">Cheia API OpenAI</label>
+                            <input type="password" name="auto_ai_news_poster_settings[chatgpt_api_key]"
+                                   value="<?php echo esc_attr($api_key); ?>" class="form-control"
+                                   id="chatgpt_api_key" placeholder="sk-..." onchange="refreshModelsList()">
+                            <span class="info-icon tooltip">
+                                i
+                                <span class="tooltiptext">Pentru a obține cheia API OpenAI, accesați https://platform.openai.com/settings/organization/api-keys</span>
+                            </span>
                         </div>
-                    <?php endif; ?>
-                    
-                <div class="form-description">
-                    <?php if (!$has_error && !empty($available_models)): ?>
-                        ✅ Lista de modele este actualizată dinamic din API-ul OpenAI. 
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshModelsList()" style="margin-left: 10px;">
-                            🔄 Actualizează lista
-                        </button>
-                    <?php elseif ($has_error): ?>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshModelsList()">
-                            🔄 Încearcă din nou
-                        </button>
-                    <?php else: ?>
-                        Introduceți cheia API pentru a vedea toate modelele disponibile.
-                    <?php endif; ?>
+
+                        <div class="form-group">
+                            <label for="ai_model" class="control-label">Model OpenAI</label>
+                            <select name="auto_ai_news_poster_settings[ai_model]" class="form-control" id="ai_model">
+                                <?php if (!$has_error && !empty($available_models)): ?>
+                                    <optgroup label="🌟 Recomandate">
+                                        <?php
+                                        $recommended_models = ['gpt-5', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini'];
+                                foreach ($recommended_models as $model_id) {
+                                    if (isset($available_models[$model_id])) {
+                                        $model = $available_models[$model_id];
+                                        $description = self::get_model_description($model_id);
+                                        $selected = selected($selected_model, $model_id, false);
+                                        echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
+                                    }
+                                }
+                                ?>
+                                    </optgroup>
+                                    <optgroup label="📊 Toate modelele disponibile">
+                                        <?php
+                                foreach ($available_models as $model_id => $model) {
+                                    if (!in_array($model_id, $recommended_models)) {
+                                        $description = self::get_model_description($model_id);
+                                        $selected = selected($selected_model, $model_id, false);
+                                        echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
+                                    }
+                                }
+                                ?>
+                                    </optgroup>
+                                <?php else: ?>
+                                    <option value="" disabled>
+                                        <?php if ($has_error): ?>
+                                            ❌ Eroare la încărcarea modelelor
+                                        <?php else: ?>
+                                            ⏳ Se încarcă modelele...
+                                        <?php endif; ?>
+                                    </option>
+                                <?php endif; ?>
+                            </select>
+
+                            <?php if ($has_error): ?>
+                                <div class="alert alert-danger" style="margin-top: 10px; padding: 10px; background: #fee; border: 1px solid #fcc; border-radius: 4px;">
+                                    <strong>❌ Eroare la încărcarea modelelor:</strong><br>
+                                    <strong>Motivul:</strong> <?php echo esc_html($error_message); ?><br>
+                                    <strong>Tipul erorii:</strong> <?php echo esc_html($error_type); ?><br>
+                                    <small>Verificați cheia API și încercați din nou.</small>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="form-description">
+                                <?php if (!$has_error && !empty($available_models)): ?>
+                                    ✅ Lista de modele este actualizată dinamic din API-ul OpenAI.
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshModelsList()" style="margin-left: 10px;">
+                                        🔄 Actualizează lista
+                                    </button>
+                                <?php elseif ($has_error): ?>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshModelsList()">
+                                        🔄 Încearcă din nou
+                                    </button>
+                                <?php else: ?>
+                                    Introduceți cheia API pentru a vedea toate modelele disponibile.
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="form-group">
+                            <label for="gemini_api_key" class="control-label">Cheia API Gemini (Google)</label>
+                            <input type="password" name="auto_ai_news_poster_settings[gemini_api_key]"
+                                   value="<?php echo esc_attr($gemini_api_key); ?>" class="form-control"
+                                   id="gemini_api_key" placeholder="AIza...">
+                            <span class="info-icon tooltip">
+                                i
+                                <span class="tooltiptext">Creează o cheie pe console.cloud.google.com, activând Generative Language API.</span>
+                            </span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="gemini_model" class="control-label">Model Gemini</label>
+                            <select name="auto_ai_news_poster_settings[gemini_model]" class="form-control" id="gemini_model">
+                                <option value="gemini-1.5-pro" <?php selected($gemini_model, 'gemini-1.5-pro'); ?>>Gemini 1.5 Pro</option>
+                                <option value="gemini-1.5-flash" <?php selected($gemini_model, 'gemini-1.5-flash'); ?>>Gemini 1.5 Flash</option>
+                                <option value="gemini-1.0-pro" <?php selected($gemini_model, 'gemini-1.0-pro'); ?>>Gemini 1.0 Pro</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label class="control-label">Selectare Provider AI</label>
+                    <div class="custom-checkbox">
+                        <input type="checkbox" id="use_openai" name="auto_ai_news_poster_settings[use_openai]" value="yes" <?php checked($use_openai, 'yes'); ?>>
+                        <label for="use_openai" class="checkbox-label">Folosește OpenAI</label>
+                    </div>
+                    <div class="custom-checkbox" style="margin-top: 8px;">
+                        <input type="checkbox" id="use_gemini" name="auto_ai_news_poster_settings[use_gemini]" value="yes" <?php checked($use_gemini, 'yes'); ?>>
+                        <label for="use_gemini" class="checkbox-label">Folosește Gemini (Google)</label>
+                    </div>
+                    <small class="form-text text-muted">Selecție exclusivă: când bifezi unul, celălalt se debifează automat.</small>
+                    <div id="ai-provider-warning" class="notice notice-error" style="display:none; margin-top:10px;">
+                        <p style="margin:0;"></p>
+                    </div>
                 </div>
-                
+
                 <div class="api-instructions">
                     <h4 class="api-instructions-toggle" onclick="toggleApiInstructions()">
                         📋 Cum să obțineți cheia API OpenAI: <span class="toggle-icon">▼</span>
@@ -493,7 +521,7 @@ class Auto_Ai_News_Poster_Settings
                             <li><strong>Copiați</strong> cheia generată (începe cu "sk-")</li>
                             <li><strong>Lipiți</strong> cheia în câmpul de mai sus</li>
                         </ol>
-                        
+
                         <div class="api-warning">
                             <strong>⚠️ Important:</strong>
                             <ul>
@@ -566,6 +594,72 @@ class Auto_Ai_News_Poster_Settings
                 refreshBtn.disabled = false;
             });
         }
+
+        (function(){
+            const openaiCheckbox = document.getElementById('use_openai');
+            const geminiCheckbox = document.getElementById('use_gemini');
+            const openaiKeyInput = document.getElementById('chatgpt_api_key');
+            const geminiKeyInput = document.getElementById('gemini_api_key');
+            const warningContainer = document.getElementById('ai-provider-warning');
+            const warningText = warningContainer ? warningContainer.querySelector('p') : null;
+
+            function showWarning(message) {
+                if (!warningContainer || !warningText) {
+                    if (message) {
+                        alert(message);
+                    }
+                    return;
+                }
+                if (message) {
+                    warningText.textContent = message;
+                    warningContainer.style.display = 'block';
+                } else {
+                    warningText.textContent = '';
+                    warningContainer.style.display = 'none';
+                }
+            }
+
+            function handleCheckboxChange(changed) {
+                if (changed === openaiCheckbox && openaiCheckbox.checked) {
+                    if (!openaiKeyInput.value.trim()) {
+                        openaiCheckbox.checked = false;
+                        showWarning('Nu poți selecta acest provider deoarece încă nu ai setat cheia API OpenAI.');
+                        return;
+                    }
+                    geminiCheckbox.checked = false;
+                    showWarning('');
+                }
+                if (changed === geminiCheckbox && geminiCheckbox.checked) {
+                    if (!geminiKeyInput.value.trim()) {
+                        geminiCheckbox.checked = false;
+                        showWarning('Nu poți selecta acest provider deoarece încă nu ai setat cheia API Gemini.');
+                        return;
+                    }
+                    openaiCheckbox.checked = false;
+                    showWarning('');
+                }
+            }
+
+            if (openaiCheckbox && geminiCheckbox) {
+                openaiCheckbox.addEventListener('change', () => handleCheckboxChange(openaiCheckbox));
+                geminiCheckbox.addEventListener('change', () => handleCheckboxChange(geminiCheckbox));
+            }
+
+            [openaiKeyInput, geminiKeyInput].forEach(input => {
+                if (!input) { return; }
+                input.addEventListener('input', () => {
+                    showWarning('');
+                });
+            });
+
+            // Dacă la încărcare e bifat un provider fără cheie, debifăm automat
+            if (openaiCheckbox && openaiCheckbox.checked && !openaiKeyInput.value.trim()) {
+                openaiCheckbox.checked = false;
+            }
+            if (geminiCheckbox && geminiCheckbox.checked && !geminiKeyInput.value.trim()) {
+                geminiCheckbox.checked = false;
+            }
+        })();
         </script>
         <?php
     }
@@ -1108,89 +1202,20 @@ class Auto_Ai_News_Poster_Settings
             }
         }
 
+        // If provider selected but key missing, for safety reset selection
+        if ((($sanitized['use_openai'] ?? 'no') === 'yes') && empty($sanitized['chatgpt_api_key'])) {
+            $sanitized['use_openai'] = 'no';
+        }
+        if ((($sanitized['use_gemini'] ?? 'no') === 'yes') && empty($sanitized['gemini_api_key'])) {
+            $sanitized['use_gemini'] = 'no';
+        }
+
         // Mutual exclusivity pentru provider: dacă ambele sunt yes, păstrăm doar OpenAI implicit
         if (($sanitized['use_openai'] ?? 'no') === 'yes' && ($sanitized['use_gemini'] ?? 'no') === 'yes') {
             $sanitized['use_gemini'] = 'no';
         }
 
         return $sanitized;
-    }
-
-    // Provider AI
-    public static function ai_provider_callback()
-    {
-        $options = get_option('auto_ai_news_poster_settings');
-        $use_openai = $options['use_openai'] ?? 'yes';
-        $use_gemini = $options['use_gemini'] ?? 'no';
-        ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">🤝</div>
-                <h3 class="settings-card-title">Selectare Provider AI</h3>
-            </div>
-            <div class="settings-card-content">
-                <div class="form-group">
-                    <div class="custom-checkbox">
-                        <input type="checkbox" id="use_openai" name="auto_ai_news_poster_settings[use_openai]" value="yes" <?php checked($use_openai, 'yes'); ?>>
-                        <label for="use_openai" class="checkbox-label">Folosește OpenAI</label>
-                    </div>
-                    <div class="custom-checkbox" style="margin-top:8px;">
-                        <input type="checkbox" id="use_gemini" name="auto_ai_news_poster_settings[use_gemini]" value="yes" <?php checked($use_gemini, 'yes'); ?>>
-                        <label for="use_gemini" class="checkbox-label">Folosește Gemini (Google)</label>
-                    </div>
-                    <small class="form-text text-muted">Selecție exclusivă: când bifezi unul, celălalt se debifează automat.</small>
-                </div>
-            </div>
-        </div>
-        <script>
-            (function(){
-                const openai = document.getElementById('use_openai');
-                const gemini = document.getElementById('use_gemini');
-                function syncExclusive(changed){
-                    if (changed === openai && openai.checked) { gemini.checked = false; }
-                    if (changed === gemini && gemini.checked) { openai.checked = false; }
-                }
-                if (openai && gemini) {
-                    openai.addEventListener('change', ()=>syncExclusive(openai));
-                    gemini.addEventListener('change', ()=>syncExclusive(gemini));
-                }
-            })();
-        </script>
-        <?php
-    }
-
-    // Configurare API Gemini
-    public static function gemini_api_key_callback()
-    {
-        $options = get_option('auto_ai_news_poster_settings');
-        $api_key = $options['gemini_api_key'] ?? '';
-        $selected_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
-        ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">🔑</div>
-                <h3 class="settings-card-title">Configurare API Gemini</h3>
-            </div>
-            <div class="settings-card-content">
-                <div class="form-group">
-                    <label for="gemini_api_key" class="control-label">Cheia API Gemini</label>
-                    <input type="password" name="auto_ai_news_poster_settings[gemini_api_key]" value="<?php echo esc_attr($api_key); ?>" class="form-control" id="gemini_api_key" placeholder="AIza...">
-                    <span class="info-icon tooltip">
-                        i
-                        <span class="tooltiptext">Creează o cheie pe console.cloud.google.com - Generative Language API</span>
-                    </span>
-                </div>
-                <div class="form-group">
-                    <label for="gemini_model" class="control-label">Model Gemini</label>
-                    <select name="auto_ai_news_poster_settings[gemini_model]" class="form-control" id="gemini_model">
-                        <option value="gemini-1.5-pro" <?php selected($selected_model, 'gemini-1.5-pro'); ?>>Gemini 1.5 Pro</option>
-                        <option value="gemini-1.5-flash" <?php selected($selected_model, 'gemini-1.5-flash'); ?>>Gemini 1.5 Flash</option>
-                        <option value="gemini-1.0-pro" <?php selected($selected_model, 'gemini-1.0-pro'); ?>>Gemini 1.0 Pro</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-        <?php
     }
 
 }
