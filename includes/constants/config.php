@@ -233,6 +233,10 @@ function call_ai_api($prompt)
     if ($use_gemini) {
         $api_key = $options['gemini_api_key'] ?? '';
         $model = $options['gemini_model'] ?? 'gemini-1.5-pro';
+        // Dacă modelul nu are prefixul "models/", îl adăugăm pentru compatibilitate cu API-ul
+        if (strpos($model, 'models/') !== 0) {
+            $model = 'models/' . $model;
+        }
         return call_gemini_api($api_key, $model, $prompt);
     }
     // default to OpenAI

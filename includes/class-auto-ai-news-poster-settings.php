@@ -15,6 +15,7 @@ class Auto_Ai_News_Poster_Settings
 
         // Handler AJAX pentru actualizarea listei de modele
         add_action('wp_ajax_refresh_openai_models', [self::class, 'ajax_refresh_openai_models']);
+        add_action('wp_ajax_refresh_gemini_models', [self::class, 'ajax_refresh_gemini_models']);
     }
 
 
@@ -379,11 +380,17 @@ class Auto_Ai_News_Poster_Settings
         $gemini_api_key = $options['gemini_api_key'] ?? '';
         $gemini_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
 
-        // Obținem lista de modele disponibile
+        // Obținem lista de modele disponibile pentru OpenAI
         $available_models = self::get_cached_openai_models($api_key);
         $has_error = isset($available_models['error']);
         $error_message = $has_error ? $available_models['error'] : '';
         $error_type = $has_error ? $available_models['error_type'] : '';
+
+        // Obținem lista de modele disponibile pentru Gemini
+        $available_gemini_models = self::get_cached_gemini_models($gemini_api_key);
+        $has_gemini_error = isset($available_gemini_models['error']);
+        $gemini_error_message = $has_gemini_error ? $available_gemini_models['error'] : '';
+        $gemini_error_type = $has_gemini_error ? $available_gemini_models['error_type'] : '';
         ?>
         <div class="settings-card">
             <div class="settings-card-header">
@@ -474,7 +481,7 @@ class Auto_Ai_News_Poster_Settings
                             <label for="gemini_api_key" class="control-label">Cheia API Gemini (Google)</label>
                             <input type="password" name="auto_ai_news_poster_settings[gemini_api_key]"
                                    value="<?php echo esc_attr($gemini_api_key); ?>" class="form-control"
-                                   id="gemini_api_key" placeholder="AIza...">
+                                   id="gemini_api_key" placeholder="AIza..." onchange="refreshGeminiModelsList()">
                             <span class="info-icon tooltip">
                                 i
                                 <span class="tooltiptext">Creează o cheie pe console.cloud.google.com, activând Generative Language API.</span>
@@ -484,20 +491,71 @@ class Auto_Ai_News_Poster_Settings
                         <div class="form-group">
                             <label for="gemini_model" class="control-label">Model Gemini</label>
                             <select name="auto_ai_news_poster_settings[gemini_model]" class="form-control" id="gemini_model">
-                                <optgroup label="🌟 Recomandate">
-                                    <option value="gemini-2.0-flash-exp" <?php selected($gemini_model, 'gemini-2.0-flash-exp'); ?>>Gemini 2.0 Flash (Experimental)</option>
-                                    <option value="gemini-1.5-pro-latest" <?php selected($gemini_model, 'gemini-1.5-pro-latest'); ?>>Gemini 1.5 Pro (Latest)</option>
-                                    <option value="gemini-1.5-flash-latest" <?php selected($gemini_model, 'gemini-1.5-flash-latest'); ?>>Gemini 1.5 Flash (Latest)</option>
-                                </optgroup>
-                                <optgroup label="📊 Modele Stabile">
-                                    <option value="gemini-1.5-pro" <?php selected($gemini_model, 'gemini-1.5-pro'); ?>>Gemini 1.5 Pro</option>
-                                    <option value="gemini-1.5-flash" <?php selected($gemini_model, 'gemini-1.5-flash'); ?>>Gemini 1.5 Flash</option>
-                                    <option value="gemini-1.0-pro" <?php selected($gemini_model, 'gemini-1.0-pro'); ?>>Gemini 1.0 Pro</option>
-                                </optgroup>
-                                <optgroup label="🔬 Experimentale">
-                                    <option value="gemini-exp-1206" <?php selected($gemini_model, 'gemini-exp-1206'); ?>>Gemini Experimental (1206)</option>
-                                </optgroup>
+                                <?php if (!$has_gemini_error && !empty($available_gemini_models)): ?>
+                                    <optgroup label="🌟 Recomandate">
+                                        <?php
+                                        $recommended_gemini_models = ['gemini-2.0-flash-exp', 'gemini-1.5-pro-latest', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-1.5-flash'];
+                                        foreach ($recommended_gemini_models as $model_id) {
+                                            if (isset($available_gemini_models[$model_id])) {
+                                                $model = $available_gemini_models[$model_id];
+                                                $description = self::get_gemini_model_description($model_id);
+                                                $selected = selected($gemini_model, $model_id, false);
+                                                echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
+                                            }
+                                        }
+                                        ?>
+                                    </optgroup>
+                                    <optgroup label="📊 Toate modelele disponibile">
+                                        <?php
+                                        foreach ($available_gemini_models as $model_id => $model) {
+                                            if (!in_array($model_id, $recommended_gemini_models)) {
+                                                $description = self::get_gemini_model_description($model_id);
+                                                $selected = selected($gemini_model, $model_id, false);
+                                                echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
+                                            }
+                                        }
+                                        ?>
+                                    </optgroup>
+                                <?php else: ?>
+                                    <option value="" disabled>
+                                        <?php if ($has_gemini_error): ?>
+                                            ❌ Eroare la încărcarea modelelor
+                                        <?php else: ?>
+                                            ⏳ Se încarcă modelele...
+                                        <?php endif; ?>
+                                    </option>
+                                    <!-- Fallback la modele statice -->
+                                    <optgroup label="📊 Modele Stabile (Fallback)">
+                                        <option value="gemini-1.5-pro" <?php selected($gemini_model, 'gemini-1.5-pro'); ?>>Gemini 1.5 Pro</option>
+                                        <option value="gemini-1.5-flash" <?php selected($gemini_model, 'gemini-1.5-flash'); ?>>Gemini 1.5 Flash</option>
+                                        <option value="gemini-1.0-pro" <?php selected($gemini_model, 'gemini-1.0-pro'); ?>>Gemini 1.0 Pro</option>
+                                    </optgroup>
+                                <?php endif; ?>
                             </select>
+
+                            <?php if ($has_gemini_error): ?>
+                                <div class="alert alert-danger" style="margin-top: 10px; padding: 10px; background: #fee; border: 1px solid #fcc; border-radius: 4px;">
+                                    <strong>❌ Eroare la încărcarea modelelor:</strong><br>
+                                    <strong>Motivul:</strong> <?php echo esc_html($gemini_error_message); ?><br>
+                                    <strong>Tipul erorii:</strong> <?php echo esc_html($gemini_error_type); ?><br>
+                                    <small>Verificați cheia API și încercați din nou.</small>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="form-description">
+                                <?php if (!$has_gemini_error && !empty($available_gemini_models)): ?>
+                                    ✅ Lista de modele este actualizată dinamic din API-ul Gemini.
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshGeminiModelsList()" style="margin-left: 10px;">
+                                        🔄 Actualizează lista
+                                    </button>
+                                <?php elseif ($has_gemini_error): ?>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshGeminiModelsList()">
+                                        🔄 Încearcă din nou
+                                    </button>
+                                <?php else: ?>
+                                    Introduceți cheia API pentru a vedea toate modelele disponibile.
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -602,6 +660,56 @@ class Auto_Ai_News_Poster_Settings
             .finally(() => {
                 refreshBtn.innerHTML = originalText;
                 refreshBtn.disabled = false;
+            });
+        }
+
+        function refreshGeminiModelsList() {
+            const apiKey = document.getElementById('gemini_api_key').value;
+            const modelSelect = document.getElementById('gemini_model');
+            
+            if (!apiKey) {
+                alert('Vă rugăm să introduceți mai întâi cheia API Gemini.');
+                return;
+            }
+            
+            // Afișăm indicator de încărcare
+            const refreshBtn = document.querySelector('button[onclick="refreshGeminiModelsList()"]');
+            const originalText = refreshBtn ? refreshBtn.innerHTML : '';
+            if (refreshBtn) {
+                refreshBtn.innerHTML = '⏳ Se încarcă...';
+                refreshBtn.disabled = true;
+            }
+            
+            // Facem apel AJAX pentru a actualiza lista
+            fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'refresh_gemini_models',
+                    api_key: apiKey,
+                    nonce: '<?php echo wp_create_nonce('refresh_gemini_models_nonce'); ?>'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reîncărcăm pagina pentru a afișa noile modele
+                    location.reload();
+                } else {
+                    alert('Eroare la actualizarea listei de modele Gemini: ' + (data.data || 'Eroare necunoscută'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Eroare la actualizarea listei de modele Gemini.');
+            })
+            .finally(() => {
+                if (refreshBtn) {
+                    refreshBtn.innerHTML = originalText;
+                    refreshBtn.disabled = false;
+                }
             });
         }
 
@@ -1132,6 +1240,171 @@ class Auto_Ai_News_Poster_Settings
         return $descriptions[$model_id];
     }
 
+    // Funcție pentru obținerea modelelor Gemini cu cache
+    public static function get_cached_gemini_models($api_key)
+    {
+        // Verificăm cache-ul (24 ore)
+        $cached_models = get_transient('gemini_models_cache');
+
+        if ($cached_models !== false && !empty($cached_models)) {
+            return $cached_models;
+        }
+
+        // Dacă nu avem API key, returnăm eroare
+        if (empty($api_key)) {
+            return ['error' => 'API key is required', 'error_type' => 'missing_api_key'];
+        }
+
+        // Facem apel API pentru a obține modelele
+        $models = self::get_available_gemini_models($api_key);
+
+        if ($models && !empty($models) && !isset($models['error'])) {
+            // Salvăm în cache pentru 24 ore
+            set_transient('gemini_models_cache', $models, 24 * HOUR_IN_SECONDS);
+            return $models;
+        }
+
+        // Returnăm eroare dacă API-ul nu răspunde
+        return $models ?: ['error' => 'Failed to load models from Gemini API', 'error_type' => 'api_error'];
+    }
+
+    // Funcție pentru apelarea API-ului Gemini pentru modele
+    public static function get_available_gemini_models($api_key)
+    {
+        $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models?key=' . urlencode($api_key);
+
+        $response = wp_remote_get($endpoint, [
+            'headers' => [
+                'Content-Type' => 'application/json',
+            ],
+            'timeout' => 30,
+        ]);
+
+        if (is_wp_error($response)) {
+            return [
+                'error' => 'Network error: ' . $response->get_error_message(),
+                'error_type' => 'network_error'
+            ];
+        }
+
+        $response_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+
+        // Verificăm codul de răspuns
+        if ($response_code !== 200) {
+            $error_message = 'API Error (HTTP ' . $response_code . ')';
+            if (isset($data['error']['message'])) {
+                $error_message .= ': ' . $data['error']['message'];
+            }
+            return [
+                'error' => $error_message,
+                'error_type' => 'api_error',
+                'response_code' => $response_code
+            ];
+        }
+
+        if (!isset($data['models']) || !is_array($data['models'])) {
+            return [
+                'error' => 'Invalid API response format',
+                'error_type' => 'invalid_response'
+            ];
+        }
+
+        // Filtrează doar modelele Gemini relevante (exclude Imagen și alte modele non-text)
+        $filtered_models = self::filter_gemini_models($data['models']);
+
+        if (empty($filtered_models)) {
+            return [
+                'error' => 'No Gemini models found in API response',
+                'error_type' => 'no_models'
+            ];
+        }
+
+        // Organizează modelele într-un array asociativ
+        // Folosim numele modelului fără prefixul "models/" ca cheie pentru compatibilitate
+        $models_array = [];
+        foreach ($filtered_models as $model) {
+            $model_name = $model['name'] ?? '';
+            // Eliminăm prefixul "models/" pentru a păstra compatibilitatea cu setările existente
+            $clean_name = str_replace('models/', '', $model_name);
+            $models_array[$clean_name] = $model;
+        }
+
+        return $models_array;
+    }
+
+    // Funcție pentru filtrarea modelelor Gemini
+    public static function filter_gemini_models($models)
+    {
+        return array_filter($models, function ($model) {
+            $name = $model['name'] ?? '';
+            // Include doar modelele Gemini (nu Imagen sau alte modele)
+            // Modelele Gemini au formatul: models/gemini-X.X-XXX
+            return strpos($name, 'models/gemini-') === 0 && 
+                   strpos($name, 'imagen') === false &&
+                   strpos($name, 'embedding') === false;
+        });
+    }
+
+    // Funcție pentru descrierile modelelor Gemini
+    public static function get_gemini_model_description($model_id)
+    {
+        // Extragem numele modelului din formatul "models/gemini-1.5-pro" sau "gemini-1.5-pro"
+        $clean_id = str_replace('models/', '', $model_id);
+        
+        $descriptions = [
+            // Gemini 2.0 Series
+            'gemini-2.0-flash-exp' => 'Gemini 2.0 Flash (Experimental) - Cel mai nou model experimental',
+            'models/gemini-2.0-flash-exp' => 'Gemini 2.0 Flash (Experimental) - Cel mai nou model experimental',
+            
+            // Gemini 1.5 Series (Latest)
+            'gemini-1.5-pro-latest' => 'Gemini 1.5 Pro (Latest) - Versiunea cea mai recentă',
+            'models/gemini-1.5-pro-latest' => 'Gemini 1.5 Pro (Latest) - Versiunea cea mai recentă',
+            'gemini-1.5-flash-latest' => 'Gemini 1.5 Flash (Latest) - Versiunea cea mai recentă, rapidă',
+            'models/gemini-1.5-flash-latest' => 'Gemini 1.5 Flash (Latest) - Versiunea cea mai recentă, rapidă',
+            
+            // Gemini 1.5 Series (Stable)
+            'gemini-1.5-pro' => 'Gemini 1.5 Pro - Model avansat pentru task-uri complexe',
+            'models/gemini-1.5-pro' => 'Gemini 1.5 Pro - Model avansat pentru task-uri complexe',
+            'gemini-1.5-flash' => 'Gemini 1.5 Flash - Model rapid și eficient',
+            'models/gemini-1.5-flash' => 'Gemini 1.5 Flash - Model rapid și eficient',
+            
+            // Gemini 1.0 Series
+            'gemini-1.0-pro' => 'Gemini 1.0 Pro - Model clasic, performanță stabilă',
+            'models/gemini-1.0-pro' => 'Gemini 1.0 Pro - Model clasic, performanță stabilă',
+            
+            // Experimental
+            'gemini-exp-1206' => 'Gemini Experimental (1206) - Model experimental',
+            'models/gemini-exp-1206' => 'Gemini Experimental (1206) - Model experimental',
+        ];
+
+        // Dacă avem descriere specifică, o returnăm
+        if (isset($descriptions[$model_id])) {
+            return $descriptions[$model_id];
+        }
+        if (isset($descriptions[$clean_id])) {
+            return $descriptions[$clean_id];
+        }
+
+        // Generăm descriere dinamică pe baza numelui modelului
+        if (strpos($clean_id, 'gemini-2.0') === 0) {
+            return $clean_id . ' - Model Gemini 2.0 de ultimă generație';
+        } elseif (strpos($clean_id, 'gemini-1.5') === 0) {
+            if (strpos($clean_id, 'flash') !== false) {
+                return $clean_id . ' - Model Gemini 1.5 Flash rapid';
+            } else {
+                return $clean_id . ' - Model Gemini 1.5 Pro avansat';
+            }
+        } elseif (strpos($clean_id, 'gemini-1.0') === 0) {
+            return $clean_id . ' - Model Gemini 1.0 clasic';
+        } elseif (strpos($clean_id, 'gemini-exp') === 0 || strpos($clean_id, 'exp') !== false) {
+            return $clean_id . ' - Model experimental Gemini';
+        } else {
+            return $clean_id;
+        }
+    }
+
     // Handler AJAX pentru actualizarea listei de modele
     public static function ajax_refresh_openai_models()
     {
@@ -1166,6 +1439,44 @@ class Auto_Ai_News_Poster_Settings
             wp_send_json_success('Models list updated successfully');
         } else {
             wp_send_json_error('Failed to fetch models from OpenAI API');
+        }
+    }
+
+    // Handler AJAX pentru actualizarea listei de modele Gemini
+    public static function ajax_refresh_gemini_models()
+    {
+        // Verificăm nonce-ul
+        if (!wp_verify_nonce($_POST['nonce'], 'refresh_gemini_models_nonce')) {
+            wp_send_json_error('Nonce verification failed');
+            return;
+        }
+
+        // Verificăm permisiunile
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+            return;
+        }
+
+        $api_key = sanitize_text_field($_POST['api_key']);
+
+        if (empty($api_key)) {
+            wp_send_json_error('API key is required');
+            return;
+        }
+
+        // Ștergem cache-ul existent
+        delete_transient('gemini_models_cache');
+
+        // Obținem noile modele
+        $models = self::get_available_gemini_models($api_key);
+
+        if ($models && !empty($models) && !isset($models['error'])) {
+            // Salvăm în cache pentru 24 ore
+            set_transient('gemini_models_cache', $models, 24 * HOUR_IN_SECONDS);
+            wp_send_json_success('Gemini models list updated successfully');
+        } else {
+            $error_msg = isset($models['error']) ? $models['error'] : 'Failed to fetch models from Gemini API';
+            wp_send_json_error($error_msg);
         }
     }
 
