@@ -504,9 +504,9 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     }
 
     // Mapăm modelele la ID-urile corecte din API
-    // Notă: Verificăm documentația pentru numele exacte ale modelelor
+    // Notă: Din eroarea API, modelul real pare să fie gemini-2.5-flash-preview-image
     $model_mapping = [
-        'gemini-2.5-flash-image' => 'gemini-2.5-flash-image', // Numele corect din documentație
+        'gemini-2.5-flash-image' => 'gemini-2.5-flash-preview-image', // Numele corect din API (conform erorii)
         'gemini-3-pro-image-preview' => 'gemini-3-pro-image-preview',
         'imagen-4' => 'imagen-4',
     ];
