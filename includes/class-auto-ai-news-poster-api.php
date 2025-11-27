@@ -1091,14 +1091,46 @@ class Auto_Ai_News_Poster_Api
         $post_tags = get_the_terms($post_id, 'post_tag');
         $tags = !empty($post_tags) ? wp_list_pluck($post_tags, 'name') : [];
 
-        error_log('Setting featured image...');
+        // Trimitem răspunsul AJAX imediat pentru a evita timeout-ul
+        // Procesarea imaginii va continua în background
+        error_log('Sending JSON success response immediately...');
+        
+        // Trimitem răspunsul manual pentru a putea continua procesarea
+        status_header(200);
+        header('Content-Type: application/json; charset=utf-8');
+        nocache_headers();
+        
+        $response_data = [
+            'success' => true,
+            'data' => [
+                'post_id' => $post_id,
+                'tags' => $tags,
+                'summary' => $summary,
+                'image_url' => $image_url,
+                'message' => 'Imaginea a fost generată! Se procesează...'
+            ]
+        ];
+        
+        echo wp_json_encode($response_data);
+        
+        // Trimitem răspunsul imediat clientului și continuăm procesarea în background
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        } else {
+            // Pentru alte configurații, închidem output buffering
+            if (ob_get_level()) {
+                ob_end_flush();
+            }
+            flush();
+        }
+        
+        error_log('Setting featured image in background...');
         try {
             $set_image_result = Post_Manager::set_featured_image($post_id, $image_url, $title, $summary);
             error_log('set_featured_image result: ' . (is_wp_error($set_image_result) ? 'ERROR: ' . $set_image_result->get_error_message() : 'SUCCESS'));
             
             if (is_wp_error($set_image_result)) {
                 error_log('Error setting featured image: ' . $set_image_result->get_error_message());
-                wp_send_json_error(['message' => 'Eroare la setarea imaginii: ' . $set_image_result->get_error_message()]);
                 return;
             }
             
@@ -1112,25 +1144,15 @@ class Auto_Ai_News_Poster_Api
 
                 if (is_wp_error($update_result)) {
                     error_log('Error updating post: ' . $update_result->get_error_message());
-                    wp_send_json_error(['message' => $update_result->get_error_message()]);
                     return;
                 }
                 error_log('Post status updated successfully');
             }
 
-            error_log('Sending JSON success response...');
-            wp_send_json_success([
-                    'post_id' => $post_id,
-                    'tags' => $tags,
-                    'summary' => $summary,
-                    'image_url' => $image_url,
-                    'message' => 'Imaginea a fost generată și setată!'
-                ]);
-            error_log('JSON response sent successfully');
+            error_log('Image processing completed successfully');
         } catch (Exception $e) {
             error_log('Exception caught: ' . $e->getMessage());
             error_log('Stack trace: ' . $e->getTraceAsString());
-            wp_send_json_error(['message' => 'Eroare la procesarea imaginii: ' . $e->getMessage()]);
         }
     }
 
