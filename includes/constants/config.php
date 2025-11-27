@@ -560,8 +560,6 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     }
     
     error_log('Request body: ' . wp_json_encode($body));
-    
-    error_log('Request body: ' . wp_json_encode($body));
 
     // Folosim header-ul x-goog-api-key în loc de query parameter
     $response = wp_remote_post($endpoint, [
