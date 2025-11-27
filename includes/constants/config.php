@@ -582,7 +582,7 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
                 ]
             ]
         ],
-        'config' => [
+        'generationConfig' => [
             'imageConfig' => $imageConfig
         ]
     ];
