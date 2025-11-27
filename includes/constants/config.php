@@ -518,32 +518,23 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
         $final_prompt .= "\n Utilizează următorul feedback de la imaginea generată anterior pentru a îmbunătăți imaginea: " . $feedback;
     }
 
-    // Pentru Generative Language API, încercăm diferite abordări
-    // Notă: Modelele de imagini Gemini pot necesita abordări diferite
-    
-    // Încercăm mai întâi cu gemini-2.0-flash-exp care ar putea suporta generarea de imagini
-    // Dacă modelul selectat este pentru Imagen, ar trebui să folosim Vertex AI
-    if ($model === 'imagen-3' || $model === 'imagen-3-generate-001' || $model === 'imagen-3-fast-generate-001') {
-        error_log('ERROR: Imagen models require Vertex AI API');
-        return new WP_Error('model_requires_vertex_ai', 
-            'Modelele Imagen necesită Vertex AI API. Te rugăm să configurezi Vertex AI în setări.');
-    }
-    
-    // Pentru modelele Gemini Flash Image, încercăm cu generateContent
-    // Mapăm la modelul corect
+    // Mapăm modelele la endpoint-urile corecte pentru Generative Language API
     $model_mapping = [
-        'gemini-2.5-flash-image-exp' => 'gemini-2.0-flash-exp',
-        'gemini-3-pro-image-preview' => 'gemini-2.0-flash-exp',
+        'gemini-2.5-flash-image-exp' => 'gemini-2.5-flash-image',
+        'gemini-3-pro-image-preview' => 'gemini-3-pro-image-preview',
+        'imagen-3' => 'gemini-2.5-flash-image', // Fallback pentru Imagen 3
+        'imagen-3-generate-001' => 'gemini-2.5-flash-image', // Fallback
+        'imagen-3-fast-generate-001' => 'gemini-2.5-flash-image', // Fallback
     ];
     
-    $api_model = $model_mapping[$model] ?? 'gemini-2.0-flash-exp';
-    error_log('Mapped API model: ' . $api_model);
+    $api_model = $model_mapping[$model] ?? 'gemini-2.5-flash-image';
+    error_log('Mapped API model: ' . $api_model . ' (from ' . $model . ')');
     
-    // Încercăm cu generateContent fără responseModalities (poate returnează imagini în răspuns)
-    $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . urlencode($api_model) . ':generateContent?key=' . urlencode($api_key);
-    error_log('Using endpoint: ' . str_replace($api_key, '***HIDDEN***', $endpoint));
+    // Endpoint-ul corect pentru Generative Language API
+    $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . urlencode($api_model) . ':generateContent';
+    error_log('Using endpoint: ' . $endpoint);
     
-    // Încercăm fără responseModalities - poate modelul returnează imagini automat
+    // Construim body-ul conform documentației
     $body = [
         'contents' => [
             [
@@ -553,15 +544,31 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
                     ]
                 ]
             ]
+        ],
+        'generationConfig' => [
+            'responseModalities' => ['IMAGE'], // Vrem doar imagini
+            'imageConfig' => [
+                'aspectRatio' => '16:9',
+                'imageSize' => '2K' // Opțiuni: 1K, 2K, 4K (doar pentru gemini-3-pro-image-preview)
+            ]
         ]
     ];
     
-    error_log('Trying without responseModalities first...');
+    // Pentru gemini-3-pro-image-preview, putem folosi rezoluții mai mari
+    if ($api_model === 'gemini-3-pro-image-preview') {
+        $body['generationConfig']['imageConfig']['imageSize'] = '2K'; // Sau '4K' pentru rezoluție maximă
+    }
+    
+    error_log('Request body: ' . wp_json_encode($body));
     
     error_log('Request body: ' . wp_json_encode($body));
 
+    // Folosim header-ul x-goog-api-key în loc de query parameter
     $response = wp_remote_post($endpoint, [
-        'headers' => [ 'Content-Type' => 'application/json' ],
+        'headers' => [
+            'x-goog-api-key' => $api_key,
+            'Content-Type' => 'application/json'
+        ],
         'body' => wp_json_encode($body),
         'timeout' => 120, // Timeout mai mare pentru generarea de imagini
     ]);

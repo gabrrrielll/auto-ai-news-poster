@@ -606,12 +606,18 @@ class Auto_Ai_News_Poster_Settings
                         </div>
 
                         <div class="form-group">
-                            <label for="imagen_model" class="control-label">Model Imagen</label>
+                            <label for="imagen_model" class="control-label">Model Gemini pentru Imagini</label>
                             <select name="auto_ai_news_poster_settings[imagen_model]" class="form-control" id="imagen_model">
-                                <option value="imagen-3-generate-001" <?php selected($imagen_model, 'imagen-3-generate-001'); ?>>Imagen 3 Generate 001 - Calitate înaltă</option>
-                                <option value="imagen-3-fast-generate-001" <?php selected($imagen_model, 'imagen-3-fast-generate-001'); ?>>Imagen 3 Fast Generate 001 - Generare rapidă</option>
+                                <optgroup label="🌟 Recomandate (Generative Language API)">
+                                    <option value="gemini-2.5-flash-image-exp" <?php selected($imagen_model, 'gemini-2.5-flash-image-exp'); ?>>Gemini 2.5 Flash Image - Generare rapidă</option>
+                                    <option value="gemini-3-pro-image-preview" <?php selected($imagen_model, 'gemini-3-pro-image-preview'); ?>>Gemini 3 Pro Image Preview - Rezoluții mari (2K/4K)</option>
+                                </optgroup>
+                                <optgroup label="📊 Vertex AI (necesită configurare mai sus)">
+                                    <option value="imagen-3-generate-001" <?php selected($imagen_model, 'imagen-3-generate-001'); ?>>Imagen 3 Generate 001 - Calitate înaltă (Vertex AI)</option>
+                                    <option value="imagen-3-fast-generate-001" <?php selected($imagen_model, 'imagen-3-fast-generate-001'); ?>>Imagen 3 Fast Generate 001 - Generare rapidă (Vertex AI)</option>
+                                </optgroup>
                             </select>
-                            <small class="form-text text-muted">Modelul Imagen pentru generarea de imagini prin Vertex AI.</small>
+                            <small class="form-text text-muted">Selectează modelul pentru generarea de imagini. Modelele Gemini 2.5/3 folosesc Generative Language API, Imagen 3 necesită Vertex AI.</small>
                         </div>
                     </div>
                 </div>
