@@ -372,6 +372,11 @@ class Auto_Ai_News_Poster_Api
 
         update_post_meta($new_post_id, '_custom_source_url', $source_link);
 
+        // Actualizează timpul ultimului articol publicat pentru cron (doar pentru procesarea în masă)
+        if ($is_bulk_processing && !$is_ajax_call) {
+            update_option('auto_ai_news_poster_last_post_time', time());
+            error_log('API: Last post time updated for post ID: ' . $new_post_id);
+        }
 
         // --- Generate Image if enabled ---
         if (isset($options['generate_image']) && $options['generate_image'] === 'yes') {
@@ -505,6 +510,14 @@ class Auto_Ai_News_Poster_Api
         $tags = $article_data['cuvinte_cheie'] ?? [];
         Post_Manager::set_post_tags($new_post_id, $tags);
         update_post_meta($new_post_id, '_generation_mode', 'ai_browsing');
+
+        // Actualizează timpul ultimului articol publicat pentru cron (doar pentru procesarea automată)
+        // Verificăm dacă suntem în modul automat prin verificarea setărilor
+        $settings = get_option('auto_ai_news_poster_settings', []);
+        if (isset($settings['mode']) && $settings['mode'] === 'auto') {
+            update_option('auto_ai_news_poster_last_post_time', time());
+            error_log('API: Last post time updated for AI browsing post ID: ' . $new_post_id);
+        }
 
         // Generăm imaginea dacă este activată opțiunea
         $prompt_for_dalle_browsing = !empty($article_data['meta_descriere']) ? $article_data['meta_descriere'] : wp_trim_words($article_data['continut'], 100, '...');
