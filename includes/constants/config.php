@@ -710,3 +710,250 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     ];
 }
 
+// --- Vertex AI Imagen API ---
+function call_vertex_ai_imagen_api($project_id, $location, $service_account_json, $model, $prompt, $feedback = '')
+{
+    error_log('=== VERTEX AI IMAGEN API CALL START ===');
+    error_log('Project ID: ' . $project_id);
+    error_log('Location: ' . $location);
+    error_log('Model: ' . $model);
+    error_log('Prompt length: ' . strlen($prompt));
+    
+    if (empty($project_id) || empty($service_account_json)) {
+        error_log('ERROR: Missing Vertex AI configuration');
+        return new WP_Error('missing_vertex_config', 'Vertex AI Project ID și Service Account JSON sunt necesare.');
+    }
+
+    // Adăugăm feedback-ul la prompt dacă există
+    $final_prompt = $prompt;
+    
+    // Dacă prompt-ul este JSON, încercăm să extragem conținutul text
+    $decoded_prompt = json_decode($prompt, true);
+    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded_prompt)) {
+        if (!empty($decoded_prompt['content'])) {
+            $final_prompt = $decoded_prompt['content'];
+        } elseif (!empty($decoded_prompt['prompt'])) {
+            $final_prompt = $decoded_prompt['prompt'];
+        } elseif (!empty($decoded_prompt['text'])) {
+            $final_prompt = $decoded_prompt['text'];
+        }
+        error_log('Extracted text from JSON prompt, length: ' . strlen($final_prompt));
+    }
+    
+    if (!empty($feedback)) {
+        $final_prompt .= "\n Utilizează următorul feedback de la imaginea generată anterior pentru a îmbunătăți imaginea: " . $feedback;
+    }
+
+    // Obținem access token din Service Account JSON
+    $service_account = json_decode($service_account_json, true);
+    if (json_last_error() !== JSON_ERROR_NONE || !isset($service_account['private_key'])) {
+        error_log('ERROR: Invalid Service Account JSON');
+        return new WP_Error('invalid_service_account', 'Service Account JSON invalid sau incomplet.');
+    }
+
+    // Generăm access token
+    $access_token = get_vertex_ai_access_token($service_account);
+    if (is_wp_error($access_token)) {
+        error_log('ERROR: Failed to get access token: ' . $access_token->get_error_message());
+        return $access_token;
+    }
+    
+    error_log('Access token obtained successfully');
+
+    // Endpoint Vertex AI pentru Imagen
+    $endpoint = sprintf(
+        'https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:predict',
+        $location,
+        $project_id,
+        $location,
+        $model
+    );
+    
+    error_log('Endpoint: ' . $endpoint);
+
+    $body = [
+        'instances' => [
+            [
+                'prompt' => $final_prompt
+            ]
+        ],
+        'parameters' => [
+            'sampleCount' => 1,
+            'aspectRatio' => '16:9',
+            'safetyFilterLevel' => 'BLOCK_SOME',
+            'personGeneration' => 'ALLOW_ALL'
+        ]
+    ];
+    
+    error_log('Request body: ' . wp_json_encode($body));
+
+    $response = wp_remote_post($endpoint, [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $access_token,
+            'Content-Type' => 'application/json',
+        ],
+        'body' => wp_json_encode($body),
+        'timeout' => 120,
+    ]);
+
+    if (is_wp_error($response)) {
+        error_log('ERROR: wp_remote_post failed: ' . $response->get_error_message());
+        return $response;
+    }
+
+    $code = wp_remote_retrieve_response_code($response);
+    $raw = wp_remote_retrieve_body($response);
+    $data = json_decode($raw, true);
+    
+    error_log('Response HTTP code: ' . $code);
+    error_log('Response body (first 500 chars): ' . substr($raw, 0, 500));
+
+    if ($code !== 200) {
+        $error_msg = 'Vertex AI API Error (HTTP ' . $code . ')';
+        if (isset($data['error']['message'])) {
+            $error_msg .= ': ' . $data['error']['message'];
+            error_log('Error message: ' . $data['error']['message']);
+        }
+        if (isset($data['error']['status'])) {
+            error_log('Error status: ' . $data['error']['status']);
+        }
+        error_log('=== VERTEX AI IMAGEN API CALL END (ERROR) ===');
+        return new WP_Error('vertex_api_error', $error_msg);
+    }
+
+    // Extragem imaginea din răspuns Vertex AI
+    $image_url = '';
+    
+    if (!empty($data['predictions']) && !empty($data['predictions'][0])) {
+        $prediction = $data['predictions'][0];
+        error_log('Found prediction, keys: ' . implode(', ', array_keys($prediction)));
+        
+        // Verificăm dacă avem bytesBase64Encoded
+        if (!empty($prediction['bytesBase64Encoded'])) {
+            error_log('Found bytesBase64Encoded, length: ' . strlen($prediction['bytesBase64Encoded']));
+            $image_base64 = $prediction['bytesBase64Encoded'];
+            
+            // Salvăm base64 într-un fișier temporar
+            $upload_dir = wp_upload_dir();
+            $temp_dir = $upload_dir['basedir'] . '/temp-gemini-images';
+            
+            if (!file_exists($temp_dir)) {
+                wp_mkdir_p($temp_dir);
+            }
+            
+            $temp_filename = 'imagen-' . time() . '-' . wp_generate_password(8, false) . '.png';
+            $temp_filepath = $temp_dir . '/' . $temp_filename;
+            
+            $image_data = base64_decode($image_base64);
+            if ($image_data !== false && file_put_contents($temp_filepath, $image_data)) {
+                $image_url = $upload_dir['baseurl'] . '/temp-gemini-images/' . $temp_filename;
+                error_log('Image saved successfully. URL: ' . $image_url);
+            } else {
+                error_log('ERROR: Failed to save image file');
+            }
+        }
+    }
+
+    if (empty($image_url)) {
+        error_log('ERROR: No image URL extracted from Vertex AI response');
+        error_log('Response structure: ' . wp_json_encode($data));
+        error_log('=== VERTEX AI IMAGEN API CALL END (NO IMAGE) ===');
+        return new WP_Error('no_image', 'No image found in Vertex AI response. Response: ' . wp_json_encode($data));
+    }
+
+    error_log('Success: Image URL extracted: ' . $image_url);
+    error_log('=== VERTEX AI IMAGEN API CALL END (SUCCESS) ===');
+    
+    return [
+        'data' => [
+            [
+                'url' => $image_url
+            ]
+        ]
+    ];
+}
+
+// Funcție helper pentru obținerea access token din Service Account
+function get_vertex_ai_access_token($service_account)
+{
+    // Verificăm dacă avem cache pentru token
+    $cache_key = 'vertex_ai_token_' . md5($service_account['client_email'] ?? '');
+    $cached_token = get_transient($cache_key);
+    
+    if ($cached_token !== false) {
+        error_log('Using cached access token');
+        return $cached_token;
+    }
+
+    error_log('Generating new access token from Service Account');
+
+    // Construim JWT claim
+    $now = time();
+    $jwt_header = [
+        'alg' => 'RS256',
+        'typ' => 'JWT'
+    ];
+
+    $jwt_claim = [
+        'iss' => $service_account['client_email'],
+        'scope' => 'https://www.googleapis.com/auth/cloud-platform',
+        'aud' => 'https://oauth2.googleapis.com/token',
+        'exp' => $now + 3600,
+        'iat' => $now
+    ];
+
+    // Encodăm header și claim
+    $base64_header = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode(json_encode($jwt_header)));
+    $base64_claim = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode(json_encode($jwt_claim)));
+
+    // Semnăm JWT
+    $signature_input = $base64_header . '.' . $base64_claim;
+    
+    // Folosim OpenSSL pentru semnătură
+    $private_key = openssl_pkey_get_private($service_account['private_key']);
+    if (!$private_key) {
+        error_log('ERROR: Invalid private key in Service Account');
+        return new WP_Error('invalid_private_key', 'Invalid private key in Service Account');
+    }
+
+    openssl_sign($signature_input, $signature, $private_key, OPENSSL_ALGO_SHA256);
+    openssl_free_key($private_key);
+
+    $base64_signature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
+    $jwt = $signature_input . '.' . $base64_signature;
+
+    // Obținem access token
+    $token_response = wp_remote_post('https://oauth2.googleapis.com/token', [
+        'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
+        'body' => [
+            'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+            'assertion' => $jwt
+        ],
+        'timeout' => 30,
+    ]);
+
+    if (is_wp_error($token_response)) {
+        error_log('ERROR: Failed to get token from OAuth2: ' . $token_response->get_error_message());
+        return $token_response;
+    }
+
+    $token_code = wp_remote_retrieve_response_code($token_response);
+    $token_body = wp_remote_retrieve_body($token_response);
+    $token_data = json_decode($token_body, true);
+
+    if ($token_code !== 200 || empty($token_data['access_token'])) {
+        error_log('ERROR: Token response code: ' . $token_code);
+        error_log('Token response: ' . $token_body);
+        return new WP_Error('token_error', 'Failed to obtain access token: ' . ($token_data['error_description'] ?? 'Unknown error'));
+    }
+
+    $access_token = $token_data['access_token'];
+    $expires_in = isset($token_data['expires_in']) ? intval($token_data['expires_in']) - 60 : 3540; // -60 sec pentru buffer
+
+    // Salvăm în cache
+    set_transient($cache_key, $access_token, $expires_in);
+    error_log('Access token cached for ' . $expires_in . ' seconds');
+
+    return $access_token;
+}
+
