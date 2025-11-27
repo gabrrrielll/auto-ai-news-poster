@@ -504,14 +504,21 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     }
 
     // Mapăm modelele la ID-urile corecte din API
+    // Notă: Verificăm documentația pentru numele exacte ale modelelor
     $model_mapping = [
-        'gemini-2.5-flash-image' => 'gemini-2.5-flash-image',
+        'gemini-2.5-flash-image' => 'gemini-2.5-flash-image', // Numele corect din documentație
         'gemini-3-pro-image-preview' => 'gemini-3-pro-image-preview',
         'imagen-4' => 'imagen-4',
     ];
     
     $api_model = $model_mapping[$model] ?? $model;
-    error_log('Using API model: ' . $api_model);
+    error_log('Using API model: ' . $api_model . ' (mapped from: ' . $model . ')');
+    
+    // Logăm body-ul pentru debugging
+    error_log('Request body preview (first 200 chars): ' . substr(wp_json_encode([
+        'contents' => [['parts' => [['text' => substr($final_prompt, 0, 50) . '...']]]],
+        'generationConfig' => ['imageConfig' => $imageConfig]
+    ]), 0, 200));
 
     // Case 1: Imagen 4.0 Model (Uses generateImages)
     if ($api_model === 'imagen-4') {
