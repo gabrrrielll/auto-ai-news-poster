@@ -380,7 +380,7 @@ class Auto_Ai_News_Poster_Settings
         $use_gemini = $options['use_gemini'] ?? 'no';
         $gemini_api_key = $options['gemini_api_key'] ?? '';
         $gemini_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
-        $imagen_model = $options['imagen_model'] ?? 'gemini-2.5-flash-image-exp';
+        $imagen_model = $options['imagen_model'] ?? 'gemini-2.5-flash-image';
         $vertex_ai_project_id = $options['vertex_ai_project_id'] ?? '';
         $vertex_ai_location = $options['vertex_ai_location'] ?? 'us-central1';
         $vertex_ai_service_account_json = $options['vertex_ai_service_account_json'] ?? '';
@@ -608,16 +608,13 @@ class Auto_Ai_News_Poster_Settings
                         <div class="form-group">
                             <label for="imagen_model" class="control-label">Model Gemini pentru Imagini</label>
                             <select name="auto_ai_news_poster_settings[imagen_model]" class="form-control" id="imagen_model">
-                                <optgroup label="🌟 Recomandate (Generative Language API)">
-                                    <option value="gemini-2.5-flash-image-exp" <?php selected($imagen_model, 'gemini-2.5-flash-image-exp'); ?>>Gemini 2.5 Flash Image - Generare rapidă</option>
+                                <optgroup label="🌟 Recomandate">
+                                    <option value="gemini-2.5-flash-image" <?php selected($imagen_model, 'gemini-2.5-flash-image'); ?>>Gemini 2.5 Flash Image - Optimizat pentru viteză</option>
                                     <option value="gemini-3-pro-image-preview" <?php selected($imagen_model, 'gemini-3-pro-image-preview'); ?>>Gemini 3 Pro Image Preview - Rezoluții mari (2K/4K)</option>
-                                </optgroup>
-                                <optgroup label="📊 Vertex AI (necesită configurare mai sus)">
-                                    <option value="imagen-3-generate-001" <?php selected($imagen_model, 'imagen-3-generate-001'); ?>>Imagen 3 Generate 001 - Calitate înaltă (Vertex AI)</option>
-                                    <option value="imagen-3-fast-generate-001" <?php selected($imagen_model, 'imagen-3-fast-generate-001'); ?>>Imagen 3 Fast Generate 001 - Generare rapidă (Vertex AI)</option>
+                                    <option value="imagen-4" <?php selected($imagen_model, 'imagen-4'); ?>>Imagen 4 - Fotorealism și stiluri artistice</option>
                                 </optgroup>
                             </select>
-                            <small class="form-text text-muted">Selectează modelul pentru generarea de imagini. Modelele Gemini 2.5/3 folosesc Generative Language API, Imagen 3 necesită Vertex AI.</small>
+                            <small class="form-text text-muted">Selectează modelul pentru generarea de imagini. Toate modelele folosesc Generative Language API cu cheia API Gemini.</small>
                         </div>
                     </div>
                 </div>
