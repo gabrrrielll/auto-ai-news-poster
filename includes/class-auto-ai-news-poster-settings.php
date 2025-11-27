@@ -484,9 +484,19 @@ class Auto_Ai_News_Poster_Settings
                         <div class="form-group">
                             <label for="gemini_model" class="control-label">Model Gemini</label>
                             <select name="auto_ai_news_poster_settings[gemini_model]" class="form-control" id="gemini_model">
-                                <option value="gemini-1.5-pro" <?php selected($gemini_model, 'gemini-1.5-pro'); ?>>Gemini 1.5 Pro</option>
-                                <option value="gemini-1.5-flash" <?php selected($gemini_model, 'gemini-1.5-flash'); ?>>Gemini 1.5 Flash</option>
-                                <option value="gemini-1.0-pro" <?php selected($gemini_model, 'gemini-1.0-pro'); ?>>Gemini 1.0 Pro</option>
+                                <optgroup label="🌟 Recomandate">
+                                    <option value="gemini-2.0-flash-exp" <?php selected($gemini_model, 'gemini-2.0-flash-exp'); ?>>Gemini 2.0 Flash (Experimental)</option>
+                                    <option value="gemini-1.5-pro-latest" <?php selected($gemini_model, 'gemini-1.5-pro-latest'); ?>>Gemini 1.5 Pro (Latest)</option>
+                                    <option value="gemini-1.5-flash-latest" <?php selected($gemini_model, 'gemini-1.5-flash-latest'); ?>>Gemini 1.5 Flash (Latest)</option>
+                                </optgroup>
+                                <optgroup label="📊 Modele Stabile">
+                                    <option value="gemini-1.5-pro" <?php selected($gemini_model, 'gemini-1.5-pro'); ?>>Gemini 1.5 Pro</option>
+                                    <option value="gemini-1.5-flash" <?php selected($gemini_model, 'gemini-1.5-flash'); ?>>Gemini 1.5 Flash</option>
+                                    <option value="gemini-1.0-pro" <?php selected($gemini_model, 'gemini-1.0-pro'); ?>>Gemini 1.0 Pro</option>
+                                </optgroup>
+                                <optgroup label="🔬 Experimentale">
+                                    <option value="gemini-exp-1206" <?php selected($gemini_model, 'gemini-exp-1206'); ?>>Gemini Experimental (1206)</option>
+                                </optgroup>
                             </select>
                         </div>
                     </div>

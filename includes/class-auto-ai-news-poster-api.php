@@ -971,36 +971,72 @@ class Auto_Ai_News_Poster_Api
         }
 
         $options = get_option('auto_ai_news_poster_settings');
-        $api_key = $options['chatgpt_api_key'];
-
-        if (empty($api_key)) {
-            wp_send_json_error(['message' => 'Cheia API lipsește pentru generarea imaginii.']);
-            return;
+        $use_gemini = isset($options['use_gemini']) && $options['use_gemini'] === 'yes';
+        
+        // Verificăm cheia API în funcție de provider
+        if ($use_gemini) {
+            $api_key = $options['gemini_api_key'] ?? '';
+            if (empty($api_key)) {
+                wp_send_json_error(['message' => 'Cheia API Gemini lipsește pentru generarea imaginii.']);
+                return;
+            }
+        } else {
+            $api_key = $options['chatgpt_api_key'] ?? '';
+            if (empty($api_key)) {
+                wp_send_json_error(['message' => 'Cheia API OpenAI lipsește pentru generarea imaginii.']);
+                return;
+            }
         }
 
         // Use imagine_prompt if provided, otherwise fall back to summary and tags
         $summary = get_the_excerpt($post_id);
-        $initial_dalle_prompt = !empty($imagine_prompt) ? $imagine_prompt : (
+        $initial_prompt = !empty($imagine_prompt) ? $imagine_prompt : (
             $summary ?: wp_trim_words($post->post_content, 100, '...')
         );
 
-        // Generează un prompt sigur pentru DALL-E
-        $prompt_for_dalle = self::generate_safe_dalle_prompt($initial_dalle_prompt, $api_key);
+        // Generează un prompt sigur (folosim OpenAI pentru generarea promptului sigur, indiferent de provider)
+        $openai_api_key = $options['chatgpt_api_key'] ?? '';
+        if (!empty($openai_api_key)) {
+            $prompt_for_image = self::generate_safe_dalle_prompt($initial_prompt, $openai_api_key);
+        } else {
+            // Dacă nu avem OpenAI key, folosim promptul direct (mai puțin sigur, dar funcțional)
+            $prompt_for_image = $initial_prompt;
+        }
 
-        $image_response = call_openai_image_api($api_key, $prompt_for_dalle, $feedback);
+        // Folosim wrapper-ul care alege automat provider-ul corect
+        $image_response = call_ai_image_api($prompt_for_image, $feedback);
 
+        // Verificăm dacă răspunsul este un WP_Error sau un array direct
         if (is_wp_error($image_response)) {
-            wp_send_json_error(['message' => 'Eroare la apelul DALL-E API: ' . $image_response->get_error_message()]);
+            $provider_name = $use_gemini ? 'Gemini' : 'OpenAI';
+            wp_send_json_error(['message' => 'Eroare la apelul ' . $provider_name . ' API: ' . $image_response->get_error_message()]);
             return;
         }
 
-        $response_code = wp_remote_retrieve_response_code($image_response);
-
-        $image_body = wp_remote_retrieve_body($image_response);
-
-        $image_json = json_decode($image_body, true);
-
-        $image_url = $image_json['data'][0]['url'] ?? '';
+        // Procesăm răspunsul în funcție de tip
+        $image_url = '';
+        if (is_array($image_response) && isset($image_response['data'][0]['url'])) {
+            // Răspuns direct de la Gemini (array)
+            $image_url = $image_response['data'][0]['url'];
+        } else {
+            // Răspuns HTTP de la OpenAI (wp_remote_post response)
+            $response_code = wp_remote_retrieve_response_code($image_response);
+            $image_body = wp_remote_retrieve_body($image_response);
+            $image_json = json_decode($image_body, true);
+            
+            if ($response_code === 200 && isset($image_json['data'][0]['url'])) {
+                $image_url = $image_json['data'][0]['url'];
+            } else {
+                $error_message = 'Eroare necunoscută la generarea imaginii.';
+                if (isset($image_json['error']['message'])) {
+                    $error_message = $image_json['error']['message'];
+                } elseif (isset($image_json['error'])) {
+                    $error_message = print_r($image_json['error'], true);
+                }
+                wp_send_json_error(['message' => 'Eroare la generarea imaginii: ' . $error_message]);
+                return;
+            }
+        }
         $title = get_the_title($post_id);
 
         $post_tags = get_the_terms($post_id, 'post_tag');
