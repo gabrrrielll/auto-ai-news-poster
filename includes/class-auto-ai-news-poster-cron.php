@@ -41,11 +41,21 @@ class Auto_Ai_News_Poster_Cron
         $next_scheduled = wp_next_scheduled('auto_ai_news_poster_cron_hook');
         error_log('CRON RESET DEBUG: Next scheduled time BEFORE clearing: ' . ($next_scheduled ? date('Y-m-d H:i:s', $next_scheduled) : 'NONE'));
 
-        // Reprogramează cronul cu noul interval
-        if (!wp_next_scheduled('auto_ai_news_poster_cron_hook')) {
-            $scheduled_time = time();
-            wp_schedule_event($scheduled_time, 'custom_interval', 'auto_ai_news_poster_cron_hook');
-            error_log('CRON RESET DEBUG: Cron rescheduled to: ' . date('Y-m-d H:i:s', $scheduled_time));
+        // Obține setările pentru a verifica dacă modul automat este activat
+        $settings = get_option('auto_ai_news_poster_settings', []);
+        
+        // Reprogramează cronul cu noul interval doar dacă modul automat este activat
+        if (isset($settings['mode']) && $settings['mode'] === 'auto') {
+            if (!wp_next_scheduled('auto_ai_news_poster_cron_hook')) {
+                $scheduled_time = time();
+                wp_schedule_event($scheduled_time, 'custom_interval', 'auto_ai_news_poster_cron_hook');
+                error_log('CRON RESET DEBUG: Cron rescheduled to: ' . date('Y-m-d H:i:s', $scheduled_time));
+                
+                // Resetează timpul ultimului articol pentru a permite publicarea imediată a primului articol
+                // după schimbarea setărilor
+                delete_option('auto_ai_news_poster_last_post_time');
+                error_log('CRON RESET DEBUG: Last post time reset to allow immediate first post');
+            }
         }
 
         $next_scheduled = wp_next_scheduled('auto_ai_news_poster_cron_hook');
@@ -54,53 +64,101 @@ class Auto_Ai_News_Poster_Cron
 
     public static function auto_post()
     {
-        $settings = get_option('auto_ai_news_poster_settings');
-        $generation_mode = $settings['generation_mode'] ?? 'parse_link'; // Mod implicit: parse_link
+        // Verifică dacă există deja o procesare în curs (lock mechanism)
+        $lock_key = 'auto_ai_news_poster_processing_lock';
+        $lock_timeout = 300; // 5 minute timeout pentru lock
+        
+        // Verifică dacă există un lock activ
+        $lock_time = get_transient($lock_key);
+        if ($lock_time !== false) {
+            error_log('CRON: Processing already in progress, skipping execution');
+            return; // Oprește execuția dacă există deja o procesare în curs
+        }
+        
+        // Setează lock-ul pentru a preveni procesarea simultană
+        set_transient($lock_key, time(), $lock_timeout);
+        
+        try {
+            $settings = get_option('auto_ai_news_poster_settings');
+            $generation_mode = $settings['generation_mode'] ?? 'parse_link'; // Mod implicit: parse_link
 
-        if ($settings['mode'] === 'auto') {
-            if ($generation_mode === 'parse_link') {
-                // Verificăm dacă opțiunea "Rulează automat doar până la epuizarea listei de linkuri" este activată
-                $run_until_bulk_exhausted = $settings['run_until_bulk_exhausted'] === 'yes';
+            if ($settings['mode'] === 'auto') {
+                // Verifică dacă a trecut suficient timp de la ultimul articol publicat
+                $last_post_time = get_option('auto_ai_news_poster_last_post_time', 0);
+                $current_time = time();
+                
+                // Calculează intervalul necesar
+                $hours = isset($settings['cron_interval_hours']) ? (int)$settings['cron_interval_hours'] : 1;
+                $minutes = isset($settings['cron_interval_minutes']) ? (int)$settings['cron_interval_minutes'] : 0;
+                $required_interval = ($hours * 3600) + ($minutes * 60);
+                
+                // Asigură-te că intervalul este cel puțin 1 minut
+                if ($required_interval < 60) {
+                    $required_interval = 60;
+                }
+                
+                // Verifică dacă a trecut suficient timp
+                $time_since_last_post = $current_time - $last_post_time;
+                if ($last_post_time > 0 && $time_since_last_post < $required_interval) {
+                    $remaining_time = $required_interval - $time_since_last_post;
+                    error_log('CRON: Not enough time passed since last post. Remaining: ' . $remaining_time . ' seconds');
+                    delete_transient($lock_key); // Eliberează lock-ul
+                    return; // Oprește execuția dacă nu a trecut suficient timp
+                }
+                
+                if ($generation_mode === 'parse_link') {
+                    // Verificăm dacă opțiunea "Rulează automat doar până la epuizarea listei de linkuri" este activată
+                    $run_until_bulk_exhausted = $settings['run_until_bulk_exhausted'] === 'yes';
 
-                if ($run_until_bulk_exhausted) {
-                    // Verificăm dacă lista de linkuri este goală
-                    $bulk_links = explode("\n", trim($settings['bulk_custom_source_urls'] ?? ''));
-                    $bulk_links = array_filter($bulk_links, 'trim'); // Eliminăm rândurile goale
+                    if ($run_until_bulk_exhausted) {
+                        // Verificăm dacă lista de linkuri este goală
+                        $bulk_links = explode("\n", trim($settings['bulk_custom_source_urls'] ?? ''));
+                        $bulk_links = array_filter($bulk_links, 'trim'); // Eliminăm rândurile goale
 
-                    if (empty($bulk_links)) {
-                        // Lista de linkuri s-a epuizat, oprim cron job-ul și schimbăm modul pe manual
+                        if (empty($bulk_links)) {
+                            // Lista de linkuri s-a epuizat, oprim cron job-ul și schimbăm modul pe manual
 
-                        // Dezactivăm cron job-ul
-                        wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
+                            // Dezactivăm cron job-ul
+                            wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
 
-                        // Schimbăm modul din automat pe manual
-                        $settings['mode'] = 'manual';
-                        update_option('auto_ai_news_poster_settings', $settings);
+                            // Schimbăm modul din automat pe manual
+                            $settings['mode'] = 'manual';
+                            update_option('auto_ai_news_poster_settings', $settings);
 
-                        // Actualizăm transient-ul pentru refresh automat
-                        set_transient('auto_ai_news_poster_last_bulk_check', 0, 300);
+                            // Actualizăm transient-ul pentru refresh automat
+                            set_transient('auto_ai_news_poster_last_bulk_check', 0, 300);
+                            
+                            delete_transient($lock_key); // Eliberează lock-ul
+                            return; // Oprim execuția
+                        }
 
-                        return; // Oprim execuția
+                        // Actualizăm transient-ul pentru verificarea schimbărilor
+                        set_transient('auto_ai_news_poster_last_bulk_check', count($bulk_links), 300);
                     }
 
-                    // Actualizăm transient-ul pentru verificarea schimbărilor
-                    set_transient('auto_ai_news_poster_last_bulk_check', count($bulk_links), 300);
-                }
+                    // Log the auto post execution
+                    error_log('CRON: Starting article generation at ' . date('Y-m-d H:i:s'));
 
-                // Log the auto post execution
-
-                try {
-                    // Apelează direct process_article_generation() în loc de get_article_from_sources()
-                    Auto_Ai_News_Poster_Api::process_article_generation();
-                } catch (Exception $e) {
-                    // Log any errors that occur during posting
-                }
-            } elseif ($generation_mode === 'ai_browsing') {
-                try {
-                    self::trigger_ai_browsing_generation();
-                } catch (Exception $e) {
+                    try {
+                        // Apelează direct process_article_generation() în loc de get_article_from_sources()
+                        // Timpul ultimului articol va fi actualizat în API după crearea cu succes a articolului
+                        Auto_Ai_News_Poster_Api::process_article_generation();
+                        error_log('CRON: Article generation completed at ' . date('Y-m-d H:i:s'));
+                    } catch (Exception $e) {
+                        error_log('CRON: Error during article generation: ' . $e->getMessage());
+                    }
+                } elseif ($generation_mode === 'ai_browsing') {
+                    try {
+                        // Timpul ultimului articol va fi actualizat în API după crearea cu succes a articolului
+                        self::trigger_ai_browsing_generation();
+                    } catch (Exception $e) {
+                        error_log('CRON: Error during AI browsing generation: ' . $e->getMessage());
+                    }
                 }
             }
+        } finally {
+            // Eliberează lock-ul în orice caz
+            delete_transient($lock_key);
         }
     }
 
