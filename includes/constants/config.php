@@ -363,23 +363,23 @@ function call_ai_image_api($dalle_prompt, $feedback = '')
     error_log('Use Gemini: ' . ($use_gemini ? 'YES' : 'NO'));
     
     if ($use_gemini) {
-        // Folosim Gemini pentru generarea de imagini prin Generative Language API
+        // NOTĂ: Generarea de imagini cu Gemini/Imagen prin Generative Language API nu este disponibilă
+        // Modelele Imagen și Gemini image generation necesită Vertex AI API
+        // Pentru moment, returnăm o eroare informativă și sugerăm folosirea OpenAI DALL-E
+        error_log('WARNING: Gemini image generation requested, but not available through Generative Language API');
+        error_log('Imagen 3 and Gemini image models require Vertex AI API configuration');
+        
         $api_key = $options['gemini_api_key'] ?? '';
         $imagen_model = $options['imagen_model'] ?? 'gemini-2.5-flash-image-exp';
         
         error_log('Gemini API Key present: ' . (!empty($api_key) ? 'YES' : 'NO'));
         error_log('Imagen model from settings: ' . $imagen_model);
         
-        if (empty($api_key)) {
-            error_log('ERROR: Gemini API key missing');
-            return new WP_Error('no_image_api', 'Cheia API Gemini lipsește pentru generarea imaginii.');
-        }
-        
-        error_log('Calling call_gemini_image_api...');
-        $result = call_gemini_image_api($api_key, $imagen_model, $dalle_prompt, $feedback);
-        error_log('call_gemini_image_api result: ' . (is_wp_error($result) ? 'ERROR: ' . $result->get_error_message() : 'SUCCESS'));
-        error_log('=== CALL_AI_IMAGE_API END ===');
-        return $result;
+        // Returnăm eroare informativă
+        return new WP_Error('gemini_image_not_available', 
+            'Generarea de imagini cu Gemini/Imagen nu este disponibilă prin Generative Language API. ' .
+            'Modelele Imagen 3 și Gemini image generation necesită configurarea Vertex AI API. ' .
+            'Pentru moment, te rugăm să folosești OpenAI DALL-E pentru generarea de imagini sau să configurezi Vertex AI API.');
     }
     
     // Default to OpenAI
@@ -513,18 +513,30 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     }
 
     // Mapăm numele modelelor la numele corecte din API
-    // Notă: Imagen 3 nu este disponibil prin Generative Language API standard
-    // Folosim gemini-2.0-flash-exp cu responseModalities pentru generarea de imagini
+    // Notă: Modelele Gemini standard nu suportă generarea de imagini prin Generative Language API
+    // Imagen 3 necesită Vertex AI API, nu Generative Language API
+    // Pentru moment, returnăm o eroare informativă
     $model_mapping = [
-        'gemini-2.5-flash-image-exp' => 'gemini-2.0-flash-exp',
-        'gemini-3-pro-image-preview' => 'gemini-2.0-flash-exp',
-        'imagen-3' => 'gemini-2.0-flash-exp' // Folosim flash-exp pentru toate, deoarece Imagen 3 nu este disponibil
+        'gemini-2.5-flash-image-exp' => null, // Nu este disponibil prin Generative Language API
+        'gemini-3-pro-image-preview' => null, // Nu este disponibil prin Generative Language API
+        'imagen-3' => null // Necesită Vertex AI API
     ];
     
+    // Verificăm dacă modelul este disponibil prin Generative Language API
+    if (isset($model_mapping[$model]) && $model_mapping[$model] === null) {
+        error_log('ERROR: Model ' . $model . ' is not available through Generative Language API');
+        error_log('Imagen 3 and Gemini image models require Vertex AI API, not Generative Language API');
+        return new WP_Error('model_not_available', 
+            'Modelul selectat (' . $model . ') nu este disponibil prin Generative Language API. ' .
+            'Pentru generarea de imagini cu Gemini/Imagen, este necesară configurarea Vertex AI API. ' .
+            'Alternativ, poți folosi OpenAI DALL-E pentru generarea de imagini.');
+    }
+    
+    // Dacă ajungem aici, încercăm cu modelul mapat (dar nu ar trebui să ajungem aici)
     $api_model = $model_mapping[$model] ?? 'gemini-2.0-flash-exp';
     error_log('Mapped API model: ' . $api_model);
     
-    // Folosim generateContent cu responseModalities pentru generarea de imagini
+    // Încercăm cu generateContent, dar probabil va eșua
     $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . urlencode($api_model) . ':generateContent?key=' . urlencode($api_key);
     error_log('Using endpoint: ' . str_replace($api_key, '***HIDDEN***', $endpoint));
     
