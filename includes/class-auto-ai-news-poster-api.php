@@ -271,7 +271,7 @@ class Auto_Ai_News_Poster_Api
 
 
         // --- Call OpenAI API ---
-        $prompt = generate_custom_source_prompt($extracted_content, $additional_instructions);
+        $prompt = generate_custom_source_prompt($extracted_content, $additional_instructions, $source_link);
         $response = call_openai_api($options['chatgpt_api_key'], $prompt);
 
         if (is_wp_error($response)) {

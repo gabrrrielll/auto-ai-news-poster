@@ -4,7 +4,7 @@
 const URL_API_OPENAI = 'https://api.openai.com/v1/chat/completions';
 const URL_API_IMAGE = 'https://api.openai.com/v1/images/generations';
 
-function generate_custom_source_prompt($article_text_content, $additional_instructions = '')
+function generate_custom_source_prompt($article_text_content, $additional_instructions = '', $source_link = '')
 {
     $options = get_option('auto_ai_news_poster_settings');
 
@@ -37,6 +37,20 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
 
     // Construim prompt-ul de bază
     $prompt = "Ești un jurnalist expert care scrie pentru o publicație de știri din România. Sarcina ta este să scrii un articol de știri complet nou și original în limba română, bazat pe informațiile din textul furnizat. Urmează aceste reguli stricte:\n";
+    
+    // Adăugăm instrucțiuni specifice pentru identificarea articolului corect folosind linkul
+    if (!empty($source_link)) {
+        $prompt .= "**CRITICAL - IDENTIFICARE ARTICOL CORECT:**\n";
+        $prompt .= "Ai primit un link specific: {$source_link}\n";
+        $prompt .= "Acest link reprezintă articolul EXACT pe care trebuie să îl extragi și să îl procesezi. Textul furnizat poate conține mai multe articole sau informații adiacente (articole recomandate, articole similare, etc.).\n";
+        $prompt .= "**OBLIGATORIU:** Folosește linkul ca referință pentru a identifica și extrage DOAR articolul care corespunde acestui link. Analizează linkul și identifică:\n";
+        $prompt .= "- Cuvintele cheie din URL care indică subiectul articolului\n";
+        $prompt .= "- Slug-ul URL-ului care de obicei conține titlul articolului în format URL-friendly\n";
+        $prompt .= "- Orice alte indicii din link care te ajută să identifici articolul corect\n";
+        $prompt .= "**IGNORĂ COMPLET** orice alt articol sau informație adiacentă care nu corespunde linkului furnizat. Nu extrage informații din alte articole care apar în textul parsat, chiar dacă par relevante sau interesante.\n";
+        $prompt .= "**VERIFICARE:** După ce ai extras conținutul, verifică că articolul identificat de tine corespunde cu subiectul indicat de link. Dacă există dubii, prioritizează informațiile care se aliniază cel mai bine cu linkul furnizat.\n\n";
+    }
+    
     $prompt .= "1. **NU menționa niciodată** 'textul furnizat', 'articolul sursă', 'materialul analizat' sau orice expresie similară. Articolul trebuie să fie independent și să nu facă referire la sursa ta de informație.\n";
     $prompt .= "2. **Reformulează** cu propriile tale cuvinte informațiile din textul furnizat, integrându-le natural în noul articol. **NU copia și lipi (copy-paste) fragmente din textul sursă.**\n";
     $prompt .= "3. Scrie un articol obiectiv, bine structurat, cu un titlu captivant, un conținut informativ și o listă de etichete (tags) relevante. **Păstrează toate faptele, detaliile, numele, numerele și listele (ex: liste de filme, produse, evenimente) EXACT așa cum apar în textul sursă. Nu omite și nu adăuga elemente noi în liste.** {$length_instruction}\n";
@@ -77,6 +91,13 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
     // Adăugăm instrucțiuni suplimentare, dacă există (pentru apelurile manuale unde se poate adăuga text extra)
     if (!empty($additional_instructions)) {
         $prompt .= 'Instrucțiuni suplimentare de moment: ' . $additional_instructions . "\n";
+    }
+
+    // Adăugăm linkul ca referință înainte de textul sursă
+    if (!empty($source_link)) {
+        $prompt .= "\n--- Link Referință (folosește-l pentru a identifica articolul corect) ---\n";
+        $prompt .= "Link: {$source_link}\n";
+        $prompt .= "Acest link indică articolul EXACT pe care trebuie să îl extragi din textul de mai jos.\n";
     }
 
     // Adăugăm textul articolului sursă
