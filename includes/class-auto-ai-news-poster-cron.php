@@ -33,13 +33,8 @@ class Auto_Ai_News_Poster_Cron
 
     public static function reset_cron()
     {
-        error_log('CRON RESET DEBUG: reset_cron() called');
-
         // Dezactivează cronul existent
         wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
-
-        $next_scheduled = wp_next_scheduled('auto_ai_news_poster_cron_hook');
-        error_log('CRON RESET DEBUG: Next scheduled time BEFORE clearing: ' . ($next_scheduled ? date('Y-m-d H:i:s', $next_scheduled) : 'NONE'));
 
         // Obține setările pentru a verifica dacă modul automat este activat
         $settings = get_option('auto_ai_news_poster_settings', []);
@@ -49,17 +44,12 @@ class Auto_Ai_News_Poster_Cron
             if (!wp_next_scheduled('auto_ai_news_poster_cron_hook')) {
                 $scheduled_time = time();
                 wp_schedule_event($scheduled_time, 'custom_interval', 'auto_ai_news_poster_cron_hook');
-                error_log('CRON RESET DEBUG: Cron rescheduled to: ' . date('Y-m-d H:i:s', $scheduled_time));
                 
                 // Resetează timpul ultimului articol pentru a permite publicarea imediată a primului articol
                 // după schimbarea setărilor
                 delete_option('auto_ai_news_poster_last_post_time');
-                error_log('CRON RESET DEBUG: Last post time reset to allow immediate first post');
             }
         }
-
-        $next_scheduled = wp_next_scheduled('auto_ai_news_poster_cron_hook');
-        error_log('CRON RESET DEBUG: Next scheduled time AFTER reset: ' . ($next_scheduled ? date('Y-m-d H:i:s', $next_scheduled) : 'NONE'));
     }
 
     public static function auto_post()
@@ -71,7 +61,6 @@ class Auto_Ai_News_Poster_Cron
         // Verifică dacă există un lock activ
         $lock_time = get_transient($lock_key);
         if ($lock_time !== false) {
-            error_log('CRON: Processing already in progress, skipping execution');
             return; // Oprește execuția dacă există deja o procesare în curs
         }
         
@@ -100,8 +89,6 @@ class Auto_Ai_News_Poster_Cron
                 // Verifică dacă a trecut suficient timp
                 $time_since_last_post = $current_time - $last_post_time;
                 if ($last_post_time > 0 && $time_since_last_post < $required_interval) {
-                    $remaining_time = $required_interval - $time_since_last_post;
-                    error_log('CRON: Not enough time passed since last post. Remaining: ' . $remaining_time . ' seconds');
                     delete_transient($lock_key); // Eliberează lock-ul
                     return; // Oprește execuția dacă nu a trecut suficient timp
                 }
@@ -136,14 +123,10 @@ class Auto_Ai_News_Poster_Cron
                         set_transient('auto_ai_news_poster_last_bulk_check', count($bulk_links), 300);
                     }
 
-                    // Log the auto post execution
-                    error_log('CRON: Starting article generation at ' . date('Y-m-d H:i:s'));
-
                     try {
                         // Apelează direct process_article_generation() în loc de get_article_from_sources()
                         // Timpul ultimului articol va fi actualizat în API după crearea cu succes a articolului
                         Auto_Ai_News_Poster_Api::process_article_generation();
-                        error_log('CRON: Article generation completed at ' . date('Y-m-d H:i:s'));
                     } catch (Exception $e) {
                         error_log('CRON: Error during article generation: ' . $e->getMessage());
                     }
@@ -220,9 +203,6 @@ class Auto_Ai_News_Poster_Cron
         // Validate hours and minutes
         $hours = isset($options['cron_interval_hours']) ? (int)$options['cron_interval_hours'] : 1;
         $minutes = isset($options['cron_interval_minutes']) ? (int)$options['cron_interval_minutes'] : 0;
-        // Temporary logs for debugging
-        error_log('CRON INTERVAL DEBUG: Raw options for cron: ' . print_r($options, true));
-        error_log('CRON INTERVAL DEBUG: Hours read: ' . $hours . ', Minutes read: ' . $minutes);
 
         // Ensure valid range for hours and minutes
         if ($hours < 0 || $hours > 24) {
@@ -234,13 +214,11 @@ class Auto_Ai_News_Poster_Cron
 
         // Calculate interval in seconds
         $interval = ($hours * 3600) + ($minutes * 60);
-        error_log('CRON INTERVAL DEBUG: Calculated interval (seconds): ' . $interval);
 
         // Ensure the interval is at least 1 minute
         if ($interval < 60) {
             $interval = 60;
         }
-        error_log('CRON INTERVAL DEBUG: Final interval after min check (seconds): ' . $interval);
 
         // Add custom interval
         $schedules['custom_interval'] = [
