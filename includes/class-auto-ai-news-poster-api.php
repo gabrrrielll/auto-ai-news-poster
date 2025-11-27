@@ -992,50 +992,87 @@ class Auto_Ai_News_Poster_Api
             $summary ?: wp_trim_words($post->post_content, 100, '...')
         );
 
-        // Generează promptul în funcție de provider
-        if ($use_gemini) {
-            // Pentru Gemini, folosim promptul direct (Gemini înțelege mai bine prompturile naturale)
-            $prompt_for_image = $initial_prompt;
-        } else {
-            // Pentru OpenAI/DALL-E, generăm un prompt sigur optimizat pentru DALL-E
-            $openai_api_key = $options['chatgpt_api_key'] ?? '';
-            if (!empty($openai_api_key)) {
-                $prompt_for_image = self::generate_safe_dalle_prompt($initial_prompt, $openai_api_key);
-            } else {
-                // Dacă nu avem OpenAI key, folosim promptul direct
-                $prompt_for_image = $initial_prompt;
-            }
-        }
-
         error_log('=== GENERATE_IMAGE_FOR_ARTICLE AJAX ===');
         error_log('Post ID: ' . $post_id);
         error_log('Use Gemini: ' . ($use_gemini ? 'YES' : 'NO'));
-        error_log('Prompt for image: ' . substr($prompt_for_image, 0, 100) . '...');
         error_log('Feedback: ' . (!empty($feedback) ? $feedback : 'NONE'));
         
-        // Folosim wrapper-ul care alege automat provider-ul corect
-        $image_response = call_ai_image_api($prompt_for_image, $feedback);
+        // Generează promptul inițial
+        $openai_api_key = $options['chatgpt_api_key'] ?? '';
+        $max_retries = 3;
+        $retry_count = 0;
+        $image_response = null;
+        $prompt_for_image = $initial_prompt;
         
-        error_log('Image response type: ' . gettype($image_response));
-        if (is_wp_error($image_response)) {
-            error_log('Image response is WP_Error: ' . $image_response->get_error_message());
-            error_log('Error code: ' . $image_response->get_error_code());
-        } elseif (is_array($image_response)) {
-            error_log('Image response is array, keys: ' . implode(', ', array_keys($image_response)));
-            if (isset($image_response['data'])) {
-                error_log('Image response data structure: ' . json_encode([
-                    'data_is_array' => is_array($image_response['data']),
-                    'data_count' => is_array($image_response['data']) ? count($image_response['data']) : 0,
-                    'first_data_keys' => is_array($image_response['data']) && isset($image_response['data'][0]) ? array_keys($image_response['data'][0]) : [],
-                ]));
+        // Pentru Gemini, generăm promptul sigur folosind OpenAI dacă este disponibil
+        if ($use_gemini && !empty($openai_api_key)) {
+            $prompt_for_image = self::generate_safe_dalle_prompt($initial_prompt, $openai_api_key);
+        } elseif (!$use_gemini && !empty($openai_api_key)) {
+            // Pentru OpenAI/DALL-E, generăm un prompt sigur optimizat pentru DALL-E
+            $prompt_for_image = self::generate_safe_dalle_prompt($initial_prompt, $openai_api_key);
+        }
+        
+        // Încercăm generarea imaginii cu retry logic
+        while ($retry_count < $max_retries) {
+            $retry_count++;
+            error_log('Attempt ' . $retry_count . '/' . $max_retries . ' - Prompt: ' . substr($prompt_for_image, 0, 100) . '...');
+            
+            // Folosim wrapper-ul care alege automat provider-ul corect
+            $image_response = call_ai_image_api($prompt_for_image, $feedback);
+            
+            error_log('Image response type: ' . gettype($image_response));
+            if (is_wp_error($image_response)) {
+                $error_code = $image_response->get_error_code();
+                $error_message = $image_response->get_error_message();
+                
+                error_log('Image response is WP_Error: ' . $error_message);
+                error_log('Error code: ' . $error_code);
+                
+                // Verificăm dacă eroarea este legată de safety filters
+                $is_safety_error = (
+                    strpos(strtolower($error_message), 'safety') !== false ||
+                    strpos(strtolower($error_message), 'blocked') !== false ||
+                    strpos(strtolower($error_message), 'harm') !== false ||
+                    strpos(strtolower($error_message), 'content policy') !== false ||
+                    strpos($error_message, '[SAFETY_BLOCK]') !== false ||
+                    $error_code === 'generation_stopped'
+                );
+                
+                // Dacă este eroare de safety și mai avem încercări, regenerăm promptul
+                if ($is_safety_error && $retry_count < $max_retries && !empty($openai_api_key)) {
+                    error_log('Safety filter detected. Regenerating prompt for retry ' . ($retry_count + 1));
+                    // Regenerăm promptul folosind OpenAI pentru a evita filtrele de safety
+                    $prompt_for_image = self::generate_safe_dalle_prompt($initial_prompt, $openai_api_key);
+                    // Adăugăm un delay mic între încercări
+                    sleep(1);
+                    continue;
+                } else {
+                    // Dacă nu mai avem încercări sau nu este eroare de safety, returnăm eroarea
+                    break;
+                }
+            } elseif (is_array($image_response)) {
+                error_log('Image response is array, keys: ' . implode(', ', array_keys($image_response)));
+                if (isset($image_response['data'])) {
+                    error_log('Image response data structure: ' . json_encode([
+                        'data_is_array' => is_array($image_response['data']),
+                        'data_count' => is_array($image_response['data']) ? count($image_response['data']) : 0,
+                        'first_data_keys' => is_array($image_response['data']) && isset($image_response['data'][0]) ? array_keys($image_response['data'][0]) : [],
+                    ]));
+                }
+                // Dacă avem răspuns valid, ieșim din loop
+                break;
             }
         }
 
         // Verificăm dacă răspunsul este un WP_Error sau un array direct
         if (is_wp_error($image_response)) {
             $provider_name = $use_gemini ? 'Gemini' : 'OpenAI';
-            error_log('Sending JSON error to frontend');
-            wp_send_json_error(['message' => 'Eroare la apelul ' . $provider_name . ' API: ' . $image_response->get_error_message()]);
+            $error_message = $image_response->get_error_message();
+            if ($retry_count >= $max_retries) {
+                $error_message .= ' (Am încercat ' . $max_retries . ' ori cu prompturi diferite)';
+            }
+            error_log('Sending JSON error to frontend after ' . $retry_count . ' attempts');
+            wp_send_json_error(['message' => 'Eroare la apelul ' . $provider_name . ' API: ' . $error_message]);
             return;
         }
 

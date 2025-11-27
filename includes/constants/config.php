@@ -663,10 +663,29 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     $finish_reason = $candidate['finishReason'] ?? 'UNKNOWN';
     error_log('Finish reason: ' . $finish_reason);
     
-    if ($finish_reason !== 'STOP') {
+    // Verificăm safety ratings pentru a detecta blocările
+    $safety_ratings = $candidate['safetyRatings'] ?? [];
+    $has_safety_block = false;
+    if (!empty($safety_ratings)) {
+        foreach ($safety_ratings as $rating) {
+            $blocked = $rating['blocked'] ?? false;
+            $category = $rating['category'] ?? '';
+            $probability = $rating['probability'] ?? '';
+            
+            if ($blocked || $probability === 'HIGH' || $probability === 'MEDIUM') {
+                $has_safety_block = true;
+                error_log('Safety block detected - Category: ' . $category . ', Blocked: ' . ($blocked ? 'YES' : 'NO') . ', Probability: ' . $probability);
+            }
+        }
+    }
+    
+    if ($finish_reason !== 'STOP' || $has_safety_block) {
         $error_msg = 'Image generation stopped. Reason: ' . $finish_reason;
-        if (isset($candidate['safetyRatings'])) {
-            $error_msg .= '. Safety ratings: ' . json_encode($candidate['safetyRatings']);
+        if (!empty($safety_ratings)) {
+            $error_msg .= '. Safety ratings: ' . json_encode($safety_ratings);
+        }
+        if ($has_safety_block) {
+            $error_msg .= ' [SAFETY_BLOCK]';
         }
         error_log($error_msg);
         return new WP_Error('generation_stopped', $error_msg);
