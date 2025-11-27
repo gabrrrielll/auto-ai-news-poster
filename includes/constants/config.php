@@ -504,15 +504,23 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     }
 
     // Mapăm modelele la ID-urile corecte din API
-    // Notă: Din eroarea API, modelul real pare să fie gemini-2.5-flash-preview-image
+    // Model names conform @google/genai SDK și Generative Language API
+    // Notă: Modelele Gemini pentru imagini folosesc generateContent, nu generateImages
     $model_mapping = [
-        'gemini-2.5-flash-image' => 'gemini-2.5-flash-preview-image', // Numele corect din API (conform erorii)
+        'gemini-2.5-flash-image' => 'gemini-2.5-flash-image', // Model corect pentru generateContent
         'gemini-3-pro-image-preview' => 'gemini-3-pro-image-preview',
         'imagen-4' => 'imagen-4',
     ];
     
     $api_model = $model_mapping[$model] ?? $model;
     error_log('Using API model: ' . $api_model . ' (mapped from: ' . $model . ')');
+    
+    // Verificare: dacă modelul nu este în mapping și nu este Imagen, încercăm variante alternative
+    if ($api_model === $model && $api_model !== 'imagen-4' && strpos($api_model, 'gemini') === 0) {
+        // Dacă modelul nu este în mapping, folosim direct valoarea din setări
+        // Aceasta permite flexibilitate pentru modele noi sau experimentale
+        error_log('Using model name directly from settings: ' . $api_model);
+    }
     
     // Logăm body-ul pentru debugging
     error_log('Request body preview (first 200 chars): ' . substr(wp_json_encode([
@@ -618,6 +626,11 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
         if (isset($data['error']['message'])) {
             $error_msg .= ': ' . $data['error']['message'];
         }
+        // Adăugăm sugestie pentru verificarea modelelor disponibile
+        if ($code === 404) {
+            $error_msg .= '. Sugestie: Verifică dacă modelul "' . $api_model . '" este disponibil în API. Poți lista modelele disponibile folosind ListModels API.';
+        }
+        error_log('Gemini Image API Error Details: Model=' . $api_model . ', Endpoint=' . $endpoint . ', Error=' . $error_msg);
         return new WP_Error('gemini_api_error', $error_msg);
     }
 
