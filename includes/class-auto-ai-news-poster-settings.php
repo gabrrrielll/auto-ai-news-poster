@@ -135,6 +135,15 @@ class Auto_Ai_News_Poster_Settings
             'main_section'
         );
 
+        // Configurare Vertex AI pentru generarea de imagini Gemini
+        add_settings_field(
+            'vertex_ai_image_settings',
+            'Configurare Vertex AI pentru Imagini Gemini',
+            [self::class, 'vertex_ai_image_settings_callback'],
+            'auto_ai_news_poster_settings_page',
+            'main_section'
+        );
+
         // Camp pentru setarea intervalului cron
         add_settings_field(
             'cron_interval',
@@ -379,6 +388,10 @@ class Auto_Ai_News_Poster_Settings
         $use_gemini = $options['use_gemini'] ?? 'no';
         $gemini_api_key = $options['gemini_api_key'] ?? '';
         $gemini_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
+        $vertex_ai_api_key = $options['vertex_ai_api_key'] ?? '';
+        $vertex_ai_project_id = $options['vertex_ai_project_id'] ?? '';
+        $vertex_ai_location = $options['vertex_ai_location'] ?? 'us-central1';
+        $imagen_model = $options['imagen_model'] ?? 'imagen-3-generate-001';
 
         // Obținem lista de modele disponibile pentru OpenAI
         $available_models = self::get_cached_openai_models($api_key);
@@ -556,6 +569,52 @@ class Auto_Ai_News_Poster_Settings
                                     Introduceți cheia API pentru a vedea toate modelele disponibile.
                                 <?php endif; ?>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configurare Vertex AI pentru Imagini -->
+                <div class="settings-card" style="margin-top: 20px;">
+                    <div class="settings-card-header">
+                        <div class="settings-card-icon">🖼️</div>
+                        <h3 class="settings-card-title">Configurare Vertex AI pentru Imagini Gemini</h3>
+                    </div>
+                    <div class="settings-card-content">
+                        <div class="form-group">
+                            <label for="vertex_ai_project_id" class="control-label">Project ID Vertex AI</label>
+                            <input type="text" name="auto_ai_news_poster_settings[vertex_ai_project_id]"
+                                   value="<?php echo esc_attr($vertex_ai_project_id); ?>" class="form-control"
+                                   id="vertex_ai_project_id" placeholder="your-project-id">
+                            <small class="form-text text-muted">ID-ul proiectului Google Cloud unde este activat Vertex AI.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="vertex_ai_location" class="control-label">Location</label>
+                            <select name="auto_ai_news_poster_settings[vertex_ai_location]" class="form-control" id="vertex_ai_location">
+                                <option value="us-central1" <?php selected($vertex_ai_location, 'us-central1'); ?>>us-central1</option>
+                                <option value="us-east1" <?php selected($vertex_ai_location, 'us-east1'); ?>>us-east1</option>
+                                <option value="us-west1" <?php selected($vertex_ai_location, 'us-west1'); ?>>us-west1</option>
+                                <option value="europe-west1" <?php selected($vertex_ai_location, 'europe-west1'); ?>>europe-west1</option>
+                                <option value="europe-west4" <?php selected($vertex_ai_location, 'europe-west4'); ?>>europe-west4</option>
+                                <option value="asia-southeast1" <?php selected($vertex_ai_location, 'asia-southeast1'); ?>>asia-southeast1</option>
+                            </select>
+                            <small class="form-text text-muted">Regiunea unde este activat Vertex AI.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="vertex_ai_api_key" class="control-label">Service Account JSON Key</label>
+                            <textarea name="auto_ai_news_poster_settings[vertex_ai_api_key]" class="form-control"
+                                      id="vertex_ai_api_key" rows="4" placeholder='{"type": "service_account", ...}'><?php echo esc_textarea($vertex_ai_api_key); ?></textarea>
+                            <small class="form-text text-muted">Conținutul fișierului JSON al Service Account din Google Cloud Console. Alternativ, poți folosi API Key simplă dacă e configurată.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="imagen_model" class="control-label">Model Imagen</label>
+                            <select name="auto_ai_news_poster_settings[imagen_model]" class="form-control" id="imagen_model">
+                                <option value="imagen-3-generate-001" <?php selected($imagen_model, 'imagen-3-generate-001'); ?>>Imagen 3 Generate 001 - Calitate înaltă</option>
+                                <option value="imagen-3-fast-generate-001" <?php selected($imagen_model, 'imagen-3-fast-generate-001'); ?>>Imagen 3 Fast Generate 001 - Generare rapidă</option>
+                            </select>
+                            <small class="form-text text-muted">Modelul Imagen pentru generarea de imagini.</small>
                         </div>
                     </div>
                 </div>
@@ -1494,7 +1553,7 @@ class Auto_Ai_News_Poster_Settings
                            'run_until_bulk_exhausted', 'generate_tags', 'use_openai', 'use_gemini'];
 
         // Câmpurile de tip <select> care trebuie validate
-        $select_fields = ['mode', 'status', 'specific_search_category', 'author_name', 'article_length_option', 'use_external_images', 'ai_model', 'generation_mode', 'gemini_model'];
+        $select_fields = ['mode', 'status', 'specific_search_category', 'author_name', 'article_length_option', 'use_external_images', 'ai_model', 'generation_mode', 'gemini_model', 'vertex_ai_location', 'imagen_model'];
 
         // Setăm toate checkbox-urile la 'no' înainte de a procesa input-ul
         foreach ($checkbox_fields as $checkbox_field) {
@@ -1513,7 +1572,7 @@ class Auto_Ai_News_Poster_Settings
                     $sanitized[$key] = sanitize_text_field($value);
                 }
                 // Pentru textarea, folosim o sanitizare specifică
-                elseif ($key === 'news_sources' || $key === 'parse_link_ai_instructions' || $key === 'ai_browsing_instructions' || $key === 'bulk_custom_source_urls') {
+                elseif ($key === 'news_sources' || $key === 'parse_link_ai_instructions' || $key === 'ai_browsing_instructions' || $key === 'bulk_custom_source_urls' || $key === 'vertex_ai_api_key') {
                     $sanitized[$key] = esc_textarea($value);
                 }
                 // Pentru alte câmpuri, sanitizăm normal
