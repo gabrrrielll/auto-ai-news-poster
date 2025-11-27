@@ -375,7 +375,6 @@ class Auto_Ai_News_Poster_Api
         // Actualizează timpul ultimului articol publicat pentru cron (doar pentru procesarea în masă)
         if ($is_bulk_processing && !$is_ajax_call) {
             update_option('auto_ai_news_poster_last_post_time', time());
-            error_log('API: Last post time updated for post ID: ' . $new_post_id);
         }
 
         // --- Generate Image if enabled ---
@@ -516,7 +515,6 @@ class Auto_Ai_News_Poster_Api
         $settings = get_option('auto_ai_news_poster_settings', []);
         if (isset($settings['mode']) && $settings['mode'] === 'auto') {
             update_option('auto_ai_news_poster_last_post_time', time());
-            error_log('API: Last post time updated for AI browsing post ID: ' . $new_post_id);
         }
 
         // Generăm imaginea dacă este activată opțiunea
