@@ -573,11 +573,11 @@ class Auto_Ai_News_Poster_Settings
                             <label for="imagen_model" class="control-label">Model Gemini pentru Imagini</label>
                             <select name="auto_ai_news_poster_settings[imagen_model]" class="form-control" id="imagen_model">
                                 <optgroup label="🌟 Recomandate">
-                                    <option value="gemini-2.5-flash-image-exp" <?php selected($imagen_model, 'gemini-2.5-flash-image-exp'); ?>>Gemini 2.5 Flash Image (Nano Banana) - Cea mai rapidă</option>
-                                    <option value="gemini-3-pro-image-preview" <?php selected($imagen_model, 'gemini-3-pro-image-preview'); ?>>Gemini 3 Pro Image Preview (Nano Banana Pro) - Calitate profesională</option>
+                                    <option value="gemini-2.5-flash-image-exp" <?php selected($imagen_model, 'gemini-2.5-flash-image-exp'); ?>>Gemini 2.0 Flash Exp - Generare imagini rapidă</option>
+                                    <option value="gemini-3-pro-image-preview" <?php selected($imagen_model, 'gemini-3-pro-image-preview'); ?>>Gemini 2.0 Flash Exp (Pro) - Calitate profesională</option>
                                 </optgroup>
                                 <optgroup label="📊 Alte Modele">
-                                    <option value="imagen-3" <?php selected($imagen_model, 'imagen-3'); ?>>Imagen 3 - Dedicat pentru imagini</option>
+                                    <option value="imagen-3" <?php selected($imagen_model, 'imagen-3'); ?>>Imagen 3 Generate 001 - Dedicat pentru imagini</option>
                                 </optgroup>
                             </select>
                             <small class="form-text text-muted">Selectează modelul Gemini pentru generarea de imagini. Folosește aceeași cheie API Gemini ca pentru text.</small>

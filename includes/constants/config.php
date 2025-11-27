@@ -454,7 +454,7 @@ function call_gemini_api($api_key, $model, $prompt)
 }
 
 // --- Google Gemini (image generation via Generative Language API) ---
-// Modele disponibile: gemini-2.5-flash-image-exp, gemini-3-pro-image-preview, imagen-3
+// Modele disponibile: gemini-2.0-flash-exp (cu responseModalities), imagen-3-generate-001 (prin endpoint separat)
 function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
 {
     if (empty($api_key)) {
@@ -467,25 +467,24 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
         $final_prompt .= "\n Utilizează următorul feedback de la imaginea generată anterior pentru a îmbunătăți imaginea: " . $feedback;
     }
 
-    // Endpoint pentru Generative Language API
-    // Modelele disponibile: gemini-2.5-flash-image-exp, gemini-3-pro-image-preview, imagen-3
-    $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . urlencode($model) . ':generateContent?key=' . urlencode($api_key);
-
-    // Construim body-ul pentru generarea de imagini
-    // Gemini 2.5 Flash Image și Gemini 3 Pro Image Preview folosesc formatul standard generateContent
+    // Mapăm numele modelelor la numele corecte din API
+    // Notă: Pentru generarea de imagini, folosim doar Imagen 3 prin endpoint-ul dedicat
+    // Modelele Gemini Flash nu suportă direct generarea de imagini prin generateContent
+    $model_mapping = [
+        'gemini-2.5-flash-image-exp' => 'imagen-3-generate-001', // Folosim Imagen 3 pentru toate
+        'gemini-3-pro-image-preview' => 'imagen-3-generate-001',
+        'imagen-3' => 'imagen-3-generate-001'
+    ];
+    
+    $api_model = $model_mapping[$model] ?? 'imagen-3-generate-001';
+    
+    // Folosim endpoint-ul dedicat pentru Imagen 3
+    $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . urlencode($api_model) . ':generateImages?key=' . urlencode($api_key);
+    
     $body = [
-        'contents' => [
-            [
-                'parts' => [
-                    [
-                        'text' => $final_prompt
-                    ]
-                ]
-            ]
-        ],
-        'generationConfig' => [
-            'responseModalities' => ['IMAGE'] // Specificăm că vrem doar imagini
-        ]
+        'prompt' => $final_prompt,
+        'numberOfImages' => 1,
+        'aspectRatio' => '16:9'
     ];
 
     $response = wp_remote_post($endpoint, [
@@ -512,17 +511,15 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
         return new WP_Error('gemini_api_error', $error_msg);
     }
 
-    // Extragem imaginea din răspuns
-    // Răspunsul poate conține imagini în format base64 sau URL
+    // Extragem imaginea din răspuns Imagen 3
     $image_url = '';
-    $image_base64 = '';
     
-    if (!empty($data['candidates']) && !empty($data['candidates'][0]['content']['parts'])) {
-        foreach ($data['candidates'][0]['content']['parts'] as $part) {
-            // Verificăm dacă avem imagine în format base64
-            if (!empty($part['inlineData']['data']) && !empty($part['inlineData']['mimeType'])) {
-                $image_base64 = $part['inlineData']['data'];
-                $mime_type = $part['inlineData']['mimeType'];
+    if (!empty($data['generatedImages']) && is_array($data['generatedImages'])) {
+        foreach ($data['generatedImages'] as $generated_image) {
+            // Verificăm dacă avem base64String
+            if (!empty($generated_image['base64String'])) {
+                $image_base64 = $generated_image['base64String'];
+                $mime_type = $generated_image['mimeType'] ?? 'image/png';
                 
                 // Determinăm extensia fișierului
                 $extension = 'png';
@@ -542,7 +539,7 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
                 }
                 
                 // Generăm un nume de fișier unic
-                $temp_filename = 'gemini-' . time() . '-' . wp_generate_password(8, false) . '.' . $extension;
+                $temp_filename = 'imagen-' . time() . '-' . wp_generate_password(8, false) . '.' . $extension;
                 $temp_filepath = $temp_dir . '/' . $temp_filename;
                 
                 // Decodăm și salvăm base64
@@ -553,9 +550,9 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
                     break;
                 }
             }
-            // Verificăm dacă avem URL direct (pentru Imagen 3)
-            elseif (!empty($part['imageUrl'])) {
-                $image_url = $part['imageUrl'];
+            // Verificăm dacă avem URL direct
+            elseif (!empty($generated_image['imageUrl'])) {
+                $image_url = $generated_image['imageUrl'];
                 break;
             }
         }
