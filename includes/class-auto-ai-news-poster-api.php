@@ -1003,12 +1003,27 @@ class Auto_Ai_News_Poster_Api
             $prompt_for_image = $initial_prompt;
         }
 
+        error_log('=== GENERATE_IMAGE_FOR_ARTICLE AJAX ===');
+        error_log('Post ID: ' . $post_id);
+        error_log('Use Gemini: ' . ($use_gemini ? 'YES' : 'NO'));
+        error_log('Prompt for image: ' . substr($prompt_for_image, 0, 100) . '...');
+        error_log('Feedback: ' . (!empty($feedback) ? $feedback : 'NONE'));
+        
         // Folosim wrapper-ul care alege automat provider-ul corect
         $image_response = call_ai_image_api($prompt_for_image, $feedback);
+        
+        error_log('Image response type: ' . gettype($image_response));
+        if (is_wp_error($image_response)) {
+            error_log('Image response is WP_Error: ' . $image_response->get_error_message());
+            error_log('Error code: ' . $image_response->get_error_code());
+        } elseif (is_array($image_response)) {
+            error_log('Image response is array, keys: ' . implode(', ', array_keys($image_response)));
+        }
 
         // Verificăm dacă răspunsul este un WP_Error sau un array direct
         if (is_wp_error($image_response)) {
             $provider_name = $use_gemini ? 'Gemini' : 'OpenAI';
+            error_log('Sending JSON error to frontend');
             wp_send_json_error(['message' => 'Eroare la apelul ' . $provider_name . ' API: ' . $image_response->get_error_message()]);
             return;
         }

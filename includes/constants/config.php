@@ -353,28 +353,48 @@ function call_openai_api($api_key, $prompt)
 // Image generation wrapper - folosește provider-ul selectat (OpenAI sau Gemini)
 function call_ai_image_api($dalle_prompt, $feedback = '')
 {
+    error_log('=== CALL_AI_IMAGE_API START ===');
+    error_log('Prompt: ' . substr($dalle_prompt, 0, 100) . '...');
+    error_log('Feedback: ' . (!empty($feedback) ? $feedback : 'NONE'));
+    
     $options = get_option('auto_ai_news_poster_settings');
     $use_gemini = isset($options['use_gemini']) && $options['use_gemini'] === 'yes';
+    
+    error_log('Use Gemini: ' . ($use_gemini ? 'YES' : 'NO'));
     
     if ($use_gemini) {
         // Folosim Gemini pentru generarea de imagini prin Generative Language API
         $api_key = $options['gemini_api_key'] ?? '';
         $imagen_model = $options['imagen_model'] ?? 'gemini-2.5-flash-image-exp';
         
+        error_log('Gemini API Key present: ' . (!empty($api_key) ? 'YES' : 'NO'));
+        error_log('Imagen model from settings: ' . $imagen_model);
+        
         if (empty($api_key)) {
+            error_log('ERROR: Gemini API key missing');
             return new WP_Error('no_image_api', 'Cheia API Gemini lipsește pentru generarea imaginii.');
         }
         
-        return call_gemini_image_api($api_key, $imagen_model, $dalle_prompt, $feedback);
+        error_log('Calling call_gemini_image_api...');
+        $result = call_gemini_image_api($api_key, $imagen_model, $dalle_prompt, $feedback);
+        error_log('call_gemini_image_api result: ' . (is_wp_error($result) ? 'ERROR: ' . $result->get_error_message() : 'SUCCESS'));
+        error_log('=== CALL_AI_IMAGE_API END ===');
+        return $result;
     }
     
     // Default to OpenAI
+    error_log('Using OpenAI DALL-E');
     $api_key = $options['chatgpt_api_key'] ?? '';
     if (empty($api_key)) {
+        error_log('ERROR: OpenAI API key missing');
         return new WP_Error('no_image_api', 'Cheia API OpenAI lipsește pentru generarea imaginii.');
     }
     
-    return call_openai_image_api($api_key, $dalle_prompt, $feedback);
+    error_log('Calling call_openai_image_api...');
+    $result = call_openai_image_api($api_key, $dalle_prompt, $feedback);
+    error_log('call_openai_image_api result: ' . (is_wp_error($result) ? 'ERROR' : 'SUCCESS'));
+    error_log('=== CALL_AI_IMAGE_API END ===');
+    return $result;
 }
 
 function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
@@ -457,7 +477,14 @@ function call_gemini_api($api_key, $model, $prompt)
 // Modele disponibile: gemini-2.0-flash-exp (cu responseModalities), imagen-3-generate-001 (prin endpoint separat)
 function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
 {
+    error_log('=== GEMINI IMAGE API CALL START ===');
+    error_log('Model received: ' . $model);
+    error_log('API Key present: ' . (!empty($api_key) ? 'YES (length: ' . strlen($api_key) . ')' : 'NO'));
+    error_log('Prompt length: ' . strlen($prompt));
+    error_log('Feedback: ' . (!empty($feedback) ? $feedback : 'NONE'));
+    
     if (empty($api_key)) {
+        error_log('ERROR: Missing Gemini API key');
         return new WP_Error('missing_api_key', 'Missing Gemini API key');
     }
 
@@ -477,15 +504,19 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     ];
     
     $api_model = $model_mapping[$model] ?? 'imagen-3-generate-001';
+    error_log('Mapped API model: ' . $api_model);
     
     // Folosim endpoint-ul dedicat pentru Imagen 3
     $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . urlencode($api_model) . ':generateImages?key=' . urlencode($api_key);
+    error_log('Endpoint URL: ' . str_replace($api_key, '***HIDDEN***', $endpoint));
     
     $body = [
         'prompt' => $final_prompt,
         'numberOfImages' => 1,
         'aspectRatio' => '16:9'
     ];
+    
+    error_log('Request body: ' . wp_json_encode($body));
 
     $response = wp_remote_post($endpoint, [
         'headers' => [ 'Content-Type' => 'application/json' ],
@@ -494,32 +525,58 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     ]);
 
     if (is_wp_error($response)) {
+        error_log('ERROR: wp_remote_post failed: ' . $response->get_error_message());
+        error_log('ERROR code: ' . $response->get_error_code());
         return $response;
     }
 
     $code = wp_remote_retrieve_response_code($response);
     $raw = wp_remote_retrieve_body($response);
     $data = json_decode($raw, true);
-
+    
+    error_log('Response HTTP code: ' . $code);
+    error_log('Response body (first 500 chars): ' . substr($raw, 0, 500));
+    
     if ($code !== 200) {
+        error_log('ERROR: Non-200 response code');
+        error_log('Full response: ' . $raw);
         $error_msg = 'Gemini Image API Error (HTTP ' . $code . ')';
         if (isset($data['error']['message'])) {
             $error_msg .= ': ' . $data['error']['message'];
-        } else {
+            error_log('Error message from API: ' . $data['error']['message']);
+        }
+        if (isset($data['error']['status'])) {
+            error_log('Error status: ' . $data['error']['status']);
+        }
+        if (isset($data['error']['details'])) {
+            error_log('Error details: ' . wp_json_encode($data['error']['details']));
+        }
+        if (empty($data['error']['message'])) {
             $error_msg .= ': ' . $raw;
         }
+        error_log('=== GEMINI IMAGE API CALL END (ERROR) ===');
         return new WP_Error('gemini_api_error', $error_msg);
     }
+    
+    error_log('Success: Response code 200');
 
     // Extragem imaginea din răspuns Imagen 3
+    error_log('Parsing response data...');
+    error_log('Response keys: ' . implode(', ', array_keys($data ?? [])));
+    
     $image_url = '';
     
     if (!empty($data['generatedImages']) && is_array($data['generatedImages'])) {
-        foreach ($data['generatedImages'] as $generated_image) {
+        error_log('Found generatedImages array with ' . count($data['generatedImages']) . ' items');
+        foreach ($data['generatedImages'] as $index => $generated_image) {
+            error_log('Processing image ' . ($index + 1) . ', keys: ' . implode(', ', array_keys($generated_image ?? [])));
+            
             // Verificăm dacă avem base64String
             if (!empty($generated_image['base64String'])) {
+                error_log('Found base64String, length: ' . strlen($generated_image['base64String']));
                 $image_base64 = $generated_image['base64String'];
                 $mime_type = $generated_image['mimeType'] ?? 'image/png';
+                error_log('MIME type: ' . $mime_type);
                 
                 // Determinăm extensia fișierului
                 $extension = 'png';
@@ -533,35 +590,56 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
                 $upload_dir = wp_upload_dir();
                 $temp_dir = $upload_dir['basedir'] . '/temp-gemini-images';
                 
+                error_log('Upload dir: ' . $upload_dir['basedir']);
+                error_log('Temp dir: ' . $temp_dir);
+                
                 // Creăm directorul dacă nu există
                 if (!file_exists($temp_dir)) {
                     wp_mkdir_p($temp_dir);
+                    error_log('Created temp directory');
                 }
                 
                 // Generăm un nume de fișier unic
                 $temp_filename = 'imagen-' . time() . '-' . wp_generate_password(8, false) . '.' . $extension;
                 $temp_filepath = $temp_dir . '/' . $temp_filename;
                 
+                error_log('Saving to: ' . $temp_filepath);
+                
                 // Decodăm și salvăm base64
                 $image_data = base64_decode($image_base64);
                 if ($image_data !== false && file_put_contents($temp_filepath, $image_data)) {
                     // Returnăm URL-ul fișierului temporar
                     $image_url = $upload_dir['baseurl'] . '/temp-gemini-images/' . $temp_filename;
+                    error_log('Image saved successfully. URL: ' . $image_url);
                     break;
+                } else {
+                    error_log('ERROR: Failed to save image file');
                 }
             }
             // Verificăm dacă avem URL direct
             elseif (!empty($generated_image['imageUrl'])) {
+                error_log('Found imageUrl: ' . $generated_image['imageUrl']);
                 $image_url = $generated_image['imageUrl'];
                 break;
+            } else {
+                error_log('No base64String or imageUrl found in image ' . ($index + 1));
             }
         }
+    } else {
+        error_log('WARNING: No generatedImages found in response');
+        error_log('Response structure: ' . wp_json_encode($data));
     }
 
     if (empty($image_url)) {
+        error_log('ERROR: No image URL extracted from response');
+        error_log('Full response data: ' . wp_json_encode($data));
+        error_log('=== GEMINI IMAGE API CALL END (NO IMAGE) ===');
         return new WP_Error('no_image', 'No image found in Gemini response. Response: ' . wp_json_encode($data));
     }
 
+    error_log('Success: Image URL extracted: ' . $image_url);
+    error_log('=== GEMINI IMAGE API CALL END (SUCCESS) ===');
+    
     // Returnăm în același format ca DALL-E pentru compatibilitate
     return [
         'data' => [
