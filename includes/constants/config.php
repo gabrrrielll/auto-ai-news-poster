@@ -702,11 +702,35 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
             return save_base64_image($image_base64, $mime_type, 'gemini');
         }
         
-        // Verificăm dacă există text în part (poate fi un mesaj de eroare)
+        // Verificăm dacă există text în part (poate fi un mesaj de eroare sau modelul returnează text în loc de imagine)
         if (!empty($part['text'])) {
-            error_log('Text found in part ' . $index . ': ' . substr($part['text'], 0, 200));
-            // Continuăm să căutăm imaginea în alte parts
+            $text_content = $part['text'];
+            error_log('Text found in part ' . $index . ': ' . substr($text_content, 0, 200));
+            
+            // Dacă modelul returnează doar text și nu există imagini, înseamnă că modelul nu generează imagini
+            // Poate că modelul nu este disponibil sau nu funcționează cum ne așteptăm
+            if (strpos(strtolower($text_content), 'imagine') !== false || strpos(strtolower($text_content), 'image') !== false) {
+                error_log('WARNING: Model returned text description instead of image. This suggests the model may not support image generation or is not available.');
+            }
         }
+    }
+
+    // Dacă nu am găsit imagini dar avem text, modelul probabil nu generează imagini
+    $has_text_only = false;
+    foreach ($parts as $part) {
+        if (!empty($part['text']) && empty($part['inlineData'])) {
+            $has_text_only = true;
+            break;
+        }
+    }
+    
+    if ($has_text_only) {
+        $error_msg = 'Modelul ' . $api_model . ' a returnat text în loc de imagine. ';
+        $error_msg .= 'Posibile cauze: modelul nu este disponibil, nu suportă generarea de imagini, sau trebuie folosit un alt model (ex: imagen-4 sau gemini-3-pro-image-preview).';
+        error_log('ERROR: ' . $error_msg);
+        error_log('Parts structure: ' . json_encode($parts));
+        error_log('Full response (first 1000 chars): ' . substr(json_encode($data), 0, 1000));
+        return new WP_Error('no_image', $error_msg);
     }
 
     error_log('No image data found in any part. Parts structure: ' . json_encode($parts));
