@@ -595,6 +595,24 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
         ],
         'generationConfig' => [
             'imageConfig' => $imageConfig
+        ],
+        'safetySettings' => [
+            [
+                'category' => 'HARM_CATEGORY_HARASSMENT',
+                'threshold' => 'BLOCK_NONE'
+            ],
+            [
+                'category' => 'HARM_CATEGORY_HATE_SPEECH',
+                'threshold' => 'BLOCK_NONE'
+            ],
+            [
+                'category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                'threshold' => 'BLOCK_NONE'
+            ],
+            [
+                'category' => 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                'threshold' => 'BLOCK_NONE'
+            ]
         ]
     ];
     
@@ -633,18 +651,40 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
         return new WP_Error('gemini_api_error', $error_msg);
     }
 
+    // Verificăm dacă există candidat
+    if (empty($data['candidates']) || empty($data['candidates'][0])) {
+        error_log('No candidates in API response. Full response: ' . json_encode($data));
+        return new WP_Error('no_candidate', 'No candidates found in API response');
+    }
+    
+    $candidate = $data['candidates'][0];
+    
+    // Verificăm finishReason pentru a vedea de ce nu s-a generat imaginea
+    $finish_reason = $candidate['finishReason'] ?? 'UNKNOWN';
+    error_log('Finish reason: ' . $finish_reason);
+    
+    if ($finish_reason !== 'STOP') {
+        $error_msg = 'Image generation stopped. Reason: ' . $finish_reason;
+        if (isset($candidate['safetyRatings'])) {
+            $error_msg .= '. Safety ratings: ' . json_encode($candidate['safetyRatings']);
+        }
+        error_log($error_msg);
+        return new WP_Error('generation_stopped', $error_msg);
+    }
+    
     // Log response structure for debugging
     error_log('API Response structure: ' . json_encode([
         'has_candidates' => isset($data['candidates']),
         'candidates_count' => isset($data['candidates']) ? count($data['candidates']) : 0,
-        'first_candidate_keys' => isset($data['candidates'][0]) ? array_keys($data['candidates'][0]) : [],
-        'has_content' => isset($data['candidates'][0]['content']),
-        'has_parts' => isset($data['candidates'][0]['content']['parts']),
-        'parts_count' => isset($data['candidates'][0]['content']['parts']) ? count($data['candidates'][0]['content']['parts']) : 0,
+        'first_candidate_keys' => isset($candidate) ? array_keys($candidate) : [],
+        'has_content' => isset($candidate['content']),
+        'has_parts' => isset($candidate['content']['parts']),
+        'parts_count' => isset($candidate['content']['parts']) ? count($candidate['content']['parts']) : 0,
+        'finish_reason' => $finish_reason,
     ]));
 
     // Iterate through parts to find the image
-    $parts = $data['candidates'][0]['content']['parts'] ?? [];
+    $parts = $candidate['content']['parts'] ?? [];
     
     if (empty($parts)) {
         error_log('No parts found in response. Full response structure: ' . json_encode($data));
@@ -653,16 +693,25 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     
     foreach ($parts as $index => $part) {
         error_log('Checking part ' . $index . ', keys: ' . implode(', ', array_keys($part)));
+        
+        // Verificăm dacă există imagine în inlineData
         if (!empty($part['inlineData']['data'])) {
             $image_base64 = $part['inlineData']['data'];
             $mime_type = $part['inlineData']['mimeType'] ?? 'image/png';
             error_log('Image found in part ' . $index . ', mime type: ' . $mime_type . ', data length: ' . strlen($image_base64));
             return save_base64_image($image_base64, $mime_type, 'gemini');
         }
+        
+        // Verificăm dacă există text în part (poate fi un mesaj de eroare)
+        if (!empty($part['text'])) {
+            error_log('Text found in part ' . $index . ': ' . substr($part['text'], 0, 200));
+            // Continuăm să căutăm imaginea în alte parts
+        }
     }
 
     error_log('No image data found in any part. Parts structure: ' . json_encode($parts));
-    return new WP_Error('no_image', 'No image data found in response');
+    error_log('Full response (first 1000 chars): ' . substr(json_encode($data), 0, 1000));
+    return new WP_Error('no_image', 'No image data found in response. Finish reason: ' . $finish_reason);
 }
 
 // Helper function pentru salvarea imaginii base64
