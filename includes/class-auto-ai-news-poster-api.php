@@ -973,18 +973,12 @@ class Auto_Ai_News_Poster_Api
         $options = get_option('auto_ai_news_poster_settings');
         $use_gemini = isset($options['use_gemini']) && $options['use_gemini'] === 'yes';
         
-        // Verificăm configurarea pentru imagini
+        // Verificăm cheia API în funcție de provider
         if ($use_gemini) {
-            $vertex_ai_project_id = $options['vertex_ai_project_id'] ?? '';
-            $vertex_ai_api_key = $options['vertex_ai_api_key'] ?? '';
-            
-            if (empty($vertex_ai_project_id) || empty($vertex_ai_api_key)) {
-                // Fallback la OpenAI dacă Vertex AI nu este configurat
-                $api_key = $options['chatgpt_api_key'] ?? '';
-                if (empty($api_key)) {
-                    wp_send_json_error(['message' => 'Pentru generarea de imagini cu Gemini, este necesară configurarea Vertex AI (Project ID și Service Account JSON). Alternativ, introduceți cheia API OpenAI pentru DALL-E.']);
-                    return;
-                }
+            $api_key = $options['gemini_api_key'] ?? '';
+            if (empty($api_key)) {
+                wp_send_json_error(['message' => 'Cheia API Gemini lipsește pentru generarea imaginii.']);
+                return;
             }
         } else {
             $api_key = $options['chatgpt_api_key'] ?? '';
@@ -1014,7 +1008,7 @@ class Auto_Ai_News_Poster_Api
 
         // Verificăm dacă răspunsul este un WP_Error sau un array direct
         if (is_wp_error($image_response)) {
-            $provider_name = $use_gemini ? 'Gemini Imagen (Vertex AI)' : 'OpenAI DALL-E';
+            $provider_name = $use_gemini ? 'Gemini' : 'OpenAI';
             wp_send_json_error(['message' => 'Eroare la apelul ' . $provider_name . ' API: ' . $image_response->get_error_message()]);
             return;
         }
