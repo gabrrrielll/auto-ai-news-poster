@@ -490,30 +490,57 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
 
     // Adăugăm feedback-ul la prompt dacă există
     $final_prompt = $prompt;
+    
+    // Dacă prompt-ul este JSON, încercăm să extragem conținutul text
+    $decoded_prompt = json_decode($prompt, true);
+    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded_prompt)) {
+        // Dacă este JSON valid, încercăm să extragem textul din câmpurile relevante
+        if (!empty($decoded_prompt['content'])) {
+            $final_prompt = $decoded_prompt['content'];
+        } elseif (!empty($decoded_prompt['prompt'])) {
+            $final_prompt = $decoded_prompt['prompt'];
+        } elseif (!empty($decoded_prompt['text'])) {
+            $final_prompt = $decoded_prompt['text'];
+        } else {
+            // Dacă nu găsim un câmp text, folosim întregul JSON ca string
+            $final_prompt = $prompt;
+        }
+        error_log('Extracted text from JSON prompt, length: ' . strlen($final_prompt));
+    }
+    
     if (!empty($feedback)) {
         $final_prompt .= "\n Utilizează următorul feedback de la imaginea generată anterior pentru a îmbunătăți imaginea: " . $feedback;
     }
 
     // Mapăm numele modelelor la numele corecte din API
-    // Notă: Pentru generarea de imagini, folosim doar Imagen 3 prin endpoint-ul dedicat
-    // Modelele Gemini Flash nu suportă direct generarea de imagini prin generateContent
+    // Notă: Imagen 3 nu este disponibil prin Generative Language API standard
+    // Folosim gemini-2.0-flash-exp cu responseModalities pentru generarea de imagini
     $model_mapping = [
-        'gemini-2.5-flash-image-exp' => 'imagen-3-generate-001', // Folosim Imagen 3 pentru toate
-        'gemini-3-pro-image-preview' => 'imagen-3-generate-001',
-        'imagen-3' => 'imagen-3-generate-001'
+        'gemini-2.5-flash-image-exp' => 'gemini-2.0-flash-exp',
+        'gemini-3-pro-image-preview' => 'gemini-2.0-flash-exp',
+        'imagen-3' => 'gemini-2.0-flash-exp' // Folosim flash-exp pentru toate, deoarece Imagen 3 nu este disponibil
     ];
     
-    $api_model = $model_mapping[$model] ?? 'imagen-3-generate-001';
+    $api_model = $model_mapping[$model] ?? 'gemini-2.0-flash-exp';
     error_log('Mapped API model: ' . $api_model);
     
-    // Folosim endpoint-ul dedicat pentru Imagen 3
-    $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . urlencode($api_model) . ':generateImages?key=' . urlencode($api_key);
-    error_log('Endpoint URL: ' . str_replace($api_key, '***HIDDEN***', $endpoint));
+    // Folosim generateContent cu responseModalities pentru generarea de imagini
+    $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . urlencode($api_model) . ':generateContent?key=' . urlencode($api_key);
+    error_log('Using endpoint: ' . str_replace($api_key, '***HIDDEN***', $endpoint));
     
     $body = [
-        'prompt' => $final_prompt,
-        'numberOfImages' => 1,
-        'aspectRatio' => '16:9'
+        'contents' => [
+            [
+                'parts' => [
+                    [
+                        'text' => $final_prompt
+                    ]
+                ]
+            ]
+        ],
+        'generationConfig' => [
+            'responseModalities' => ['IMAGE'] // Specificăm că vrem doar imagini
+        ]
     ];
     
     error_log('Request body: ' . wp_json_encode($body));
@@ -539,20 +566,34 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     
     if ($code !== 200) {
         error_log('ERROR: Non-200 response code');
-        error_log('Full response: ' . $raw);
+        error_log('Full response length: ' . strlen($raw));
+        error_log('Full response: ' . ($raw ? $raw : '(EMPTY)'));
+        
+        // Dacă răspunsul este gol sau 404, înseamnă că endpoint-ul nu există
+        if ($code === 404 && empty($raw)) {
+            error_log('ERROR: 404 with empty response - endpoint does not exist');
+            error_log('Imagen 3 might not be available through Generative Language API');
+            error_log('Consider using Vertex AI API instead');
+        }
+        
         $error_msg = 'Gemini Image API Error (HTTP ' . $code . ')';
-        if (isset($data['error']['message'])) {
-            $error_msg .= ': ' . $data['error']['message'];
-            error_log('Error message from API: ' . $data['error']['message']);
-        }
-        if (isset($data['error']['status'])) {
-            error_log('Error status: ' . $data['error']['status']);
-        }
-        if (isset($data['error']['details'])) {
-            error_log('Error details: ' . wp_json_encode($data['error']['details']));
-        }
-        if (empty($data['error']['message'])) {
-            $error_msg .= ': ' . $raw;
+        if (!empty($raw)) {
+            if (isset($data['error']['message'])) {
+                $error_msg .= ': ' . $data['error']['message'];
+                error_log('Error message from API: ' . $data['error']['message']);
+            }
+            if (isset($data['error']['status'])) {
+                $error_msg .= ' [' . $data['error']['status'] . ']';
+                error_log('Error status: ' . $data['error']['status']);
+            }
+            if (isset($data['error']['details'])) {
+                error_log('Error details: ' . wp_json_encode($data['error']['details']));
+            }
+            if (empty($data['error']['message'])) {
+                $error_msg .= ': ' . substr($raw, 0, 200);
+            }
+        } else {
+            $error_msg .= ': Endpoint not found (empty response). Imagen 3 might require Vertex AI API instead of Generative Language API.';
         }
         error_log('=== GEMINI IMAGE API CALL END (ERROR) ===');
         return new WP_Error('gemini_api_error', $error_msg);
@@ -560,22 +601,23 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     
     error_log('Success: Response code 200');
 
-    // Extragem imaginea din răspuns Imagen 3
+    // Extragem imaginea din răspuns Gemini Flash (generateContent cu responseModalities)
     error_log('Parsing response data...');
     error_log('Response keys: ' . implode(', ', array_keys($data ?? [])));
     
     $image_url = '';
     
-    if (!empty($data['generatedImages']) && is_array($data['generatedImages'])) {
-        error_log('Found generatedImages array with ' . count($data['generatedImages']) . ' items');
-        foreach ($data['generatedImages'] as $index => $generated_image) {
-            error_log('Processing image ' . ($index + 1) . ', keys: ' . implode(', ', array_keys($generated_image ?? [])));
+    // Pentru generateContent cu responseModalities, răspunsul vine în candidates[0].content.parts
+    if (!empty($data['candidates']) && !empty($data['candidates'][0]['content']['parts'])) {
+        error_log('Found candidates with ' . count($data['candidates'][0]['content']['parts']) . ' parts');
+        foreach ($data['candidates'][0]['content']['parts'] as $index => $part) {
+            error_log('Processing part ' . ($index + 1) . ', keys: ' . implode(', ', array_keys($part ?? [])));
             
-            // Verificăm dacă avem base64String
-            if (!empty($generated_image['base64String'])) {
-                error_log('Found base64String, length: ' . strlen($generated_image['base64String']));
-                $image_base64 = $generated_image['base64String'];
-                $mime_type = $generated_image['mimeType'] ?? 'image/png';
+            // Verificăm dacă avem imagine în format base64
+            if (!empty($part['inlineData']['data']) && !empty($part['inlineData']['mimeType'])) {
+                error_log('Found inlineData with base64, length: ' . strlen($part['inlineData']['data']));
+                $image_base64 = $part['inlineData']['data'];
+                $mime_type = $part['inlineData']['mimeType'];
                 error_log('MIME type: ' . $mime_type);
                 
                 // Determinăm extensia fișierului
@@ -600,7 +642,7 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
                 }
                 
                 // Generăm un nume de fișier unic
-                $temp_filename = 'imagen-' . time() . '-' . wp_generate_password(8, false) . '.' . $extension;
+                $temp_filename = 'gemini-' . time() . '-' . wp_generate_password(8, false) . '.' . $extension;
                 $temp_filepath = $temp_dir . '/' . $temp_filename;
                 
                 error_log('Saving to: ' . $temp_filepath);
@@ -617,16 +659,16 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
                 }
             }
             // Verificăm dacă avem URL direct
-            elseif (!empty($generated_image['imageUrl'])) {
-                error_log('Found imageUrl: ' . $generated_image['imageUrl']);
-                $image_url = $generated_image['imageUrl'];
+            elseif (!empty($part['imageUrl'])) {
+                error_log('Found imageUrl: ' . $part['imageUrl']);
+                $image_url = $part['imageUrl'];
                 break;
             } else {
-                error_log('No base64String or imageUrl found in image ' . ($index + 1));
+                error_log('No inlineData or imageUrl found in part ' . ($index + 1));
             }
         }
     } else {
-        error_log('WARNING: No generatedImages found in response');
+        error_log('WARNING: No candidates or parts found in response');
         error_log('Response structure: ' . wp_json_encode($data));
     }
 
