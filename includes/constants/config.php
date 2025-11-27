@@ -522,11 +522,14 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
         error_log('Using model name directly from settings: ' . $api_model);
     }
     
-    // Logăm body-ul pentru debugging
-    error_log('Request body preview (first 200 chars): ' . substr(wp_json_encode([
-        'contents' => [['parts' => [['text' => substr($final_prompt, 0, 50) . '...']]]],
-        'generationConfig' => ['imageConfig' => $imageConfig]
-    ]), 0, 200));
+    // Inițializăm imageConfig pentru modelele Gemini (va fi folosit mai jos)
+    $imageConfig = [
+        'aspectRatio' => '16:9',
+    ];
+    
+    if ($api_model === 'gemini-3-pro-image-preview') {
+        $imageConfig['imageSize'] = '2K'; // Opțiuni: 1K, 2K, 4K
+    }
 
     // Case 1: Imagen 4.0 Model (Uses generateImages)
     if ($api_model === 'imagen-4') {
@@ -578,14 +581,7 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     // Case 2: Gemini Flash/Pro Series (Uses generateContent)
     $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . urlencode($api_model) . ':generateContent';
     
-    // Pro preview supports imageSize configuration
-    $imageConfig = [
-        'aspectRatio' => '16:9',
-    ];
-
-    if ($api_model === 'gemini-3-pro-image-preview') {
-        $imageConfig['imageSize'] = '2K'; // Opțiuni: 1K, 2K, 4K
-    }
+    // imageConfig este deja definit mai sus pentru toate modelele Gemini
 
     $body = [
         'contents' => [
@@ -603,6 +599,8 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     ];
     
     error_log('Using generateContent endpoint for ' . $api_model);
+    error_log('Request body (imageConfig): ' . json_encode($imageConfig));
+    error_log('Request body (full, first 300 chars): ' . substr(wp_json_encode($body), 0, 300));
     
     $response = wp_remote_post($endpoint, [
         'headers' => [
@@ -631,20 +629,39 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
             $error_msg .= '. Sugestie: Verifică dacă modelul "' . $api_model . '" este disponibil în API. Poți lista modelele disponibile folosind ListModels API.';
         }
         error_log('Gemini Image API Error Details: Model=' . $api_model . ', Endpoint=' . $endpoint . ', Error=' . $error_msg);
+        error_log('Response body (first 500 chars): ' . substr($raw, 0, 500));
         return new WP_Error('gemini_api_error', $error_msg);
     }
+
+    // Log response structure for debugging
+    error_log('API Response structure: ' . json_encode([
+        'has_candidates' => isset($data['candidates']),
+        'candidates_count' => isset($data['candidates']) ? count($data['candidates']) : 0,
+        'first_candidate_keys' => isset($data['candidates'][0]) ? array_keys($data['candidates'][0]) : [],
+        'has_content' => isset($data['candidates'][0]['content']),
+        'has_parts' => isset($data['candidates'][0]['content']['parts']),
+        'parts_count' => isset($data['candidates'][0]['content']['parts']) ? count($data['candidates'][0]['content']['parts']) : 0,
+    ]));
 
     // Iterate through parts to find the image
     $parts = $data['candidates'][0]['content']['parts'] ?? [];
     
-    foreach ($parts as $part) {
+    if (empty($parts)) {
+        error_log('No parts found in response. Full response structure: ' . json_encode($data));
+        return new WP_Error('no_image', 'No parts found in API response. Response: ' . substr(json_encode($data), 0, 500));
+    }
+    
+    foreach ($parts as $index => $part) {
+        error_log('Checking part ' . $index . ', keys: ' . implode(', ', array_keys($part)));
         if (!empty($part['inlineData']['data'])) {
             $image_base64 = $part['inlineData']['data'];
             $mime_type = $part['inlineData']['mimeType'] ?? 'image/png';
+            error_log('Image found in part ' . $index . ', mime type: ' . $mime_type . ', data length: ' . strlen($image_base64));
             return save_base64_image($image_base64, $mime_type, 'gemini');
         }
     }
 
+    error_log('No image data found in any part. Parts structure: ' . json_encode($parts));
     return new WP_Error('no_image', 'No image data found in response');
 }
 
