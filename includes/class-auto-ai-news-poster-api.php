@@ -992,13 +992,19 @@ class Auto_Ai_News_Poster_Api
             $summary ?: wp_trim_words($post->post_content, 100, '...')
         );
 
-        // Generează un prompt sigur (folosim OpenAI pentru generarea promptului sigur, indiferent de provider)
-        $openai_api_key = $options['chatgpt_api_key'] ?? '';
-        if (!empty($openai_api_key)) {
-            $prompt_for_image = self::generate_safe_dalle_prompt($initial_prompt, $openai_api_key);
-        } else {
-            // Dacă nu avem OpenAI key, folosim promptul direct (mai puțin sigur, dar funcțional)
+        // Generează promptul în funcție de provider
+        if ($use_gemini) {
+            // Pentru Gemini, folosim promptul direct (Gemini înțelege mai bine prompturile naturale)
             $prompt_for_image = $initial_prompt;
+        } else {
+            // Pentru OpenAI/DALL-E, generăm un prompt sigur optimizat pentru DALL-E
+            $openai_api_key = $options['chatgpt_api_key'] ?? '';
+            if (!empty($openai_api_key)) {
+                $prompt_for_image = self::generate_safe_dalle_prompt($initial_prompt, $openai_api_key);
+            } else {
+                // Dacă nu avem OpenAI key, folosim promptul direct
+                $prompt_for_image = $initial_prompt;
+            }
         }
 
         error_log('=== GENERATE_IMAGE_FOR_ARTICLE AJAX ===');
