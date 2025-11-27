@@ -518,34 +518,32 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
         $final_prompt .= "\n Utilizează următorul feedback de la imaginea generată anterior pentru a îmbunătăți imaginea: " . $feedback;
     }
 
-    // Mapăm numele modelelor la numele corecte din API
-    // Notă: Modelele Gemini standard nu suportă generarea de imagini prin Generative Language API
-    // Imagen 3 necesită Vertex AI API, nu Generative Language API
-    // Pentru moment, returnăm o eroare informativă
-    $model_mapping = [
-        'gemini-2.5-flash-image-exp' => null, // Nu este disponibil prin Generative Language API
-        'gemini-3-pro-image-preview' => null, // Nu este disponibil prin Generative Language API
-        'imagen-3' => null // Necesită Vertex AI API
-    ];
+    // Pentru Generative Language API, încercăm diferite abordări
+    // Notă: Modelele de imagini Gemini pot necesita abordări diferite
     
-    // Verificăm dacă modelul este disponibil prin Generative Language API
-    if (isset($model_mapping[$model]) && $model_mapping[$model] === null) {
-        error_log('ERROR: Model ' . $model . ' is not available through Generative Language API');
-        error_log('Imagen 3 and Gemini image models require Vertex AI API, not Generative Language API');
-        return new WP_Error('model_not_available', 
-            'Modelul selectat (' . $model . ') nu este disponibil prin Generative Language API. ' .
-            'Pentru generarea de imagini cu Gemini/Imagen, este necesară configurarea Vertex AI API. ' .
-            'Alternativ, poți folosi OpenAI DALL-E pentru generarea de imagini.');
+    // Încercăm mai întâi cu gemini-2.0-flash-exp care ar putea suporta generarea de imagini
+    // Dacă modelul selectat este pentru Imagen, ar trebui să folosim Vertex AI
+    if ($model === 'imagen-3' || $model === 'imagen-3-generate-001' || $model === 'imagen-3-fast-generate-001') {
+        error_log('ERROR: Imagen models require Vertex AI API');
+        return new WP_Error('model_requires_vertex_ai', 
+            'Modelele Imagen necesită Vertex AI API. Te rugăm să configurezi Vertex AI în setări.');
     }
     
-    // Dacă ajungem aici, încercăm cu modelul mapat (dar nu ar trebui să ajungem aici)
+    // Pentru modelele Gemini Flash Image, încercăm cu generateContent
+    // Mapăm la modelul corect
+    $model_mapping = [
+        'gemini-2.5-flash-image-exp' => 'gemini-2.0-flash-exp',
+        'gemini-3-pro-image-preview' => 'gemini-2.0-flash-exp',
+    ];
+    
     $api_model = $model_mapping[$model] ?? 'gemini-2.0-flash-exp';
     error_log('Mapped API model: ' . $api_model);
     
-    // Încercăm cu generateContent, dar probabil va eșua
+    // Încercăm cu generateContent fără responseModalities (poate returnează imagini în răspuns)
     $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . urlencode($api_model) . ':generateContent?key=' . urlencode($api_key);
     error_log('Using endpoint: ' . str_replace($api_key, '***HIDDEN***', $endpoint));
     
+    // Încercăm fără responseModalities - poate modelul returnează imagini automat
     $body = [
         'contents' => [
             [
@@ -555,11 +553,10 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
                     ]
                 ]
             ]
-        ],
-        'generationConfig' => [
-            'responseModalities' => ['IMAGE'] // Specificăm că vrem doar imagini
         ]
     ];
+    
+    error_log('Trying without responseModalities first...');
     
     error_log('Request body: ' . wp_json_encode($body));
 
@@ -708,6 +705,228 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
             ]
         ]
     ];
+}
+
+// --- Vertex AI Imagen API ---
+function call_vertex_ai_imagen_api($project_id, $location, $service_account_json, $model, $prompt, $feedback = '')
+{
+    error_log('=== VERTEX AI IMAGEN API CALL START ===');
+    error_log('Project ID: ' . $project_id);
+    error_log('Location: ' . $location);
+    error_log('Model: ' . $model);
+    error_log('Prompt length: ' . strlen($prompt));
+    
+    if (empty($project_id) || empty($service_account_json)) {
+        error_log('ERROR: Missing Vertex AI configuration');
+        return new WP_Error('missing_vertex_config', 'Vertex AI Project ID și Service Account JSON sunt necesare.');
+    }
+
+    // Adăugăm feedback-ul la prompt dacă există
+    $final_prompt = $prompt;
+    if (!empty($feedback)) {
+        $final_prompt .= "\n Utilizează următorul feedback de la imaginea generată anterior pentru a îmbunătăți imaginea: " . $feedback;
+    }
+
+    // Obținem access token din Service Account JSON
+    $service_account = json_decode($service_account_json, true);
+    if (json_last_error() !== JSON_ERROR_NONE || !isset($service_account['private_key'])) {
+        error_log('ERROR: Invalid Service Account JSON');
+        return new WP_Error('invalid_service_account', 'Service Account JSON invalid sau incomplet.');
+    }
+
+    // Generăm JWT token pentru autentificare
+    $access_token = get_vertex_ai_access_token($service_account);
+    if (is_wp_error($access_token)) {
+        error_log('ERROR: Failed to get access token: ' . $access_token->get_error_message());
+        return $access_token;
+    }
+    
+    error_log('Access token obtained successfully');
+
+    // Endpoint Vertex AI pentru Imagen
+    $endpoint = sprintf(
+        'https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:predict',
+        $location,
+        $project_id,
+        $location,
+        $model
+    );
+    
+    error_log('Endpoint: ' . $endpoint);
+
+    $body = [
+        'instances' => [
+            [
+                'prompt' => $final_prompt
+            ]
+        ],
+        'parameters' => [
+            'sampleCount' => 1,
+            'aspectRatio' => '16:9',
+            'safetyFilterLevel' => 'BLOCK_SOME',
+            'personGeneration' => 'ALLOW_ALL'
+        ]
+    ];
+    
+    error_log('Request body: ' . wp_json_encode($body));
+
+    $response = wp_remote_post($endpoint, [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $access_token,
+            'Content-Type' => 'application/json',
+        ],
+        'body' => wp_json_encode($body),
+        'timeout' => 120,
+    ]);
+
+    if (is_wp_error($response)) {
+        error_log('ERROR: wp_remote_post failed: ' . $response->get_error_message());
+        return $response;
+    }
+
+    $code = wp_remote_retrieve_response_code($response);
+    $raw = wp_remote_retrieve_body($response);
+    $data = json_decode($raw, true);
+    
+    error_log('Response HTTP code: ' . $code);
+    error_log('Response body (first 500 chars): ' . substr($raw, 0, 500));
+
+    if ($code !== 200) {
+        $error_msg = 'Vertex AI API Error (HTTP ' . $code . ')';
+        if (isset($data['error']['message'])) {
+            $error_msg .= ': ' . $data['error']['message'];
+        }
+        error_log('ERROR: ' . $error_msg);
+        error_log('=== VERTEX AI IMAGEN API CALL END (ERROR) ===');
+        return new WP_Error('vertex_api_error', $error_msg);
+    }
+
+    // Extragem imaginea din răspuns Vertex AI
+    $image_url = '';
+    
+    if (!empty($data['predictions']) && !empty($data['predictions'][0])) {
+        $prediction = $data['predictions'][0];
+        
+        // Verificăm dacă avem bytesBase64Encoded
+        if (!empty($prediction['bytesBase64Encoded'])) {
+            $image_base64 = $prediction['bytesBase64Encoded'];
+            
+            $upload_dir = wp_upload_dir();
+            $temp_dir = $upload_dir['basedir'] . '/temp-gemini-images';
+            
+            if (!file_exists($temp_dir)) {
+                wp_mkdir_p($temp_dir);
+            }
+            
+            $temp_filename = 'imagen-' . time() . '-' . wp_generate_password(8, false) . '.png';
+            $temp_filepath = $temp_dir . '/' . $temp_filename;
+            
+            $image_data = base64_decode($image_base64);
+            if ($image_data !== false && file_put_contents($temp_filepath, $image_data)) {
+                $image_url = $upload_dir['baseurl'] . '/temp-gemini-images/' . $temp_filename;
+                error_log('Image saved successfully. URL: ' . $image_url);
+            }
+        }
+    }
+
+    if (empty($image_url)) {
+        error_log('ERROR: No image found in Vertex AI response');
+        error_log('Response: ' . wp_json_encode($data));
+        error_log('=== VERTEX AI IMAGEN API CALL END (NO IMAGE) ===');
+        return new WP_Error('no_image', 'No image found in Vertex AI response');
+    }
+
+    error_log('Success: Image URL extracted: ' . $image_url);
+    error_log('=== VERTEX AI IMAGEN API CALL END (SUCCESS) ===');
+    
+    return [
+        'data' => [
+            [
+                'url' => $image_url
+            ]
+        ]
+    ];
+}
+
+// Funcție helper pentru obținerea access token din Service Account
+function get_vertex_ai_access_token($service_account)
+{
+    // Verificăm dacă avem cache pentru token
+    $cache_key = 'vertex_ai_token_' . md5($service_account['client_email'] ?? '');
+    $cached_token = get_transient($cache_key);
+    
+    if ($cached_token !== false) {
+        error_log('Using cached access token');
+        return $cached_token;
+    }
+
+    error_log('Generating new access token...');
+    
+    // Construim JWT claim
+    $now = time();
+    $jwt_header = [
+        'alg' => 'RS256',
+        'typ' => 'JWT'
+    ];
+
+    $jwt_claim = [
+        'iss' => $service_account['client_email'],
+        'scope' => 'https://www.googleapis.com/auth/cloud-platform',
+        'aud' => 'https://oauth2.googleapis.com/token',
+        'exp' => $now + 3600,
+        'iat' => $now
+    ];
+
+    // Encodăm header și claim
+    $base64_header = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode(json_encode($jwt_header)));
+    $base64_claim = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode(json_encode($jwt_claim)));
+
+    // Semnăm JWT
+    $signature_input = $base64_header . '.' . $base64_claim;
+    
+    // Folosim OpenSSL pentru semnătură
+    $private_key = openssl_pkey_get_private($service_account['private_key']);
+    if (!$private_key) {
+        return new WP_Error('invalid_private_key', 'Invalid private key in Service Account');
+    }
+
+    openssl_sign($signature_input, $signature, $private_key, OPENSSL_ALGO_SHA256);
+    openssl_free_key($private_key);
+
+    $base64_signature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
+    $jwt = $signature_input . '.' . $base64_signature;
+
+    // Obținem access token
+    $token_response = wp_remote_post('https://oauth2.googleapis.com/token', [
+        'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
+        'body' => [
+            'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+            'assertion' => $jwt
+        ],
+        'timeout' => 30,
+    ]);
+
+    if (is_wp_error($token_response)) {
+        return $token_response;
+    }
+
+    $token_code = wp_remote_retrieve_response_code($token_response);
+    $token_body = wp_remote_retrieve_body($token_response);
+    $token_data = json_decode($token_body, true);
+
+    if ($token_code !== 200 || empty($token_data['access_token'])) {
+        return new WP_Error('token_error', 'Failed to obtain access token: ' . ($token_data['error_description'] ?? 'Unknown error'));
+    }
+
+    $access_token = $token_data['access_token'];
+    $expires_in = isset($token_data['expires_in']) ? intval($token_data['expires_in']) - 60 : 3540; // -60 sec pentru buffer
+
+    // Salvăm în cache
+    set_transient($cache_key, $access_token, $expires_in);
+    
+    error_log('Access token generated and cached');
+
+    return $access_token;
 }
 
 // --- Vertex AI Imagen API ---
