@@ -363,23 +363,29 @@ function call_ai_image_api($dalle_prompt, $feedback = '')
     error_log('Use Gemini: ' . ($use_gemini ? 'YES' : 'NO'));
     
     if ($use_gemini) {
-        // NOTĂ: Generarea de imagini cu Gemini/Imagen prin Generative Language API nu este disponibilă
-        // Modelele Imagen și Gemini image generation necesită Vertex AI API
-        // Pentru moment, returnăm o eroare informativă și sugerăm folosirea OpenAI DALL-E
-        error_log('WARNING: Gemini image generation requested, but not available through Generative Language API');
-        error_log('Imagen 3 and Gemini image models require Vertex AI API configuration');
+        // Verificăm dacă Vertex AI este configurat pentru generarea de imagini
+        $vertex_ai_project_id = $options['vertex_ai_project_id'] ?? '';
+        $vertex_ai_location = $options['vertex_ai_location'] ?? 'us-central1';
+        $vertex_ai_service_account_json = $options['vertex_ai_service_account_json'] ?? '';
+        $imagen_model = $options['imagen_model'] ?? 'imagen-3-generate-001';
         
-        $api_key = $options['gemini_api_key'] ?? '';
-        $imagen_model = $options['imagen_model'] ?? 'gemini-2.5-flash-image-exp';
+        error_log('Vertex AI Project ID: ' . (!empty($vertex_ai_project_id) ? $vertex_ai_project_id : 'NOT SET'));
+        error_log('Vertex AI Location: ' . $vertex_ai_location);
+        error_log('Vertex AI Service Account JSON: ' . (!empty($vertex_ai_service_account_json) ? 'SET (length: ' . strlen($vertex_ai_service_account_json) . ')' : 'NOT SET'));
+        error_log('Imagen model: ' . $imagen_model);
         
-        error_log('Gemini API Key present: ' . (!empty($api_key) ? 'YES' : 'NO'));
-        error_log('Imagen model from settings: ' . $imagen_model);
-        
-        // Returnăm eroare informativă
-        return new WP_Error('gemini_image_not_available', 
-            'Generarea de imagini cu Gemini/Imagen nu este disponibilă prin Generative Language API. ' .
-            'Modelele Imagen 3 și Gemini image generation necesită configurarea Vertex AI API. ' .
-            'Pentru moment, te rugăm să folosești OpenAI DALL-E pentru generarea de imagini sau să configurezi Vertex AI API.');
+        // Dacă Vertex AI este configurat, folosim Vertex AI API
+        if (!empty($vertex_ai_project_id) && !empty($vertex_ai_service_account_json)) {
+            error_log('Using Vertex AI API for image generation');
+            return call_vertex_ai_imagen_api($vertex_ai_project_id, $vertex_ai_location, $vertex_ai_service_account_json, $imagen_model, $dalle_prompt, $feedback);
+        } else {
+            // Dacă Vertex AI nu este configurat, returnăm eroare informativă
+            error_log('WARNING: Vertex AI not configured for Gemini image generation');
+            return new WP_Error('vertex_ai_not_configured', 
+                'Generarea de imagini cu Gemini/Imagen necesită configurarea Vertex AI API. ' .
+                'Te rugăm să configurezi Project ID, Location și Service Account JSON în setări. ' .
+                'Alternativ, poți folosi OpenAI DALL-E pentru generarea de imagini.');
+        }
     }
     
     // Default to OpenAI

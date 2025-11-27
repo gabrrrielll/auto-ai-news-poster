@@ -381,6 +381,9 @@ class Auto_Ai_News_Poster_Settings
         $gemini_api_key = $options['gemini_api_key'] ?? '';
         $gemini_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
         $imagen_model = $options['imagen_model'] ?? 'gemini-2.5-flash-image-exp';
+        $vertex_ai_project_id = $options['vertex_ai_project_id'] ?? '';
+        $vertex_ai_location = $options['vertex_ai_location'] ?? 'us-central1';
+        $vertex_ai_service_account_json = $options['vertex_ai_service_account_json'] ?? '';
 
         // Obținem lista de modele disponibile pentru OpenAI
         $available_models = self::get_cached_openai_models($api_key);
@@ -562,25 +565,53 @@ class Auto_Ai_News_Poster_Settings
                     </div>
                 </div>
 
-                <!-- Configurare Modele Gemini pentru Imagini -->
+                <!-- Configurare Vertex AI pentru Imagini Gemini -->
                 <div class="settings-card" style="margin-top: 20px;">
                     <div class="settings-card-header">
                         <div class="settings-card-icon">🖼️</div>
-                        <h3 class="settings-card-title">Configurare Modele Gemini pentru Generare Imagini</h3>
+                        <h3 class="settings-card-title">Configurare Vertex AI pentru Generare Imagini Gemini</h3>
                     </div>
                     <div class="settings-card-content">
+                        <div class="alert alert-info" style="margin-bottom: 20px;">
+                            <strong>Notă:</strong> Generarea de imagini cu Gemini/Imagen necesită Vertex AI API, nu Generative Language API. 
+                            Configurează mai jos detaliile Vertex AI pentru a folosi generarea de imagini.
+                        </div>
+                        
                         <div class="form-group">
-                            <label for="imagen_model" class="control-label">Model Gemini pentru Imagini</label>
-                            <select name="auto_ai_news_poster_settings[imagen_model]" class="form-control" id="imagen_model">
-                                <optgroup label="🌟 Recomandate">
-                                    <option value="gemini-2.5-flash-image-exp" <?php selected($imagen_model, 'gemini-2.5-flash-image-exp'); ?>>Gemini 2.0 Flash Exp - Generare imagini rapidă</option>
-                                    <option value="gemini-3-pro-image-preview" <?php selected($imagen_model, 'gemini-3-pro-image-preview'); ?>>Gemini 2.0 Flash Exp (Pro) - Calitate profesională</option>
-                                </optgroup>
-                                <optgroup label="📊 Alte Modele">
-                                    <option value="imagen-3" <?php selected($imagen_model, 'imagen-3'); ?>>Imagen 3 Generate 001 - Dedicat pentru imagini</option>
-                                </optgroup>
+                            <label for="vertex_ai_project_id" class="control-label">Project ID Vertex AI</label>
+                            <input type="text" name="auto_ai_news_poster_settings[vertex_ai_project_id]"
+                                   value="<?php echo esc_attr($vertex_ai_project_id); ?>" class="form-control"
+                                   id="vertex_ai_project_id" placeholder="your-project-id">
+                            <small class="form-text text-muted">ID-ul proiectului Google Cloud unde este activat Vertex AI.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="vertex_ai_location" class="control-label">Location</label>
+                            <select name="auto_ai_news_poster_settings[vertex_ai_location]" class="form-control" id="vertex_ai_location">
+                                <option value="us-central1" <?php selected($vertex_ai_location, 'us-central1'); ?>>us-central1</option>
+                                <option value="us-east1" <?php selected($vertex_ai_location, 'us-east1'); ?>>us-east1</option>
+                                <option value="us-west1" <?php selected($vertex_ai_location, 'us-west1'); ?>>us-west1</option>
+                                <option value="europe-west1" <?php selected($vertex_ai_location, 'europe-west1'); ?>>europe-west1</option>
+                                <option value="europe-west4" <?php selected($vertex_ai_location, 'europe-west4'); ?>>europe-west4</option>
+                                <option value="asia-southeast1" <?php selected($vertex_ai_location, 'asia-southeast1'); ?>>asia-southeast1</option>
                             </select>
-                            <small class="form-text text-muted">Selectează modelul Gemini pentru generarea de imagini. Folosește aceeași cheie API Gemini ca pentru text.</small>
+                            <small class="form-text text-muted">Regiunea unde este activat Vertex AI.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="vertex_ai_service_account_json" class="control-label">Service Account JSON Key</label>
+                            <textarea name="auto_ai_news_poster_settings[vertex_ai_service_account_json]" class="form-control"
+                                     id="vertex_ai_service_account_json" rows="6" placeholder='{"type": "service_account", "project_id": "...", ...}'><?php echo esc_textarea($vertex_ai_service_account_json); ?></textarea>
+                            <small class="form-text text-muted">Conținutul complet al fișierului JSON al Service Account din Google Cloud Console. Acest cont trebuie să aibă permisiuni pentru Vertex AI.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="imagen_model" class="control-label">Model Imagen</label>
+                            <select name="auto_ai_news_poster_settings[imagen_model]" class="form-control" id="imagen_model">
+                                <option value="imagen-3-generate-001" <?php selected($imagen_model, 'imagen-3-generate-001'); ?>>Imagen 3 Generate 001 - Calitate înaltă</option>
+                                <option value="imagen-3-fast-generate-001" <?php selected($imagen_model, 'imagen-3-fast-generate-001'); ?>>Imagen 3 Fast Generate 001 - Generare rapidă</option>
+                            </select>
+                            <small class="form-text text-muted">Modelul Imagen pentru generarea de imagini prin Vertex AI.</small>
                         </div>
                     </div>
                 </div>
@@ -1519,7 +1550,7 @@ class Auto_Ai_News_Poster_Settings
                            'run_until_bulk_exhausted', 'generate_tags', 'use_openai', 'use_gemini'];
 
         // Câmpurile de tip <select> care trebuie validate
-        $select_fields = ['mode', 'status', 'specific_search_category', 'author_name', 'article_length_option', 'use_external_images', 'ai_model', 'generation_mode', 'gemini_model', 'imagen_model'];
+        $select_fields = ['mode', 'status', 'specific_search_category', 'author_name', 'article_length_option', 'use_external_images', 'ai_model', 'generation_mode', 'gemini_model', 'imagen_model', 'vertex_ai_location'];
 
         // Setăm toate checkbox-urile la 'no' înainte de a procesa input-ul
         foreach ($checkbox_fields as $checkbox_field) {
@@ -1538,7 +1569,7 @@ class Auto_Ai_News_Poster_Settings
                     $sanitized[$key] = sanitize_text_field($value);
                 }
                 // Pentru textarea, folosim o sanitizare specifică
-                elseif ($key === 'news_sources' || $key === 'parse_link_ai_instructions' || $key === 'ai_browsing_instructions' || $key === 'bulk_custom_source_urls') {
+                elseif ($key === 'news_sources' || $key === 'parse_link_ai_instructions' || $key === 'ai_browsing_instructions' || $key === 'bulk_custom_source_urls' || $key === 'vertex_ai_service_account_json') {
                     $sanitized[$key] = esc_textarea($value);
                 }
                 // Pentru alte câmpuri, sanitizăm normal
