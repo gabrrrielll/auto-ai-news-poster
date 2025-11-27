@@ -351,18 +351,28 @@ function call_openai_api($api_key, $prompt)
 
 // Funcție pentru apelarea API-ului pentru generarea de imagini
 // Image generation wrapper - folosește provider-ul selectat (OpenAI sau Gemini)
+// NOTĂ: Gemini Imagen 3 necesită Vertex AI API (OAuth2), deci folosim automat OpenAI pentru imagini
 function call_ai_image_api($dalle_prompt, $feedback = '')
 {
     $options = get_option('auto_ai_news_poster_settings');
     $use_gemini = isset($options['use_gemini']) && $options['use_gemini'] === 'yes';
     
-    if ($use_gemini) {
-        $api_key = $options['gemini_api_key'] ?? '';
-        return call_gemini_image_api($api_key, $dalle_prompt, $feedback);
+    // Gemini Imagen 3 nu este disponibil direct prin Generative Language API
+    // Trebuie Vertex AI API cu OAuth2, deci folosim automat OpenAI pentru imagini
+    // Chiar dacă Gemini este selectat pentru text, pentru imagini folosim DALL-E
+    $api_key = $options['chatgpt_api_key'] ?? '';
+    
+    if (empty($api_key)) {
+        if ($use_gemini) {
+            return new WP_Error('no_image_api', 
+                'Pentru generarea de imagini, este necesară cheia API OpenAI (DALL-E). ' .
+                'Gemini Imagen 3 necesită configurare Vertex AI API cu OAuth2. ' .
+                'Vă rugăm să introduceți cheia API OpenAI pentru generarea de imagini.');
+        } else {
+            return new WP_Error('no_image_api', 'Cheia API OpenAI lipsește pentru generarea imaginii.');
+        }
     }
     
-    // Default to OpenAI
-    $api_key = $options['chatgpt_api_key'] ?? '';
     return call_openai_image_api($api_key, $dalle_prompt, $feedback);
 }
 
@@ -443,96 +453,16 @@ function call_gemini_api($api_key, $model, $prompt)
 }
 
 // --- Google Gemini (image generation) ---
+// NOTĂ: Această funcție nu este folosită în prezent deoarece Imagen 3 necesită Vertex AI API
+// Funcția este păstrată pentru referință viitoare dacă se implementează Vertex AI API
 function call_gemini_image_api($api_key, $prompt, $feedback = '')
 {
-    if (empty($api_key)) {
-        return new WP_Error('missing_api_key', 'Missing Gemini API key');
-    }
-
-    // Adăugăm feedback-ul la prompt dacă există
-    $final_prompt = $prompt;
-    if (!empty($feedback)) {
-        $final_prompt .= "\n Utilizează următorul feedback de la imaginea generată anterior pentru a îmbunătăți imaginea: " . $feedback;
-    }
-
-    // Endpoint pentru Imagen 3 (Google's image generation model)
-    $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/imagen-3:generateImages?key=' . urlencode($api_key);
-
-    $body = [
-        'prompt' => $final_prompt,
-        'numberOfImages' => 1,
-        'aspectRatio' => '16:9', // Similar cu 1792x1024 de la DALL-E
-        'safetyFilterLevel' => 'block_some',
-        'personGeneration' => 'allow_all'
-    ];
-
-    $response = wp_remote_post($endpoint, [
-        'headers' => [ 'Content-Type' => 'application/json' ],
-        'body' => wp_json_encode($body),
-        'timeout' => 90,
-    ]);
-
-    if (is_wp_error($response)) {
-        return $response;
-    }
-
-    $code = wp_remote_retrieve_response_code($response);
-    $raw = wp_remote_retrieve_body($response);
-    $data = json_decode($raw, true);
-
-    if ($code !== 200) {
-        return new WP_Error('gemini_api_error', 'Gemini Image API Error (HTTP ' . $code . '): ' . ($data['error']['message'] ?? $raw));
-    }
-
-    // Extragem URL-ul imaginii sau datele base64 din răspuns
-    $image_url = '';
-    $image_base64 = '';
+    // Imagen 3 nu este disponibil direct prin Generative Language API
+    // Necesită Vertex AI API cu autentificare OAuth2
+    // Pentru moment, această funcție nu este folosită
+    // Generarea de imagini folosește automat OpenAI DALL-E
     
-    if (!empty($data['generatedImages']) && !empty($data['generatedImages'][0])) {
-        $generated_image = $data['generatedImages'][0];
-        
-        // Verificăm dacă avem URL direct
-        if (!empty($generated_image['imageUrl'])) {
-            $image_url = $generated_image['imageUrl'];
-        } 
-        // Sau date base64
-        elseif (!empty($generated_image['imageBase64'])) {
-            $image_base64 = $generated_image['imageBase64'];
-            // Salvăm base64 într-un fișier temporar și returnăm URL-ul
-            $upload_dir = wp_upload_dir();
-            $temp_dir = $upload_dir['basedir'] . '/temp-gemini-images';
-            
-            // Creăm directorul dacă nu există
-            if (!file_exists($temp_dir)) {
-                wp_mkdir_p($temp_dir);
-            }
-            
-            // Generăm un nume de fișier unic
-            $temp_filename = 'gemini-' . time() . '-' . wp_generate_password(8, false) . '.png';
-            $temp_filepath = $temp_dir . '/' . $temp_filename;
-            
-            // Decodăm și salvăm base64
-            $image_data = base64_decode($image_base64);
-            if ($image_data !== false && file_put_contents($temp_filepath, $image_data)) {
-                // Returnăm URL-ul fișierului temporar
-                $image_url = $upload_dir['baseurl'] . '/temp-gemini-images/' . $temp_filename;
-            } else {
-                return new WP_Error('save_failed', 'Failed to save Gemini image to temporary file');
-            }
-        }
-    }
-
-    if (empty($image_url)) {
-        return new WP_Error('no_image', 'No image URL found in Gemini response');
-    }
-
-    // Returnăm în același format ca DALL-E pentru compatibilitate
-    // Simulăm un răspuns HTTP similar cu OpenAI
-    return [
-        'data' => [
-            [
-                'url' => $image_url
-            ]
-        ]
-    ];
+    return new WP_Error('imagen_not_available', 
+        'Generarea de imagini cu Gemini Imagen 3 necesită Vertex AI API cu autentificare OAuth2. ' .
+        'Pentru moment, sistemul folosește automat OpenAI DALL-E pentru generarea de imagini.');
 }
