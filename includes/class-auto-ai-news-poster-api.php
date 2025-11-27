@@ -1018,6 +1018,13 @@ class Auto_Ai_News_Poster_Api
             error_log('Error code: ' . $image_response->get_error_code());
         } elseif (is_array($image_response)) {
             error_log('Image response is array, keys: ' . implode(', ', array_keys($image_response)));
+            if (isset($image_response['data'])) {
+                error_log('Image response data structure: ' . json_encode([
+                    'data_is_array' => is_array($image_response['data']),
+                    'data_count' => is_array($image_response['data']) ? count($image_response['data']) : 0,
+                    'first_data_keys' => is_array($image_response['data']) && isset($image_response['data'][0]) ? array_keys($image_response['data'][0]) : [],
+                ]));
+            }
         }
 
         // Verificăm dacă răspunsul este un WP_Error sau un array direct
@@ -1030,17 +1037,34 @@ class Auto_Ai_News_Poster_Api
 
         // Procesăm răspunsul în funcție de tip
         $image_url = '';
+        error_log('Processing image response...');
+        
         if (is_array($image_response) && isset($image_response['data'][0]['url'])) {
             // Răspuns direct de la Gemini (array)
             $image_url = $image_response['data'][0]['url'];
+            error_log('Image URL extracted from array: ' . $image_url);
+        } elseif (is_array($image_response) && is_array($image_response['data']) && !empty($image_response['data'][0])) {
+            // Verificăm structura alternativă
+            $first_data = $image_response['data'][0];
+            if (isset($first_data['url'])) {
+                $image_url = $first_data['url'];
+                error_log('Image URL extracted from nested structure: ' . $image_url);
+            } else {
+                error_log('No URL found in data structure. First data item keys: ' . implode(', ', array_keys($first_data)));
+            }
         } else {
             // Răspuns HTTP de la OpenAI (wp_remote_post response)
+            error_log('Processing as HTTP response...');
             $response_code = wp_remote_retrieve_response_code($image_response);
             $image_body = wp_remote_retrieve_body($image_response);
             $image_json = json_decode($image_body, true);
             
+            error_log('HTTP Response code: ' . $response_code);
+            error_log('HTTP Response body (first 200 chars): ' . substr($image_body, 0, 200));
+            
             if ($response_code === 200 && isset($image_json['data'][0]['url'])) {
                 $image_url = $image_json['data'][0]['url'];
+                error_log('Image URL extracted from HTTP response: ' . $image_url);
             } else {
                 $error_message = 'Eroare necunoscută la generarea imaginii.';
                 if (isset($image_json['error']['message'])) {
@@ -1048,44 +1072,88 @@ class Auto_Ai_News_Poster_Api
                 } elseif (isset($image_json['error'])) {
                     $error_message = print_r($image_json['error'], true);
                 }
+                error_log('Error extracting image URL: ' . $error_message);
                 wp_send_json_error(['message' => 'Eroare la generarea imaginii: ' . $error_message]);
                 return;
             }
         }
+        
+        error_log('Final image_url: ' . ($image_url ? $image_url : 'EMPTY'));
+        
+        if (empty($image_url)) {
+            error_log('ERROR: Image URL is empty after processing');
+            wp_send_json_error(['message' => 'Eroare: URL-ul imaginii este gol după procesare.']);
+            return;
+        }
+        
+        error_log('Getting post title and tags...');
         $title = get_the_title($post_id);
-
         $post_tags = get_the_terms($post_id, 'post_tag');
         $tags = !empty($post_tags) ? wp_list_pluck($post_tags, 'name') : [];
 
-        if (!empty($image_url)) {
-            Post_Manager::set_featured_image($post_id, $image_url, $title, $summary);
+        // Trimitem răspunsul AJAX mai devreme pentru a evita timeout-ul
+        // Procesarea imaginii se va face după ce clientul primește răspunsul
+        error_log('Sending JSON success response immediately...');
+        
+        // Trimitem header-urile și răspunsul manual pentru a putea continua procesarea
+        status_header(200);
+        header('Content-Type: application/json; charset=utf-8');
+        nocache_headers();
+        
+        $response_data = [
+            'success' => true,
+            'data' => [
+                'post_id' => $post_id,
+                'tags' => $tags,
+                'summary' => $summary,
+                'image_url' => $image_url,
+                'message' => 'Imaginea a fost generată! Se procesează...'
+            ]
+        ];
+        
+        echo wp_json_encode($response_data);
+        
+        // Dacă fastcgi_finish_request este disponibil, îl folosim pentru a trimite răspunsul imediat
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        } else {
+            // Pentru alte configurații, închidem output buffering și trimitem răspunsul
+            if (ob_get_level()) {
+                ob_end_flush();
+            }
+            flush();
+        }
+        
+        // Continuăm procesarea după ce am trimis răspunsul (pentru a evita timeout-ul AJAX)
+        error_log('Setting featured image in background...');
+        try {
+            $set_image_result = Post_Manager::set_featured_image($post_id, $image_url, $title, $summary);
+            error_log('set_featured_image result: ' . (is_wp_error($set_image_result) ? 'ERROR: ' . $set_image_result->get_error_message() : 'SUCCESS'));
+            
+            if (is_wp_error($set_image_result)) {
+                error_log('Error setting featured image: ' . $set_image_result->get_error_message());
+                return;
+            }
+            
             update_post_meta($post_id, '_external_image_source', 'Imagine generată AI');
+            error_log('Post meta updated');
 
             $post_status = $options['status'];
             if ($post_status == 'publish') {
+                error_log('Updating post status to publish...');
                 $update_result = Post_Manager::insert_or_update_post($post_id, ['post_status' => $post_status]);
 
                 if (is_wp_error($update_result)) {
-                    wp_send_json_error(['message' => $update_result->get_error_message()]);
+                    error_log('Error updating post: ' . $update_result->get_error_message());
                     return;
                 }
+                error_log('Post status updated successfully');
             }
 
-            wp_send_json_success([
-                    'post_id' => $post_id,
-                    'tags' => $tags, // Variabila $tags va fi definită mai sus
-                    'summary' => $summary,
-                    'image_url' => $image_url, // Returnăm URL-ul imaginii generate
-                    'message' => 'Imaginea a fost generată și setată!.'
-                ]);
-        } else {
-            $error_message = 'Eroare necunoscută la generarea imaginii.';
-            if (isset($image_json['error']['message'])) {
-                $error_message = $image_json['error']['message'];
-            } elseif (isset($image_json['error'])) {
-                $error_message = print_r($image_json['error'], true);
-            }
-            wp_send_json_error(['message' => 'Eroare la generarea imaginii: ' . $error_message]);
+            error_log('Image processing completed successfully');
+        } catch (Exception $e) {
+            error_log('Exception caught: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
         }
     }
 
