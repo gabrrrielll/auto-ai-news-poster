@@ -40,15 +40,25 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
     
     // Adăugăm instrucțiuni specifice pentru identificarea articolului corect folosind linkul
     if (!empty($source_link)) {
-        $prompt .= "**CRITICAL - IDENTIFICARE ARTICOL CORECT:**\n";
-        $prompt .= "Ai primit un link specific: {$source_link}\n";
-        $prompt .= "Acest link reprezintă articolul EXACT pe care trebuie să îl extragi și să îl procesezi. Textul furnizat poate conține mai multe articole sau informații adiacente (articole recomandate, articole similare, etc.).\n";
-        $prompt .= "**OBLIGATORIU:** Folosește linkul ca referință pentru a identifica și extrage DOAR articolul care corespunde acestui link. Analizează linkul și identifică:\n";
-        $prompt .= "- Cuvintele cheie din URL care indică subiectul articolului\n";
-        $prompt .= "- Slug-ul URL-ului care de obicei conține titlul articolului în format URL-friendly\n";
-        $prompt .= "- Orice alte indicii din link care te ajută să identifici articolul corect\n";
-        $prompt .= "**IGNORĂ COMPLET** orice alt articol sau informație adiacentă care nu corespunde linkului furnizat. Nu extrage informații din alte articole care apar în textul parsat, chiar dacă par relevante sau interesante.\n";
-        $prompt .= "**VERIFICARE:** După ce ai extras conținutul, verifică că articolul identificat de tine corespunde cu subiectul indicat de link. Dacă există dubii, prioritizează informațiile care se aliniază cel mai bine cu linkul furnizat.\n\n";
+        $prompt .= "**IMPORTANT - CLARIFICARE PROCES:**\n";
+        $prompt .= "Textul de mai jos a fost DEJA extras și parsat din linkul: {$source_link}\n";
+        $prompt .= "**NU trebuie să parsezi linkul sau să ceri conținut.** Textul este deja disponibil mai jos.\n";
+        $prompt .= "**SARCINA TA:** Textul parsat poate conține mai multe articole sau informații adiacente (articole recomandate, articole similare, meniuri, reclame, etc.).\n";
+        $prompt .= "Folosește linkul ca referință pentru a identifica și selecta DOAR articolul care corespunde acestui link specific.\n\n";
+        
+        $prompt .= "**CUM SĂ IDENTIFICI ARTICOLUL CORECT:**\n";
+        $prompt .= "1. Analizează linkul și identifică cuvintele cheie din URL (de exemplu, din linkul \"bogdan-ivan-trimite-corpul-de-control-la-hidroelectrica\" identifică subiectul: Bogdan Ivan, Corp de Control, Hidroelectrica)\n";
+        $prompt .= "2. Caută în textul parsat articolul care conține aceste cuvinte cheie și subiecte\n";
+        $prompt .= "3. Identifică titlul articolului căutat (care de obicei apare în slug-ul URL-ului)\n";
+        $prompt .= "4. Selectează DOAR conținutul acelui articol specific, ignorând complet:\n";
+        $prompt .= "   - Alte articole recomandate sau similare\n";
+        $prompt .= "   - Meniuri, navigare, anteturi, subsoluri\n";
+        $prompt .= "   - Reclame sau promovări\n";
+        $prompt .= "   - Orice alt conținut care nu face parte din articolul indicat de link\n\n";
+        
+        $prompt .= "**DUPĂ IDENTIFICARE:**\n";
+        $prompt .= "Odată ce ai identificat articolul corect din textul parsat, generează un articol NOU și ORIGINAL bazat pe informațiile din acel articol identificat.\n";
+        $prompt .= "**NU** trebuie să parsezi linkul sau să ceri conținut - tot ce ai nevoie este deja în textul furnizat mai jos.\n\n";
     }
     
     $prompt .= "1. **NU menționa niciodată** 'textul furnizat', 'articolul sursă', 'materialul analizat' sau orice expresie similară. Articolul trebuie să fie independent și să nu facă referire la sursa ta de informație.\n";
@@ -79,7 +89,10 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
     $prompt .= "- **Respectă structura de paragrafe și subtitluri (H2, H3) din textul sursă pentru a menține ierarhia informației.**\n";
 
     $prompt .= "\n**Format de răspuns OBLIGATORIU:**\n";
-    $prompt .= "Răspunsul tău trebuie să fie EXACT UN OBIECT JSON, fără niciun alt text înainte sau după. NU adăuga mai multe obiecte JSON. NU adăuga text explicativ. Structura trebuie să fie următoarea:\n";
+    $prompt .= "**CRITICAL:** Răspunsul tău trebuie să fie EXACT UN OBIECT JSON, fără niciun alt text înainte sau după.\n";
+    $prompt .= "**NU** adăuga text explicativ, mesaje, întrebări sau cereri de clarificare.\n";
+    $prompt .= "**NU** spune că nu poți accesa linkul sau că ai nevoie de conținut - textul este deja furnizat mai jos.\n";
+    $prompt .= "**DOAR** returnează obiectul JSON cu articolul generat. Structura trebuie să fie următoarea:\n";
     $prompt .= "{\n";
     $prompt .= "  \"title\": \"Titlul articolului generat de tine\",\n";
     $prompt .= "  \"content\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie.\",\n";
@@ -95,9 +108,11 @@ function generate_custom_source_prompt($article_text_content, $additional_instru
 
     // Adăugăm linkul ca referință înainte de textul sursă
     if (!empty($source_link)) {
-        $prompt .= "\n--- Link Referință (folosește-l pentru a identifica articolul corect) ---\n";
-        $prompt .= "Link: {$source_link}\n";
-        $prompt .= "Acest link indică articolul EXACT pe care trebuie să îl extragi din textul de mai jos.\n";
+        $prompt .= "\n--- LINK REFERINȚĂ (textul a fost DEJA extras din acest link) ---\n";
+        $prompt .= "Link sursă: {$source_link}\n";
+        $prompt .= "**REȚINE:** Textul de mai jos a fost DEJA parsat din acest link. NU trebuie să parsezi linkul sau să ceri conținut.\n";
+        $prompt .= "Folosește linkul doar ca referință pentru a identifica care parte din textul de mai jos este articolul corect.\n";
+        $prompt .= "Analizează cuvintele cheie din link (ex: din \"bogdan-ivan-trimite-corpul-de-control\" identifică subiectul) și caută în text articolul care conține aceste subiecte.\n\n";
     }
 
     // Adăugăm textul articolului sursă
