@@ -180,9 +180,9 @@ class Auto_AI_News_Poster_Parser
         }
 
         if ($best_node && $best_score > 0) { // Ensure a meaningful node with a positive score is found
-            $article_content = $best_node->textContent;
+            $article_content = self::extract_content_with_links($best_node);
         } else {
-            $article_content = $context_node_clean->textContent; // Fallback: iau conținutul din nodul de context rămas (body)
+            $article_content = self::extract_content_with_links($context_node_clean); // Fallback: iau conținutul din nodul de context rămas (body)
         }
 
         // 3. Post-procesare pentru curățarea textului
@@ -354,5 +354,93 @@ class Auto_AI_News_Poster_Parser
             }
         }
         return implode("\n\n", array_filter($filtered_paragraphs));
+    }
+
+    /**
+     * Extracts content from a DOM node while preserving links in a readable format.
+     * Links are converted to format: "Link Text (URL)" so AI can include them in generated articles.
+     *
+     * @param DOMNode $node The DOM node to extract content from.
+     * @return string The extracted content with links preserved.
+     */
+    private static function extract_content_with_links($node)
+    {
+        if (!$node) {
+            return '';
+        }
+
+        $content = '';
+        $xpath = new DOMXPath($node->ownerDocument);
+
+        // Find all links in the node
+        $links = $xpath->query('.//a[@href]', $node);
+
+        // Create a map of link nodes to their replacement text
+        $link_replacements = [];
+        if ($links && $links->length > 0) {
+            foreach ($links as $link) {
+                $href = trim($link->getAttribute('href'));
+                $link_text = trim($link->textContent);
+
+                // Skip empty links, anchor-only links, or links without text
+                if (empty($href) || $href === '#' || empty($link_text)) {
+                    continue;
+                }
+
+                // Store the replacement: link text followed by URL in parentheses
+                $link_replacements[spl_object_hash($link)] = $link_text . ' (' . $href . ')';
+            }
+        }
+
+        // If no links found, fall back to regular textContent
+        if (empty($link_replacements)) {
+            return $node->textContent;
+        }
+
+        // Traverse the node and build content with link replacements
+        $content = self::extract_text_with_link_replacements($node, $link_replacements);
+
+        return $content;
+    }
+
+    /**
+     * Recursively extracts text from a DOM node, replacing links with formatted text.
+     *
+     * @param DOMNode $node The DOM node to process.
+     * @param array $link_replacements Map of link object hashes to replacement strings.
+     * @return string The extracted text with links replaced.
+     */
+    private static function extract_text_with_link_replacements($node, $link_replacements)
+    {
+        $content = '';
+
+        if ($node->nodeType === XML_TEXT_NODE) {
+            // Text node - add its content
+            $content .= $node->textContent;
+        } elseif ($node->nodeType === XML_ELEMENT_NODE) {
+            // Element node
+            $tag_name = strtolower($node->nodeName);
+
+            // Check if this is a link that needs replacement
+            if ($tag_name === 'a' && $node->hasAttribute('href')) {
+                $node_hash = spl_object_hash($node);
+                if (isset($link_replacements[$node_hash])) {
+                    // Replace link with formatted text
+                    $content .= $link_replacements[$node_hash];
+                } else {
+                    // Link not in replacements map, just get text content
+                    $content .= $node->textContent;
+                }
+            } else {
+                // Process child nodes
+                if ($node->hasChildNodes()) {
+                    foreach ($node->childNodes as $child) {
+                        $content .= self::extract_text_with_link_replacements($child, $link_replacements);
+                    }
+                }
+            }
+        }
+
+        return $content;
     }
 }
