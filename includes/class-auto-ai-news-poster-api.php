@@ -920,8 +920,28 @@ class Auto_Ai_News_Poster_Api
      */
     private static function generate_safe_dalle_prompt(string $original_prompt, string $api_key): string
     {
-        $system_message = 'Ești un asistent AI specializat în transformarea descrierilor de text în concepte vizuale sigure și abstracte, potrivite pentru generarea de imagini. Elimină orice referință directă la evenimente politice, conflicte militare, violență explicită, sau orice conținut sensibil din promptul furnizat. Concentrează-te pe crearea unei descrieri vizuale simbolice, care să evoce tema sau emoția centrală a textului, fără a fi literală sau a încălca politicile de siguranță ale generatoarelor de imagini. Folosește un limbaj poetic și metaforic. NU menționa nume de persoane, țări sau termeni militari.';
-        $user_message = "Transformă următoarea descriere într-un prompt vizual sigur și abstract pentru DALL-E: \"{$original_prompt}\"";
+        $system_message = 'Ești un asistent AI specializat în transformarea descrierilor de text în prompturi vizuale pentru generarea de imagini fotorealiste și naturale. Sarcina ta este să creezi un prompt care să genereze o imagine care să pară o fotografie reală realizată cu ocazia evenimentului descris în text. 
+
+IMPORTANT - Stilul imaginii:
+- Imaginea trebuie să fie FOTOREALISTĂ și NATURALĂ, ca o fotografie profesională de știri
+- Stil: fotografie jurnalistică, natural lighting, composition profesională, depth of field realistă
+- Calitate: high resolution, sharp focus, natural colors, realistic textures
+- Perspectivă: unghi natural, ca și cum ar fi o fotografie făcută de un fotograf profesionist
+- Evită stiluri artistice, abstracte sau ilustrații - doar fotografie reală
+
+IMPORTANT - Conținutul:
+- Elimină orice referință directă la evenimente politice sensibile, conflicte militare, violență explicită, sau conținut sensibil
+- Concentrează-te pe aspectele vizuale și scenografice ale evenimentului, fără a încălca politicile de siguranță
+- Dacă textul menționează persoane publice sau evenimente politice, transformă-le în scene generale și naturale (ex: oameni într-o sală de conferințe, oameni la un eveniment public, etc.)
+- NU menționa nume specifice de persoane, țări sau termeni militari dacă pot cauza probleme de safety
+
+IMPORTANT - Formatul promptului:
+- Promptul trebuie să fie în limba română
+- Include detalii despre iluminare naturală, compoziție, unghi de vedere
+- Descrie scenele ca și cum ar fi fotografii reale de știri
+- Folosește termeni fotografici: "fotografie profesională", "iluminare naturală", "compoziție jurnalistică", etc.';
+        
+        $user_message = "Transformă următoarea descriere într-un prompt vizual pentru generarea unei imagini FOTOREALISTE și NATURALE, ca o fotografie profesională de știri realizată cu ocazia evenimentului descris. Promptul trebuie să genereze o imagine care să pară o fotografie reală, nu o ilustrație sau artă abstractă: \"{$original_prompt}\"";
 
         $prompt_for_ai = generate_simple_text_prompt($system_message, $user_message);
         $response = call_openai_api($api_key, $prompt_for_ai);
@@ -1004,12 +1024,38 @@ class Auto_Ai_News_Poster_Api
         $image_response = null;
         $prompt_for_image = $initial_prompt;
         
+        // Funcție helper pentru a adăuga instrucțiuni de fotorealism la prompt
+        $add_photorealism_instructions = function($prompt) {
+            $photorealism_prefix = 'Fotografie profesională de știri, fotorealistă și naturală, realizată cu ocazia evenimentului. ';
+            $photorealism_suffix = ' Stil: fotografie jurnalistică profesională, iluminare naturală, compoziție profesională, culori naturale, texturi realiste, sharp focus, high resolution. Imaginea trebuie să pară o fotografie reală, nu o ilustrație sau artă abstractă.';
+            
+            // Verificăm dacă promptul nu conține deja instrucțiuni similare
+            $has_instructions = (
+                stripos($prompt, 'fotografie') !== false ||
+                stripos($prompt, 'fotorealist') !== false ||
+                stripos($prompt, 'jurnalistic') !== false
+            );
+            
+            if (!$has_instructions) {
+                return $photorealism_prefix . $prompt . $photorealism_suffix;
+            }
+            
+            return $prompt;
+        };
+        
         // Pentru Gemini, generăm promptul sigur folosind OpenAI dacă este disponibil
         if ($use_gemini && !empty($openai_api_key)) {
             $prompt_for_image = self::generate_safe_dalle_prompt($initial_prompt, $openai_api_key);
+            // Asigurăm că promptul generat include instrucțiuni de fotorealism
+            $prompt_for_image = $add_photorealism_instructions($prompt_for_image);
         } elseif (!$use_gemini && !empty($openai_api_key)) {
             // Pentru OpenAI/DALL-E, generăm un prompt sigur optimizat pentru DALL-E
             $prompt_for_image = self::generate_safe_dalle_prompt($initial_prompt, $openai_api_key);
+            // Asigurăm că promptul generat include instrucțiuni de fotorealism
+            $prompt_for_image = $add_photorealism_instructions($prompt_for_image);
+        } else {
+            // Dacă nu avem OpenAI key, adăugăm instrucțiuni de fotorealism direct la prompt
+            $prompt_for_image = $add_photorealism_instructions($initial_prompt);
         }
         
         // Încercăm generarea imaginii cu retry logic
@@ -1044,6 +1090,12 @@ class Auto_Ai_News_Poster_Api
                     // Regenerăm promptul folosind OpenAI pentru a evita filtrele de safety
                     $prompt_for_image = self::generate_safe_dalle_prompt($initial_prompt, $openai_api_key);
                     // Adăugăm un delay mic între încercări
+                    sleep(1);
+                    continue;
+                } elseif ($is_safety_error && $retry_count < $max_retries && empty($openai_api_key)) {
+                    // Dacă nu avem OpenAI key dar avem eroare de safety, adăugăm instrucțiuni de fotorealism
+                    error_log('Safety filter detected but no OpenAI key. Adding photorealism instructions for retry ' . ($retry_count + 1));
+                    $prompt_for_image = $add_photorealism_instructions($initial_prompt);
                     sleep(1);
                     continue;
                 } else {
