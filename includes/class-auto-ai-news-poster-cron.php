@@ -73,12 +73,14 @@ class Auto_Ai_News_Poster_Cron
 
             if ($settings['mode'] === 'auto') {
                 // Verifică dacă a trecut suficient timp de la ultimul articol publicat
+                // IMPORTANT: Re-citeste setările pentru a obține valorile actuale
+                $current_settings = get_option('auto_ai_news_poster_settings', []);
                 $last_post_time = get_option('auto_ai_news_poster_last_post_time', 0);
                 $current_time = time();
                 
-                // Calculează intervalul necesar
-                $hours = isset($settings['cron_interval_hours']) ? (int)$settings['cron_interval_hours'] : 1;
-                $minutes = isset($settings['cron_interval_minutes']) ? (int)$settings['cron_interval_minutes'] : 0;
+                // Calculează intervalul necesar din setările actuale
+                $hours = isset($current_settings['cron_interval_hours']) ? (int)$current_settings['cron_interval_hours'] : 1;
+                $minutes = isset($current_settings['cron_interval_minutes']) ? (int)$current_settings['cron_interval_minutes'] : 0;
                 $required_interval = ($hours * 3600) + ($minutes * 60);
                 
                 // Asigură-te că intervalul este cel puțin 1 minut
@@ -86,11 +88,21 @@ class Auto_Ai_News_Poster_Cron
                     $required_interval = 60;
                 }
                 
+                error_log('CRON TIMING: Current settings - Hours: ' . $hours . ', Minutes: ' . $minutes . ', Required interval: ' . $required_interval . ' seconds');
+                
                 // Verifică dacă a trecut suficient timp
                 $time_since_last_post = $current_time - $last_post_time;
-                if ($last_post_time > 0 && $time_since_last_post < $required_interval) {
-                    delete_transient($lock_key); // Eliberează lock-ul
-                    return; // Oprește execuția dacă nu a trecut suficient timp
+                if ($last_post_time > 0) {
+                    error_log('CRON TIMING: Last post time: ' . date('Y-m-d H:i:s', $last_post_time) . ', Current time: ' . date('Y-m-d H:i:s', $current_time) . ', Time since last post: ' . $time_since_last_post . ' seconds');
+                    
+                    if ($time_since_last_post < $required_interval) {
+                        $remaining_time = $required_interval - $time_since_last_post;
+                        error_log('CRON TIMING: Not enough time passed. Remaining: ' . $remaining_time . ' seconds. Skipping execution.');
+                        delete_transient($lock_key); // Eliberează lock-ul
+                        return; // Oprește execuția dacă nu a trecut suficient timp
+                    }
+                } else {
+                    error_log('CRON TIMING: No previous post time found. Proceeding with article generation.');
                 }
                 
                 if ($generation_mode === 'parse_link') {
