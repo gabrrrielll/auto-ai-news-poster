@@ -166,6 +166,12 @@ class Auto_AI_News_Poster_Parser
                     // Calculate a score based on priority and text length
                     $current_score = $priority * 1000 + $text_length; // Prioritize by score, then length
 
+                    // PENALTY: If text length is very small, drastically reduce score regardless of tag priority
+                    // This prevents selecting an empty <article> tag over a content-rich <div>
+                    if ($text_length < 200) {
+                        $current_score -= 9000; 
+                    }
+
                     // Add a penalty if the node is likely an ad or irrelevant content
                     if (self::is_node_irrelevant($node)) {
                         $current_score -= 5000; // Major penalty for irrelevant content
@@ -206,7 +212,8 @@ class Auto_AI_News_Poster_Parser
             }
         }
 
-        if ($is_suspicious) {
+        // FALLBACK: If content is empty, too short, or suspicious, try alternative parsing
+        if ($is_suspicious || strlen($article_content) < 100) {
 
             // Try alternative parsing method
             $alternative_content = self::try_alternative_parsing($body, $url);
@@ -222,6 +229,9 @@ class Auto_AI_News_Poster_Parser
 
         // Verificăm dacă conținutul pare să fie corect
         if (strlen($article_content) < 100) {
+             // Second chance fallback if even alternative parsing failed (maybe logic above didn't catch it)
+             // But we already tried alternative parsing. Just leave as is or log error?
+             // Maybe return error here? No, let it return empty so logic elsewhere handles it or retries.
         }
 
         return $article_content;
