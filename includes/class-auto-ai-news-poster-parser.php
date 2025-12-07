@@ -397,8 +397,15 @@ class Auto_AI_News_Poster_Parser
             return $node->textContent;
         }
 
+
         // Traverse the node and build content with link replacements
         $content = self::extract_text_with_link_replacements($node, $link_replacements);
+
+        // Fallback: If for some reason the extraction failed (logic bug, node mismatches) and returned empty content,
+        // but the original node had content, return the plain text content instead of empty string.
+        if (empty(trim($content)) && !empty(trim($node->textContent))) {
+            return $node->textContent;
+        }
 
         return $content;
     }
@@ -414,8 +421,8 @@ class Auto_AI_News_Poster_Parser
     {
         $content = '';
 
-        if ($node->nodeType === XML_TEXT_NODE) {
-            // Text node - add its content
+        if ($node->nodeType === XML_TEXT_NODE || $node->nodeType === XML_CDATA_SECTION_NODE) {
+            // Text node or CDATA - add its content
             $content .= $node->textContent;
         } elseif ($node->nodeType === XML_ELEMENT_NODE) {
             // Element node
@@ -440,7 +447,7 @@ class Auto_AI_News_Poster_Parser
                 }
             }
         }
-
+        
         return $content;
     }
 }
