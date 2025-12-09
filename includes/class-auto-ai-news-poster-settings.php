@@ -618,27 +618,64 @@ class Auto_Ai_News_Poster_Settings
                     </div>
                 </div>
 
-                <div class="api-instructions">
-                    <h4 class="api-instructions-toggle" onclick="toggleApiInstructions()">
-                        📋 Cum să obțineți cheia API OpenAI: <span class="toggle-icon">▼</span>
-                    </h4>
-                    <div class="api-instructions-content" id="api-instructions-content" style="display: none;">
-                        <ol>
-                            <li><strong>Accesați</strong> <a href="https://platform.openai.com" target="_blank">https://platform.openai.com</a></li>
-                            <li><strong>Vă înregistrați</strong> sau vă autentificați în contul OpenAI</li>
-                            <li><strong>Navigați</strong> la <a href="https://platform.openai.com/api-keys" target="_blank">API Keys</a></li>
-                            <li><strong>Faceți click</strong> pe "Create new secret key"</li>
-                            <li><strong>Copiați</strong> cheia generată (începe cu "sk-")</li>
-                            <li><strong>Lipiți</strong> cheia în câmpul de mai sus</li>
-                        </ol>
+                <div class="api-instructions-container" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                    <!-- OpenAI Instructions -->
+                    <div class="api-instructions">
+                        <h4 class="api-instructions-toggle" onclick="toggleInstructions('openai-instructions')">
+                            📋 Cum să obțineți cheia API OpenAI <span class="toggle-icon">▼</span>
+                        </h4>
+                        <div class="api-instructions-content" id="openai-instructions" style="display: none;">
+                            <ol>
+                                <li><strong>Accesați</strong> <a href="https://platform.openai.com" target="_blank">https://platform.openai.com</a></li>
+                                <li><strong>Vă înregistrați</strong> sau vă autentificați în contul OpenAI</li>
+                                <li><strong>Navigați</strong> la <a href="https://platform.openai.com/api-keys" target="_blank">API Keys</a></li>
+                                <li><strong>Faceți click</strong> pe "Create new secret key"</li>
+                                <li><strong>Copiați</strong> cheia generată (începe cu "sk-")</li>
+                                <li><strong>Lipiți</strong> cheia în câmpul OpenAI de mai sus</li>
+                            </ol>
+                            <div class="api-warning">
+                                <strong>⚠️ Important:</strong> Asigurați-vă că aveți credit disponibil în contul OpenAI.
+                            </div>
+                        </div>
+                    </div>
 
-                        <div class="api-warning">
-                            <strong>⚠️ Important:</strong>
-                            <ul>
-                                <li>Cheia API este confidențială - nu o partajați cu nimeni</li>
-                                <li>Asigurați-vă că aveți credit disponibil în contul OpenAI</li>
-                                <li>Cheia va fi folosită pentru generarea articolelor și imaginilor</li>
-                            </ul>
+                    <!-- Gemini Instructions -->
+                    <div class="api-instructions" style="margin-top: 15px;">
+                        <h4 class="api-instructions-toggle" onclick="toggleInstructions('gemini-instructions')">
+                            📋 Cum să obțineți cheia API Gemini (Google) <span class="toggle-icon">▼</span>
+                        </h4>
+                        <div class="api-instructions-content" id="gemini-instructions" style="display: none;">
+                            <ol>
+                                <li><strong>Accesați</strong> <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
+                                <li><strong>Vă autentificați</strong> cu contul Google</li>
+                                <li><strong>Faceți click</strong> pe "Create API key"</li>
+                                <li><strong>Selectați</strong> "Create API key in new project" sau un proiect existent</li>
+                                <li><strong>Copiați</strong> cheia generată</li>
+                                <li><strong>Lipiți</strong> cheia în câmpul Gemini de mai sus</li>
+                            </ol>
+                            <div class="api-warning">
+                                <strong>⚠️ Important:</strong> Gemini oferă un nivel gratuit generos, dar verificați limitele de utilizare.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DeepSeek Instructions -->
+                    <div class="api-instructions" style="margin-top: 15px;">
+                        <h4 class="api-instructions-toggle" onclick="toggleInstructions('deepseek-instructions')">
+                            📋 Cum să obțineți cheia API DeepSeek <span class="toggle-icon">▼</span>
+                        </h4>
+                        <div class="api-instructions-content" id="deepseek-instructions" style="display: none;">
+                            <ol>
+                                <li><strong>Accesați</strong> <a href="https://platform.deepseek.com/api_keys" target="_blank">DeepSeek Platform</a></li>
+                                <li><strong>Vă înregistrați</strong> sau vă autentificați</li>
+                                <li><strong>Navigați</strong> la secțiunea "API Keys"</li>
+                                <li><strong>Generați</strong> o nouă cheie API</li>
+                                <li><strong>Copiați</strong> cheia</li>
+                                <li><strong>Lipiți</strong> cheia în câmpul DeepSeek de mai sus</li>
+                            </ol>
+                            <div class="api-warning">
+                                <strong>⚠️ Important:</strong> DeepSeek este compatibil cu formatul OpenAI și oferă prețuri competitive.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -646,9 +683,12 @@ class Auto_Ai_News_Poster_Settings
         </div>
         
         <script>
-        function toggleApiInstructions() {
-            const content = document.getElementById('api-instructions-content');
-            const icon = document.querySelector('.toggle-icon');
+        function toggleInstructions(id) {
+            const content = document.getElementById(id);
+            // Găsim iconița din interiorul header-ului care a declanșat evenimentul (părintele lui content nu e header-ul, ci sibling anterior)
+            // Dar mai simplu, luăm elementul clicat din event sau căutăm sibling-ul anterior al content-ului
+            const header = content.previousElementSibling;
+            const icon = header.querySelector('.toggle-icon');
             
             if (content.style.display === 'none') {
                 content.style.display = 'block';
@@ -658,6 +698,7 @@ class Auto_Ai_News_Poster_Settings
                 icon.textContent = '▼';
             }
         }
+
         
         function refreshModelsList() {
             const apiKey = document.getElementById('chatgpt_api_key').value;
