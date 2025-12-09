@@ -287,14 +287,32 @@ function call_openai_api($api_key, $prompt, $model = null, $api_url = URL_API_OP
     // Setăm toate proprietățile ca fiind obligatorii (inclusiv tags)
     $required_properties = ['title', 'content', 'summary', 'category', 'tags', 'sources', 'source_titles'];
 
+    // Verificăm dacă este DeepSeek (care nu suportă încă json_schema strict)
+    $is_deepseek = ($api_url === URL_API_DEEPSEEK);
+
+    // Mesajul de sistem de bază
+    $system_content = 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.';
+
+    // Dacă e DeepSeek, adăugăm instrucțiuni explicite despre JSON în prompt, deoarece nu folosim json_schema strict
+    if ($is_deepseek) {
+        $system_content .= " ERROR HANDLING: You MUST respond with valid JSON only. The JSON must follow this structure: {\"title\": \"...\", \"content\": \"...\", \"summary\": \"...\", \"category\": \"...\", \"tags\": [\"...\"], \"sources\": [\"...\"], \"source_titles\": [\"...\"]}";
+    }
+
     $request_body = [
-        'model' => $selected_model,  // Model selectat din setări
-        // 'temperature' => 0.1,  // Foarte strict, respectă exact sursa (0.0-1.0) - eliminat conform erorii API
+        'model' => $selected_model,
         'messages' => [
-            ['role' => 'system', 'content' => 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.'],
+            ['role' => 'system', 'content' => $system_content],
             ['role' => 'user', 'content' => $prompt],
         ],
-        'response_format' => [
+        'max_completion_tokens' => 8000, // Limita safe pentru majoritatea modelelor
+    ];
+
+    if ($is_deepseek) {
+        // DeepSeek folosește 'json_object' standard
+        $request_body['response_format'] = ['type' => 'json_object'];
+    } else {
+        // OpenAI folosește 'json_schema' pentru Structured Outputs
+        $request_body['response_format'] = [
             'type' => 'json_schema',
             'json_schema' => [
                 'name' => 'article_response',
@@ -344,9 +362,8 @@ function call_openai_api($api_key, $prompt, $model = null, $api_url = URL_API_OP
                     'additionalProperties' => false
                 ]
             ]
-        ],
-        'max_completion_tokens' => 128000,
-    ];
+        ];
+    }
 
 
     $response = wp_remote_post($api_url, [
@@ -483,7 +500,18 @@ function call_gemini_api($api_key, $model, $prompt)
     if (!empty($data['candidates'][0]['content']['parts'][0]['text'])) {
         $text = $data['candidates'][0]['content']['parts'][0]['text'];
     }
-    return [ 'choices' => [ ['message' => ['content' => $text]] ] ];
+    
+    // Simulăm structura de răspuns OpenAI pentru compatibilitate cu functiile existente
+    $simulated_choices = [ 'choices' => [ ['message' => ['content' => $text]] ] ];
+    
+    // Returnăm un array care simulează structura de răspuns a wp_remote_post
+    return [
+        'response' => ['code' => 200, 'message' => 'OK'],
+        'headers' => [],
+        'body' => json_encode($simulated_choices),
+        'cookies' => [],
+        'filename' => null
+    ];
 }
 
 // --- Google Gemini (image generation via Generative Language API) ---
