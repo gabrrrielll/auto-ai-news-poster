@@ -16,6 +16,7 @@ class Auto_Ai_News_Poster_Settings
         // Handler AJAX pentru actualizarea listei de modele
         add_action('wp_ajax_refresh_openai_models', [self::class, 'ajax_refresh_openai_models']);
         add_action('wp_ajax_refresh_gemini_models', [self::class, 'ajax_refresh_gemini_models']);
+        add_action('wp_ajax_refresh_deepseek_models', [self::class, 'ajax_refresh_deepseek_models']);
     }
 
 
@@ -382,6 +383,7 @@ class Auto_Ai_News_Poster_Settings
         $gemini_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
         $imagen_model = $options['imagen_model'] ?? 'gemini-2.5-flash-image';
         $deepseek_api_key = $options['deepseek_api_key'] ?? '';
+        $deepseek_model = $options['deepseek_model'] ?? 'deepseek-chat';
         $use_deepseek = $options['use_deepseek'] ?? 'no';
 
         // Obținem lista de modele disponibile pentru OpenAI
@@ -395,6 +397,11 @@ class Auto_Ai_News_Poster_Settings
         $has_gemini_error = isset($available_gemini_models['error']);
         $gemini_error_message = $has_gemini_error ? $available_gemini_models['error'] : '';
         $gemini_error_type = $has_gemini_error ? $available_gemini_models['error_type'] : '';
+
+        // Obținem lista de modele disponibile pentru DeepSeek
+        $available_deepseek_models = self::get_cached_deepseek_models($deepseek_api_key);
+        $has_deepseek_error = isset($available_deepseek_models['error']);
+        $deepseek_error_message = $has_deepseek_error ? $available_deepseek_models['error'] : '';
         ?>
         <div class="settings-card">
             <div class="settings-card-header">
@@ -485,11 +492,67 @@ class Auto_Ai_News_Poster_Settings
                             <label for="deepseek_api_key" class="control-label">Cheia API DeepSeek</label>
                             <input type="password" name="auto_ai_news_poster_settings[deepseek_api_key]"
                                    value="<?php echo esc_attr($deepseek_api_key); ?>" class="form-control"
-                                   id="deepseek_api_key" placeholder="sk-...">
+                                   id="deepseek_api_key" placeholder="sk-..." onchange="refreshDeepSeekModelsList()">
                             <span class="info-icon tooltip">
                                 i
                                 <span class="tooltiptext">Obține cheia de la https://platform.deepseek.com/api_keys</span>
                             </span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="deepseek_model" class="control-label">Model DeepSeek</label>
+                            <select name="auto_ai_news_poster_settings[deepseek_model]" class="form-control" id="deepseek_model">
+                                <?php if (!$has_deepseek_error && !empty($available_deepseek_models)): ?>
+                                    <optgroup label="🌟 Recomandate">
+                                        <?php
+                                        // Modelele recomandate DeepSeek
+                                        $recommended_deepseek = ['deepseek-chat', 'deepseek-reasoner'];
+                                        foreach ($recommended_deepseek as $model_id) {
+                                            if (isset($available_deepseek_models[$model_id])) {
+                                                $selected = selected($deepseek_model, $model_id, false);
+                                                echo "<option value=\"{$model_id}\" {$selected}>{$model_id}</option>";
+                                            }
+                                        }
+                                        ?>
+                                    </optgroup>
+                                    <optgroup label="📊 Toate modelele disponibile">
+                                        <?php
+                                        foreach ($available_deepseek_models as $model_id => $val) {
+                                            if (!in_array($model_id, $recommended_deepseek)) {
+                                                $selected = selected($deepseek_model, $model_id, false);
+                                                echo "<option value=\"{$model_id}\" {$selected}>{$model_id}</option>";
+                                            }
+                                        }
+                                        ?>
+                                    </optgroup>
+                                <?php else: ?>
+                                    <option value="" disabled>
+                                        <?php if ($has_deepseek_error): ?>
+                                            ❌ Eroare: <?php echo esc_html($deepseek_error_message); ?>
+                                        <?php else: ?>
+                                            ⏳ Se încarcă modelele...
+                                        <?php endif; ?>
+                                    </option>
+                                    <!-- Fallback -->
+                                    <optgroup label="📊 Modele Standard (Fallback)">
+                                        <option value="deepseek-chat" <?php selected($deepseek_model, 'deepseek-chat'); ?>>deepseek-chat</option>
+                                        <option value="deepseek-reasoner" <?php selected($deepseek_model, 'deepseek-reasoner'); ?>>deepseek-reasoner</option>
+                                    </optgroup>
+                                <?php endif; ?>
+                            </select>
+
+                            <div class="form-description">
+                                <?php if (!$has_deepseek_error && !empty($available_deepseek_models)): ?>
+                                    ✅ Lista de modele preluată din API.
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshDeepSeekModelsList()" style="margin-left: 10px;">
+                                        🔄 Actualizează lista
+                                    </button>
+                                <?php else: ?>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshDeepSeekModelsList()">
+                                        🔄 Actualizează lista
+                                    </button>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
 
@@ -787,6 +850,54 @@ class Auto_Ai_News_Poster_Settings
             .catch(error => {
                 console.error('Error:', error);
                 alert('Eroare la actualizarea listei de modele Gemini.');
+            })
+            .finally(() => {
+                if (refreshBtn) {
+                    refreshBtn.innerHTML = originalText;
+                    refreshBtn.disabled = false;
+                }
+            });
+        }
+
+        function refreshDeepSeekModelsList() {
+            const apiKey = document.getElementById('deepseek_api_key').value;
+            
+            if (!apiKey) {
+                alert('Vă rugăm să introduceți mai întâi cheia API DeepSeek.');
+                return;
+            }
+            
+            // Afișăm indicator de încărcare
+            const refreshBtn = document.querySelector('button[onclick="refreshDeepSeekModelsList()"]');
+            const originalText = refreshBtn ? refreshBtn.innerHTML : '';
+            if (refreshBtn) {
+                refreshBtn.innerHTML = '⏳ Se încarcă...';
+                refreshBtn.disabled = true;
+            }
+            
+            // Facem apel AJAX pentru a actualiza lista
+            fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'refresh_deepseek_models',
+                    api_key: apiKey,
+                    nonce: '<?php echo wp_create_nonce('refresh_deepseek_models_nonce'); ?>'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Eroare la actualizarea listei de modele DeepSeek: ' + (data.data || 'Eroare necunoscută'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Eroare la actualizarea listei de modele DeepSeek.');
             })
             .finally(() => {
                 if (refreshBtn) {
@@ -1501,9 +1612,65 @@ class Auto_Ai_News_Poster_Settings
             return $clean_id . ' - Model Gemini 1.0 clasic';
         } elseif (strpos($clean_id, 'gemini-exp') === 0 || strpos($clean_id, 'exp') !== false) {
             return $clean_id . ' - Model experimental Gemini';
-        } else {
             return $clean_id;
         }
+    }
+
+    public static function get_available_deepseek_models($api_key)
+    {
+        $response = wp_remote_get('https://api.deepseek.com/models', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type' => 'application/json',
+            ],
+            'timeout' => 30, // Timeout de 30 secunde
+        ]);
+
+        if (is_wp_error($response)) {
+            return ['error' => 'Connection failed: ' . $response->get_error_message()];
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+
+        if (empty($data) || !isset($data['data'])) {
+            return ['error' => 'Invalid response from DeepSeek API'];
+        }
+
+        $models = [];
+        foreach ($data['data'] as $model) {
+            $id = $model['id'];
+            $models[$id] = $id; // DeepSeek nu are neapărat descrieri separate momentan, folosim ID-ul
+        }
+
+        return $models;
+    }
+
+    public static function get_cached_deepseek_models($api_key)
+    {
+        // Încercăm să obținem modelele din cache
+        $cached_models = get_transient('deepseek_models_cache');
+
+        if ($cached_models !== false) {
+            return $cached_models;
+        }
+
+        // Dacă nu avem API Key, returnăm o listă goală (nu încercăm să tragem date)
+        if (empty($api_key)) {
+            return [];
+        }
+
+        // Dacă nu sunt în cache, le obținem din API
+        $models = self::get_available_deepseek_models($api_key);
+
+        if (isset($models['error'])) {
+            return $models; // Returnăm eroarea pentru afișare
+        }
+
+        // Salvăm în cache pentru 24 ore
+        set_transient('deepseek_models_cache', $models, 24 * HOUR_IN_SECONDS);
+
+        return $models;
     }
 
     // Handler AJAX pentru actualizarea listei de modele
@@ -1581,6 +1748,44 @@ class Auto_Ai_News_Poster_Settings
         }
     }
 
+    // Handler AJAX pentru actualizarea listei de modele DeepSeek
+    public static function ajax_refresh_deepseek_models()
+    {
+        // Verificăm nonce-ul
+        if (!wp_verify_nonce($_POST['nonce'], 'refresh_deepseek_models_nonce')) {
+            wp_send_json_error('Nonce verification failed');
+            return;
+        }
+
+        // Verificăm permisiunile
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+            return;
+        }
+
+        $api_key = sanitize_text_field($_POST['api_key']);
+
+        if (empty($api_key)) {
+            wp_send_json_error('API key is required');
+            return;
+        }
+
+        // Ștergem cache-ul existent
+        delete_transient('deepseek_models_cache');
+
+        // Obținem noile modele
+        $models = self::get_available_deepseek_models($api_key);
+
+        if ($models && !empty($models) && !isset($models['error'])) {
+            // Salvăm în cache pentru 24 ore
+            set_transient('deepseek_models_cache', $models, 24 * HOUR_IN_SECONDS);
+            wp_send_json_success('DeepSeek models list updated successfully');
+        } else {
+            $error_msg = isset($models['error']) ? $models['error'] : 'Failed to fetch models from DeepSeek API';
+            wp_send_json_error($error_msg);
+        }
+    }
+
     // Funcție simplă pentru sanitizarea doar a checkbox-urilor
     public static function sanitize_checkbox_settings($input)
     {
@@ -1592,10 +1797,10 @@ class Auto_Ai_News_Poster_Settings
 
         // Lista checkbox-urilor care trebuie să fie setate explicit
         $checkbox_fields = ['auto_rotate_categories', 'generate_image',
-                           'run_until_bulk_exhausted', 'generate_tags', 'use_openai', 'use_gemini'];
+                           'run_until_bulk_exhausted', 'generate_tags', 'use_openai', 'use_gemini', 'use_deepseek'];
 
         // Câmpurile de tip <select> care trebuie validate
-        $select_fields = ['mode', 'status', 'specific_search_category', 'author_name', 'article_length_option', 'use_external_images', 'ai_model', 'generation_mode', 'gemini_model', 'imagen_model'];
+        $select_fields = ['mode', 'status', 'specific_search_category', 'author_name', 'article_length_option', 'use_external_images', 'ai_model', 'generation_mode', 'gemini_model', 'imagen_model', 'deepseek_model'];
 
         // Setăm toate checkbox-urile la 'no' înainte de a procesa input-ul
         foreach ($checkbox_fields as $checkbox_field) {

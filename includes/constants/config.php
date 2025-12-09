@@ -261,7 +261,7 @@ function call_ai_api($prompt)
     } elseif ($use_deepseek) {
          // Logica pentru DeepSeek (OpenAI-compatible)
         $api_key = $options['deepseek_api_key'] ?? '';
-        $model = 'deepseek-chat';
+        $model = $options['deepseek_model'] ?? 'deepseek-chat';
         return call_openai_api($api_key, $prompt, $model, URL_API_DEEPSEEK);
     }
     // default to OpenAI
