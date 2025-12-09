@@ -3,6 +3,7 @@
 // Funcție pentru generarea promptului
 const URL_API_OPENAI = 'https://api.openai.com/v1/chat/completions';
 const URL_API_IMAGE = 'https://api.openai.com/v1/images/generations';
+const URL_API_DEEPSEEK = 'https://api.deepseek.com/chat/completions';
 
 function generate_custom_source_prompt($article_text_content, $additional_instructions = '', $source_link = '')
 {
@@ -247,6 +248,8 @@ function call_ai_api($prompt)
 {
     $options = get_option('auto_ai_news_poster_settings');
     $use_gemini = isset($options['use_gemini']) && $options['use_gemini'] === 'yes';
+    $use_deepseek = isset($options['use_deepseek']) && $options['use_deepseek'] === 'yes';
+
     if ($use_gemini) {
         $api_key = $options['gemini_api_key'] ?? '';
         $model = $options['gemini_model'] ?? 'gemini-1.5-pro';
@@ -255,18 +258,26 @@ function call_ai_api($prompt)
             $model = 'models/' . $model;
         }
         return call_gemini_api($api_key, $model, $prompt);
+    } elseif ($use_deepseek) {
+         // Logica pentru DeepSeek (OpenAI-compatible)
+        $api_key = $options['deepseek_api_key'] ?? '';
+        $model = 'deepseek-chat';
+        return call_openai_api($api_key, $prompt, $model, URL_API_DEEPSEEK);
     }
     // default to OpenAI
     $api_key = $options['chatgpt_api_key'] ?? '';
     return call_openai_api($api_key, $prompt);
 }
 
-function call_openai_api($api_key, $prompt)
+function call_openai_api($api_key, $prompt, $model = null, $api_url = URL_API_OPENAI)
 {
 
-    // Obținem modelul selectat din setări
-    $options = get_option('auto_ai_news_poster_settings', []);
-    $selected_model = $options['ai_model'] ?? 'gpt-4o';
+    // Obținem modelul selectat din setări (doar dacă nu e specificat explicit)
+    $selected_model = $model;
+    if (empty($selected_model)) {
+        $options = get_option('auto_ai_news_poster_settings', []);
+        $selected_model = $options['ai_model'] ?? 'gpt-4o';
+    }
 
 
     // Preluăm setările pentru a vedea dacă trebuie să generăm etichete
@@ -338,7 +349,7 @@ function call_openai_api($api_key, $prompt)
     ];
 
 
-    $response = wp_remote_post(URL_API_OPENAI, [
+    $response = wp_remote_post($api_url, [
         'headers' => [
             'Authorization' => 'Bearer ' . $api_key,
             'Content-Type' => 'application/json',

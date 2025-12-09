@@ -286,7 +286,7 @@ class Auto_Ai_News_Poster_Api
         // --- Call OpenAI API ---
         error_log('CRON PROCESS: Calling AI API for: ' . $source_link);
         $prompt = generate_custom_source_prompt($extracted_content, $additional_instructions, $source_link);
-        $response = call_openai_api($options['chatgpt_api_key'], $prompt);
+        $response = call_ai_api($prompt);
 
         if (is_wp_error($response)) {
             $error_message = 'OpenAI API Error: ' . $response->get_error_message();

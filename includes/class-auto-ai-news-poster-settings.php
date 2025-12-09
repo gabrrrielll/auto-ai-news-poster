@@ -381,6 +381,8 @@ class Auto_Ai_News_Poster_Settings
         $gemini_api_key = $options['gemini_api_key'] ?? '';
         $gemini_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
         $imagen_model = $options['imagen_model'] ?? 'gemini-2.5-flash-image';
+        $deepseek_api_key = $options['deepseek_api_key'] ?? '';
+        $use_deepseek = $options['use_deepseek'] ?? 'no';
 
         // Obținem lista de modele disponibile pentru OpenAI
         $available_models = self::get_cached_openai_models($api_key);
@@ -475,6 +477,19 @@ class Auto_Ai_News_Poster_Settings
                                     Introduceți cheia API pentru a vedea toate modelele disponibile.
                                 <?php endif; ?>
                             </div>
+                        </div>
+                    </div>
+
+                    <div>
+                         <div class="form-group">
+                            <label for="deepseek_api_key" class="control-label">Cheia API DeepSeek</label>
+                            <input type="password" name="auto_ai_news_poster_settings[deepseek_api_key]"
+                                   value="<?php echo esc_attr($deepseek_api_key); ?>" class="form-control"
+                                   id="deepseek_api_key" placeholder="sk-...">
+                            <span class="info-icon tooltip">
+                                i
+                                <span class="tooltiptext">Obține cheia de la https://platform.deepseek.com/api_keys</span>
+                            </span>
                         </div>
                     </div>
 
@@ -592,6 +607,10 @@ class Auto_Ai_News_Poster_Settings
                     <div class="custom-checkbox" style="margin-top: 8px;">
                         <input type="checkbox" id="use_gemini" name="auto_ai_news_poster_settings[use_gemini]" value="yes" <?php checked($use_gemini, 'yes'); ?>>
                         <label for="use_gemini" class="checkbox-label">Folosește Gemini (Google)</label>
+                    </div>
+                    <div class="custom-checkbox" style="margin-top: 8px;">
+                        <input type="checkbox" id="use_deepseek" name="auto_ai_news_poster_settings[use_deepseek]" value="yes" <?php checked($use_deepseek, 'yes'); ?>>
+                        <label for="use_deepseek" class="checkbox-label">Folosește DeepSeek</label>
                     </div>
                     <small class="form-text text-muted">Selecție exclusivă: când bifezi unul, celălalt se debifează automat.</small>
                     <div id="ai-provider-warning" class="notice notice-error" style="display:none; margin-top:10px;">
@@ -739,8 +758,10 @@ class Auto_Ai_News_Poster_Settings
         (function(){
             const openaiCheckbox = document.getElementById('use_openai');
             const geminiCheckbox = document.getElementById('use_gemini');
+            const deepseekCheckbox = document.getElementById('use_deepseek');
             const openaiKeyInput = document.getElementById('chatgpt_api_key');
             const geminiKeyInput = document.getElementById('gemini_api_key');
+            const deepseekKeyInput = document.getElementById('deepseek_api_key');
             const warningContainer = document.getElementById('ai-provider-warning');
             const warningText = warningContainer ? warningContainer.querySelector('p') : null;
 
@@ -768,6 +789,7 @@ class Auto_Ai_News_Poster_Settings
                         return;
                     }
                     geminiCheckbox.checked = false;
+                    deepseekCheckbox.checked = false;
                     showWarning('');
                 }
                 if (changed === geminiCheckbox && geminiCheckbox.checked) {
@@ -777,16 +799,28 @@ class Auto_Ai_News_Poster_Settings
                         return;
                     }
                     openaiCheckbox.checked = false;
+                    deepseekCheckbox.checked = false;
+                    showWarning('');
+                }
+                if (changed === deepseekCheckbox && deepseekCheckbox.checked) {
+                    if (!deepseekKeyInput.value.trim()) {
+                        deepseekCheckbox.checked = false;
+                        showWarning('Nu poți selecta acest provider deoarece încă nu ai setat cheia API DeepSeek.');
+                        return;
+                    }
+                    openaiCheckbox.checked = false;
+                    geminiCheckbox.checked = false;
                     showWarning('');
                 }
             }
 
-            if (openaiCheckbox && geminiCheckbox) {
+            if (openaiCheckbox && geminiCheckbox && deepseekCheckbox) {
                 openaiCheckbox.addEventListener('change', () => handleCheckboxChange(openaiCheckbox));
                 geminiCheckbox.addEventListener('change', () => handleCheckboxChange(geminiCheckbox));
+                deepseekCheckbox.addEventListener('change', () => handleCheckboxChange(deepseekCheckbox));
             }
 
-            [openaiKeyInput, geminiKeyInput].forEach(input => {
+            [openaiKeyInput, geminiKeyInput, deepseekKeyInput].forEach(input => {
                 if (!input) { return; }
                 input.addEventListener('input', () => {
                     showWarning('');
@@ -799,6 +833,9 @@ class Auto_Ai_News_Poster_Settings
             }
             if (geminiCheckbox && geminiCheckbox.checked && !geminiKeyInput.value.trim()) {
                 geminiCheckbox.checked = false;
+            }
+            if (deepseekCheckbox && deepseekCheckbox.checked && !deepseekKeyInput.value.trim()) {
+                deepseekCheckbox.checked = false;
             }
         })();
         </script>
