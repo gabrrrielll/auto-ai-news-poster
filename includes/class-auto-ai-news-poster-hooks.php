@@ -27,7 +27,8 @@ class Auto_Ai_News_Poster_Hooks
 
         // Preluăm URL-ul imaginii externe și sursa
         $external_image_url = get_post_meta($post->ID, '_external_image_url', true);
-        $external_image_source = get_post_meta($post->ID, '_external_image_source', true);
+        $external_image_source = trim((string) get_post_meta($post->ID, '_external_image_source', true));
+        $ai_image_generated = (bool) get_post_meta($post->ID, '_auto_ai_news_poster_ai_image_generated', true);
 
         // Dacă folosim imagini externe și există un URL extern
         if ($use_external_images === 'external' && !empty($external_image_url)) {
@@ -41,12 +42,26 @@ class Auto_Ai_News_Poster_Hooks
             $content = $image_html . $content;
         } // Dacă folosim importul de imagini, afișăm imaginea reprezentativă din WordPress
 
-        if (has_post_thumbnail($post->ID)) {
+        $has_any_image = (has_post_thumbnail($post->ID) || ($use_external_images === 'external' && !empty($external_image_url)));
+        $should_show_source = (!empty($external_image_source) || $ai_image_generated);
+
+        if ($has_any_image && $should_show_source) {
+            // Dacă imaginea a fost generată cu AI și user-ul a golit câmpul "Sursa imaginii",
+            // afișăm totuși sursa implicită.
+            $display_source = $external_image_source;
+            if (empty($display_source) && $ai_image_generated) {
+                $display_source = 'Imagine generată AI';
+            }
+
             $info_icon = '';
-            if (str_contains(strtolower($external_image_source), 'imagine generat')) {
+            if (
+                $ai_image_generated ||
+                (!empty($display_source) && str_contains(strtolower($display_source), 'imagine generat'))
+            ) {
                 $info_icon = '<span class="info-icon">i</span>';
             }
-            $content = '<p id="sursa-foto"><em>Sursa foto: <b>' . esc_html($external_image_source) . '</b></em>' . $info_icon . '</p><br>' . $content;
+
+            $content = '<p id="sursa-foto"><em>Sursa foto: <b>' . esc_html($display_source) . '</b></em>' . $info_icon . '</p><br>' . $content;
         }
 
         return $content;
