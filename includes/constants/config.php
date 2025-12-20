@@ -257,15 +257,19 @@ function call_ai_api($prompt)
         if (strpos($model, 'models/') !== 0) {
             $model = 'models/' . $model;
         }
+        error_log('[AUTO_AI_NEWS_POSTER] AI request (provider=Gemini) model=' . $model . ' prompt_len=' . strlen((string) $prompt) . ' prompt_preview=' . substr((string) $prompt, 0, 250));
         return call_gemini_api($api_key, $model, $prompt);
     } elseif ($use_deepseek) {
          // Logica pentru DeepSeek (OpenAI-compatible)
         $api_key = $options['deepseek_api_key'] ?? '';
         $model = $options['deepseek_model'] ?? 'deepseek-chat';
+        error_log('[AUTO_AI_NEWS_POSTER] AI request (provider=DeepSeek) model=' . $model . ' prompt_len=' . strlen((string) $prompt) . ' prompt_preview=' . substr((string) $prompt, 0, 250));
         return call_openai_api($api_key, $prompt, $model, URL_API_DEEPSEEK);
     }
     // default to OpenAI
     $api_key = $options['chatgpt_api_key'] ?? '';
+    $selected_model = $options['ai_model'] ?? 'gpt-4o';
+    error_log('[AUTO_AI_NEWS_POSTER] AI request (provider=OpenAI) model=' . $selected_model . ' prompt_len=' . strlen((string) $prompt) . ' prompt_preview=' . substr((string) $prompt, 0, 250));
     return call_openai_api($api_key, $prompt);
 }
 
@@ -364,6 +368,21 @@ function call_openai_api($api_key, $prompt, $model = null, $api_url = URL_API_OP
             ]
         ];
     }
+
+    // --- Debug logs: model + message payload preview (fără chei API) ---
+    $messages_preview = [];
+    foreach (($request_body['messages'] ?? []) as $m) {
+        $role = isset($m['role']) ? (string) $m['role'] : 'unknown';
+        $content = isset($m['content']) ? (string) $m['content'] : '';
+        $messages_preview[] = [
+            'role' => $role,
+            'len' => strlen($content),
+            'preview' => substr($content, 0, 250),
+        ];
+    }
+    $provider_label = ($api_url === URL_API_DEEPSEEK) ? 'DeepSeek(OpenAI-compatible)' : 'OpenAI';
+    $response_format_type = $request_body['response_format']['type'] ?? null;
+    error_log('[AUTO_AI_NEWS_POSTER] AI request payload provider=' . $provider_label . ' api_url=' . $api_url . ' model=' . $selected_model . ' response_format=' . (string) $response_format_type . ' messages=' . wp_json_encode($messages_preview));
 
 
     $response = wp_remote_post($api_url, [
@@ -476,6 +495,9 @@ function call_gemini_api($api_key, $model, $prompt)
             ]
         ]
     ];
+
+    // Debug logs: model + request payload preview (fără chei API)
+    error_log('[AUTO_AI_NEWS_POSTER] Gemini request model=' . $model . ' endpoint=v1beta:generateContent prompt_len=' . strlen((string) $prompt) . ' prompt_preview=' . substr((string) $prompt, 0, 250) . ' body_preview=' . substr(wp_json_encode($body), 0, 250));
 
     $response = wp_remote_post($endpoint, [
         'headers' => [ 'Content-Type' => 'application/json' ],

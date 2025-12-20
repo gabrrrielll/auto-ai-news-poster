@@ -663,6 +663,21 @@ class Auto_Ai_News_Poster_Api
             'max_completion_tokens' => $max_completion_tokens,
         ];
 
+        // Debug logs: model + message payload preview (fără chei API)
+        $messages_preview = [];
+        foreach (($request_body['messages'] ?? []) as $m) {
+            $role = isset($m['role']) ? (string) $m['role'] : 'unknown';
+            $content = isset($m['content']) ? (string) $m['content'] : '';
+            $messages_preview[] = [
+                'role' => $role,
+                'len' => strlen($content),
+                'preview' => substr($content, 0, 250),
+            ];
+        }
+        $response_format_type = $request_body['response_format']['type'] ?? null;
+        $tools_count = isset($request_body['tools']) && is_array($request_body['tools']) ? count($request_body['tools']) : 0;
+        error_log('[AUTO_AI_NEWS_POSTER] AI browsing request model=' . $selected_model . ' response_format=' . (string) $response_format_type . ' tools=' . $tools_count . ' messages=' . wp_json_encode($messages_preview));
+
         $response = wp_remote_post(URL_API_OPENAI, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $api_key,
@@ -773,6 +788,21 @@ class Auto_Ai_News_Poster_Api
             ],
             'max_completion_tokens' => $max_completion_tokens,
         ];
+
+        // Debug logs: model + message payload preview (fără chei API)
+        $messages_preview = [];
+        foreach (($request_body['messages'] ?? []) as $m) {
+            $role = isset($m['role']) ? (string) $m['role'] : 'unknown';
+            $content = isset($m['content']) ? (string) $m['content'] : '';
+            $messages_preview[] = [
+                'role' => $role,
+                'len' => strlen($content),
+                'preview' => substr($content, 0, 250),
+            ];
+        }
+        $response_format_type = $request_body['response_format']['type'] ?? null;
+        $tool_calls_count = is_array($tool_calls) ? count($tool_calls) : 0;
+        error_log('[AUTO_AI_NEWS_POSTER] AI browsing continue request model=' . $selected_model . ' response_format=' . (string) $response_format_type . ' tool_calls=' . $tool_calls_count . ' messages=' . wp_json_encode($messages_preview));
 
         $response = wp_remote_post(URL_API_OPENAI, [
             'headers' => [
