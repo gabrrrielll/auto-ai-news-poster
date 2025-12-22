@@ -15,8 +15,9 @@ class Auto_Ai_News_Poster_Settings
 
         // Handler AJAX pentru actualizarea listei de modele
         add_action('wp_ajax_refresh_openai_models', [self::class, 'ajax_refresh_openai_models']);
-        add_action('wp_ajax_refresh_gemini_models', [self::class, 'ajax_refresh_gemini_models']);
-        add_action('wp_ajax_refresh_deepseek_models', [self::class, 'ajax_refresh_deepseek_models']);
+        // Temporar: Gemini & DeepSeek dezactivate (UI + provider)
+        // add_action('wp_ajax_refresh_gemini_models', [self::class, 'ajax_refresh_gemini_models']);
+        // add_action('wp_ajax_refresh_deepseek_models', [self::class, 'ajax_refresh_deepseek_models']);
     }
 
 
@@ -377,31 +378,12 @@ class Auto_Ai_News_Poster_Settings
         $options = get_option('auto_ai_news_poster_settings');
         $api_key = $options['chatgpt_api_key'] ?? '';
         $selected_model = $options['ai_model'] ?? 'gpt-4o';
-        $use_openai = $options['use_openai'] ?? (empty($api_key) ? 'no' : 'yes');
-        $use_gemini = $options['use_gemini'] ?? 'no';
-        $gemini_api_key = $options['gemini_api_key'] ?? '';
-        $gemini_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
-        $imagen_model = $options['imagen_model'] ?? 'gemini-2.5-flash-image';
-        $deepseek_api_key = $options['deepseek_api_key'] ?? '';
-        $deepseek_model = $options['deepseek_model'] ?? 'deepseek-chat';
-        $use_deepseek = $options['use_deepseek'] ?? 'no';
 
         // Obținem lista de modele disponibile pentru OpenAI
         $available_models = self::get_cached_openai_models($api_key);
         $has_error = isset($available_models['error']);
         $error_message = $has_error ? $available_models['error'] : '';
         $error_type = $has_error ? $available_models['error_type'] : '';
-
-        // Obținem lista de modele disponibile pentru Gemini
-        $available_gemini_models = self::get_cached_gemini_models($gemini_api_key);
-        $has_gemini_error = isset($available_gemini_models['error']);
-        $gemini_error_message = $has_gemini_error ? $available_gemini_models['error'] : '';
-        $gemini_error_type = $has_gemini_error ? $available_gemini_models['error_type'] : '';
-
-        // Obținem lista de modele disponibile pentru DeepSeek
-        $available_deepseek_models = self::get_cached_deepseek_models($deepseek_api_key);
-        $has_deepseek_error = isset($available_deepseek_models['error']);
-        $deepseek_error_message = $has_deepseek_error ? $available_deepseek_models['error'] : '';
         ?>
         <div class="settings-card">
             <div class="settings-card-header">
@@ -409,6 +391,9 @@ class Auto_Ai_News_Poster_Settings
                 <h3 class="settings-card-title">Configurare API AI</h3>
             </div>
             <div class="settings-card-content">
+                <div class="alert alert-warning" style="margin-bottom: 15px; padding: 10px; background: #fff8e5; border: 1px solid #ffe4a3; border-radius: 6px;">
+                    <strong>ℹ️ Temporar:</strong> opțiunile pentru <b>Gemini</b> și <b>DeepSeek</b> sunt dezactivate. Plugin-ul folosește doar <b>OpenAI</b>.
+                </div>
                 <div class="form-grid">
                     <div>
                         <div class="form-group">
@@ -486,199 +471,6 @@ class Auto_Ai_News_Poster_Settings
                             </div>
                         </div>
                     </div>
-
-                    <div>
-                         <div class="form-group">
-                            <label for="deepseek_api_key" class="control-label">Cheia API DeepSeek</label>
-                            <input type="password" name="auto_ai_news_poster_settings[deepseek_api_key]"
-                                   value="<?php echo esc_attr($deepseek_api_key); ?>" class="form-control"
-                                   id="deepseek_api_key" placeholder="sk-..." onchange="refreshDeepSeekModelsList()">
-                            <span class="info-icon tooltip">
-                                i
-                                <span class="tooltiptext">Obține cheia de la https://platform.deepseek.com/api_keys</span>
-                            </span>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="deepseek_model" class="control-label">Model DeepSeek</label>
-                            <select name="auto_ai_news_poster_settings[deepseek_model]" class="form-control" id="deepseek_model">
-                                <?php if (!$has_deepseek_error && !empty($available_deepseek_models)): ?>
-                                    <optgroup label="🌟 Recomandate">
-                                        <?php
-                                        // Modelele recomandate DeepSeek
-                                        $recommended_deepseek = ['deepseek-chat', 'deepseek-reasoner'];
-                                        foreach ($recommended_deepseek as $model_id) {
-                                            if (isset($available_deepseek_models[$model_id])) {
-                                                $selected = selected($deepseek_model, $model_id, false);
-                                                echo "<option value=\"{$model_id}\" {$selected}>{$model_id}</option>";
-                                            }
-                                        }
-                                        ?>
-                                    </optgroup>
-                                    <optgroup label="📊 Toate modelele disponibile">
-                                        <?php
-                                        foreach ($available_deepseek_models as $model_id => $val) {
-                                            if (!in_array($model_id, $recommended_deepseek)) {
-                                                $selected = selected($deepseek_model, $model_id, false);
-                                                echo "<option value=\"{$model_id}\" {$selected}>{$model_id}</option>";
-                                            }
-                                        }
-                                        ?>
-                                    </optgroup>
-                                <?php else: ?>
-                                    <option value="" disabled>
-                                        <?php if ($has_deepseek_error): ?>
-                                            ❌ Eroare: <?php echo esc_html($deepseek_error_message); ?>
-                                        <?php else: ?>
-                                            ⏳ Se încarcă modelele...
-                                        <?php endif; ?>
-                                    </option>
-                                    <!-- Fallback -->
-                                    <optgroup label="📊 Modele Standard (Fallback)">
-                                        <option value="deepseek-chat" <?php selected($deepseek_model, 'deepseek-chat'); ?>>deepseek-chat</option>
-                                        <option value="deepseek-reasoner" <?php selected($deepseek_model, 'deepseek-reasoner'); ?>>deepseek-reasoner</option>
-                                    </optgroup>
-                                <?php endif; ?>
-                            </select>
-
-                            <div class="form-description">
-                                <?php if (!$has_deepseek_error && !empty($available_deepseek_models)): ?>
-                                    ✅ Lista de modele preluată din API.
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshDeepSeekModelsList()" style="margin-left: 10px;">
-                                        🔄 Actualizează lista
-                                    </button>
-                                <?php else: ?>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshDeepSeekModelsList()">
-                                        🔄 Actualizează lista
-                                    </button>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="form-group">
-                            <label for="gemini_api_key" class="control-label">Cheia API Gemini (Google)</label>
-                            <input type="password" name="auto_ai_news_poster_settings[gemini_api_key]"
-                                   value="<?php echo esc_attr($gemini_api_key); ?>" class="form-control"
-                                   id="gemini_api_key" placeholder="AIza..." onchange="refreshGeminiModelsList()">
-                            <span class="info-icon tooltip">
-                                i
-                                <span class="tooltiptext">Creează o cheie pe console.cloud.google.com, activând Generative Language API.</span>
-                            </span>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="gemini_model" class="control-label">Model Gemini</label>
-                            <select name="auto_ai_news_poster_settings[gemini_model]" class="form-control" id="gemini_model">
-                                <?php if (!$has_gemini_error && !empty($available_gemini_models)): ?>
-                                    <optgroup label="🌟 Recomandate">
-                                        <?php
-                                        $recommended_gemini_models = ['gemini-2.0-flash-exp', 'gemini-1.5-pro-latest', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-1.5-flash'];
-                                        foreach ($recommended_gemini_models as $model_id) {
-                                            if (isset($available_gemini_models[$model_id])) {
-                                                $model = $available_gemini_models[$model_id];
-                                                $description = self::get_gemini_model_description($model_id);
-                                                $selected = selected($gemini_model, $model_id, false);
-                                                echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
-                                            }
-                                        }
-                                        ?>
-                                    </optgroup>
-                                    <optgroup label="📊 Toate modelele disponibile">
-                                        <?php
-                                        foreach ($available_gemini_models as $model_id => $model) {
-                                            if (!in_array($model_id, $recommended_gemini_models)) {
-                                                $description = self::get_gemini_model_description($model_id);
-                                                $selected = selected($gemini_model, $model_id, false);
-                                                echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
-                                            }
-                                        }
-                                        ?>
-                                    </optgroup>
-                                <?php else: ?>
-                                    <option value="" disabled>
-                                        <?php if ($has_gemini_error): ?>
-                                            ❌ Eroare la încărcarea modelelor
-                                        <?php else: ?>
-                                            ⏳ Se încarcă modelele...
-                                        <?php endif; ?>
-                                    </option>
-                                    <!-- Fallback la modele statice -->
-                                    <optgroup label="📊 Modele Stabile (Fallback)">
-                                        <option value="gemini-1.5-pro" <?php selected($gemini_model, 'gemini-1.5-pro'); ?>>Gemini 1.5 Pro</option>
-                                        <option value="gemini-1.5-flash" <?php selected($gemini_model, 'gemini-1.5-flash'); ?>>Gemini 1.5 Flash</option>
-                                        <option value="gemini-1.0-pro" <?php selected($gemini_model, 'gemini-1.0-pro'); ?>>Gemini 1.0 Pro</option>
-                                    </optgroup>
-                                <?php endif; ?>
-                            </select>
-
-                            <?php if ($has_gemini_error): ?>
-                                <div class="alert alert-danger" style="margin-top: 10px; padding: 10px; background: #fee; border: 1px solid #fcc; border-radius: 4px;">
-                                    <strong>❌ Eroare la încărcarea modelelor:</strong><br>
-                                    <strong>Motivul:</strong> <?php echo esc_html($gemini_error_message); ?><br>
-                                    <strong>Tipul erorii:</strong> <?php echo esc_html($gemini_error_type); ?><br>
-                                    <small>Verificați cheia API și încercați din nou.</small>
-                                </div>
-                            <?php endif; ?>
-
-                            <div class="form-description">
-                                <?php if (!$has_gemini_error && !empty($available_gemini_models)): ?>
-                                    ✅ Lista de modele este actualizată dinamic din API-ul Gemini.
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshGeminiModelsList()" style="margin-left: 10px;">
-                                        🔄 Actualizează lista
-                                    </button>
-                                <?php elseif ($has_gemini_error): ?>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshGeminiModelsList()">
-                                        🔄 Încearcă din nou
-                                    </button>
-                                <?php else: ?>
-                                    Introduceți cheia API pentru a vedea toate modelele disponibile.
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Configurare Modele Gemini pentru Imagini -->
-                <div class="settings-card" style="margin-top: 20px;">
-                    <div class="settings-card-header">
-                        <div class="settings-card-icon">🖼️</div>
-                        <h3 class="settings-card-title">Configurare Modele Gemini pentru Generare Imagini</h3>
-                    </div>
-                    <div class="settings-card-content">
-                        <div class="form-group">
-                            <label for="imagen_model" class="control-label">Model Gemini pentru Imagini</label>
-                            <select name="auto_ai_news_poster_settings[imagen_model]" class="form-control" id="imagen_model">
-                                <optgroup label="🌟 Recomandate">
-                                    <option value="gemini-2.5-flash-image" <?php selected($imagen_model, 'gemini-2.5-flash-image'); ?>>Gemini 2.5 Flash Image - Optimizat pentru viteză</option>
-                                    <option value="gemini-3-pro-image-preview" <?php selected($imagen_model, 'gemini-3-pro-image-preview'); ?>>Gemini 3 Pro Image Preview - Rezoluții mari (2K/4K)</option>
-                                    <option value="imagen-4" <?php selected($imagen_model, 'imagen-4'); ?>>Imagen 4 - Fotorealism și stiluri artistice</option>
-                                </optgroup>
-                            </select>
-                            <small class="form-text text-muted">Selectează modelul pentru generarea de imagini. Toate modelele folosesc Generative Language API cu cheia API Gemini.</small>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group" style="margin-top: 20px;">
-                    <label class="control-label">Selectare Provider AI</label>
-                    <div class="custom-checkbox">
-                        <input type="checkbox" id="use_openai" name="auto_ai_news_poster_settings[use_openai]" value="yes" <?php checked($use_openai, 'yes'); ?>>
-                        <label for="use_openai" class="checkbox-label">Folosește OpenAI</label>
-                    </div>
-                    <div class="custom-checkbox" style="margin-top: 8px;">
-                        <input type="checkbox" id="use_gemini" name="auto_ai_news_poster_settings[use_gemini]" value="yes" <?php checked($use_gemini, 'yes'); ?>>
-                        <label for="use_gemini" class="checkbox-label">Folosește Gemini (Google)</label>
-                    </div>
-                    <div class="custom-checkbox" style="margin-top: 8px;">
-                        <input type="checkbox" id="use_deepseek" name="auto_ai_news_poster_settings[use_deepseek]" value="yes" <?php checked($use_deepseek, 'yes'); ?>>
-                        <label for="use_deepseek" class="checkbox-label">Folosește DeepSeek</label>
-                    </div>
-                    <small class="form-text text-muted">Selecție exclusivă: când bifezi unul, celălalt se debifează automat.</small>
-                    <div id="ai-provider-warning" class="notice notice-error" style="display:none; margin-top:10px;">
-                        <p style="margin:0;"></p>
-                    </div>
                 </div>
 
                 <div class="api-instructions-container" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
@@ -698,46 +490,6 @@ class Auto_Ai_News_Poster_Settings
                             </ol>
                             <div class="api-warning">
                                 <strong>⚠️ Important:</strong> Asigurați-vă că aveți credit disponibil în contul OpenAI.
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Gemini Instructions -->
-                    <div class="api-instructions" style="margin-top: 15px;">
-                        <h4 class="api-instructions-toggle" onclick="toggleInstructions('gemini-instructions')">
-                            📋 Cum să obțineți cheia API Gemini (Google) <span class="toggle-icon">▼</span>
-                        </h4>
-                        <div class="api-instructions-content" id="gemini-instructions" style="display: none;">
-                            <ol>
-                                <li><strong>Accesați</strong> <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
-                                <li><strong>Vă autentificați</strong> cu contul Google</li>
-                                <li><strong>Faceți click</strong> pe "Create API key"</li>
-                                <li><strong>Selectați</strong> "Create API key in new project" sau un proiect existent</li>
-                                <li><strong>Copiați</strong> cheia generată</li>
-                                <li><strong>Lipiți</strong> cheia în câmpul Gemini de mai sus</li>
-                            </ol>
-                            <div class="api-warning">
-                                <strong>⚠️ Important:</strong> Gemini oferă un nivel gratuit generos, dar verificați limitele de utilizare.
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- DeepSeek Instructions -->
-                    <div class="api-instructions" style="margin-top: 15px;">
-                        <h4 class="api-instructions-toggle" onclick="toggleInstructions('deepseek-instructions')">
-                            📋 Cum să obțineți cheia API DeepSeek <span class="toggle-icon">▼</span>
-                        </h4>
-                        <div class="api-instructions-content" id="deepseek-instructions" style="display: none;">
-                            <ol>
-                                <li><strong>Accesați</strong> <a href="https://platform.deepseek.com/api_keys" target="_blank">DeepSeek Platform</a></li>
-                                <li><strong>Vă înregistrați</strong> sau vă autentificați</li>
-                                <li><strong>Navigați</strong> la secțiunea "API Keys"</li>
-                                <li><strong>Generați</strong> o nouă cheie API</li>
-                                <li><strong>Copiați</strong> cheia</li>
-                                <li><strong>Lipiți</strong> cheia în câmpul DeepSeek de mai sus</li>
-                            </ol>
-                            <div class="api-warning">
-                                <strong>⚠️ Important:</strong> DeepSeek este compatibil cu formatul OpenAI și oferă prețuri competitive.
                             </div>
                         </div>
                     </div>
@@ -809,187 +561,7 @@ class Auto_Ai_News_Poster_Settings
             });
         }
 
-        function refreshGeminiModelsList() {
-            const apiKey = document.getElementById('gemini_api_key').value;
-            const modelSelect = document.getElementById('gemini_model');
-            
-            if (!apiKey) {
-                alert('Vă rugăm să introduceți mai întâi cheia API Gemini.');
-                return;
-            }
-            
-            // Afișăm indicator de încărcare
-            const refreshBtn = document.querySelector('button[onclick="refreshGeminiModelsList()"]');
-            const originalText = refreshBtn ? refreshBtn.innerHTML : '';
-            if (refreshBtn) {
-                refreshBtn.innerHTML = '⏳ Se încarcă...';
-                refreshBtn.disabled = true;
-            }
-            
-            // Facem apel AJAX pentru a actualiza lista
-            fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    action: 'refresh_gemini_models',
-                    api_key: apiKey,
-                    nonce: '<?php echo wp_create_nonce('refresh_gemini_models_nonce'); ?>'
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Reîncărcăm pagina pentru a afișa noile modele
-                    location.reload();
-                } else {
-                    alert('Eroare la actualizarea listei de modele Gemini: ' + (data.data || 'Eroare necunoscută'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Eroare la actualizarea listei de modele Gemini.');
-            })
-            .finally(() => {
-                if (refreshBtn) {
-                    refreshBtn.innerHTML = originalText;
-                    refreshBtn.disabled = false;
-                }
-            });
-        }
-
-        function refreshDeepSeekModelsList() {
-            const apiKey = document.getElementById('deepseek_api_key').value;
-            
-            if (!apiKey) {
-                alert('Vă rugăm să introduceți mai întâi cheia API DeepSeek.');
-                return;
-            }
-            
-            // Afișăm indicator de încărcare
-            const refreshBtn = document.querySelector('button[onclick="refreshDeepSeekModelsList()"]');
-            const originalText = refreshBtn ? refreshBtn.innerHTML : '';
-            if (refreshBtn) {
-                refreshBtn.innerHTML = '⏳ Se încarcă...';
-                refreshBtn.disabled = true;
-            }
-            
-            // Facem apel AJAX pentru a actualiza lista
-            fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    action: 'refresh_deepseek_models',
-                    api_key: apiKey,
-                    nonce: '<?php echo wp_create_nonce('refresh_deepseek_models_nonce'); ?>'
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Eroare la actualizarea listei de modele DeepSeek: ' + (data.data || 'Eroare necunoscută'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Eroare la actualizarea listei de modele DeepSeek.');
-            })
-            .finally(() => {
-                if (refreshBtn) {
-                    refreshBtn.innerHTML = originalText;
-                    refreshBtn.disabled = false;
-                }
-            });
-        }
-
-        (function(){
-            const openaiCheckbox = document.getElementById('use_openai');
-            const geminiCheckbox = document.getElementById('use_gemini');
-            const deepseekCheckbox = document.getElementById('use_deepseek');
-            const openaiKeyInput = document.getElementById('chatgpt_api_key');
-            const geminiKeyInput = document.getElementById('gemini_api_key');
-            const deepseekKeyInput = document.getElementById('deepseek_api_key');
-            const warningContainer = document.getElementById('ai-provider-warning');
-            const warningText = warningContainer ? warningContainer.querySelector('p') : null;
-
-            function showWarning(message) {
-                if (!warningContainer || !warningText) {
-                    if (message) {
-                        alert(message);
-                    }
-                    return;
-                }
-                if (message) {
-                    warningText.textContent = message;
-                    warningContainer.style.display = 'block';
-                } else {
-                    warningText.textContent = '';
-                    warningContainer.style.display = 'none';
-                }
-            }
-
-            function handleCheckboxChange(changed) {
-                if (changed === openaiCheckbox && openaiCheckbox.checked) {
-                    if (!openaiKeyInput.value.trim()) {
-                        openaiCheckbox.checked = false;
-                        showWarning('Nu poți selecta acest provider deoarece încă nu ai setat cheia API OpenAI.');
-                        return;
-                    }
-                    geminiCheckbox.checked = false;
-                    deepseekCheckbox.checked = false;
-                    showWarning('');
-                }
-                if (changed === geminiCheckbox && geminiCheckbox.checked) {
-                    if (!geminiKeyInput.value.trim()) {
-                        geminiCheckbox.checked = false;
-                        showWarning('Nu poți selecta acest provider deoarece încă nu ai setat cheia API Gemini.');
-                        return;
-                    }
-                    openaiCheckbox.checked = false;
-                    deepseekCheckbox.checked = false;
-                    showWarning('');
-                }
-                if (changed === deepseekCheckbox && deepseekCheckbox.checked) {
-                    if (!deepseekKeyInput.value.trim()) {
-                        deepseekCheckbox.checked = false;
-                        showWarning('Nu poți selecta acest provider deoarece încă nu ai setat cheia API DeepSeek.');
-                        return;
-                    }
-                    openaiCheckbox.checked = false;
-                    geminiCheckbox.checked = false;
-                    showWarning('');
-                }
-            }
-
-            if (openaiCheckbox && geminiCheckbox && deepseekCheckbox) {
-                openaiCheckbox.addEventListener('change', () => handleCheckboxChange(openaiCheckbox));
-                geminiCheckbox.addEventListener('change', () => handleCheckboxChange(geminiCheckbox));
-                deepseekCheckbox.addEventListener('change', () => handleCheckboxChange(deepseekCheckbox));
-            }
-
-            [openaiKeyInput, geminiKeyInput, deepseekKeyInput].forEach(input => {
-                if (!input) { return; }
-                input.addEventListener('input', () => {
-                    showWarning('');
-                });
-            });
-
-            // Dacă la încărcare e bifat un provider fără cheie, debifăm automat
-            if (openaiCheckbox && openaiCheckbox.checked && !openaiKeyInput.value.trim()) {
-                openaiCheckbox.checked = false;
-            }
-            if (geminiCheckbox && geminiCheckbox.checked && !geminiKeyInput.value.trim()) {
-                geminiCheckbox.checked = false;
-            }
-            if (deepseekCheckbox && deepseekCheckbox.checked && !deepseekKeyInput.value.trim()) {
-                deepseekCheckbox.checked = false;
-            }
-        })();
+        // Temporar: dezactivat refresh Gemini/DeepSeek și selectorul de provideri (rămâne doar OpenAI).
         </script>
         <?php
     }

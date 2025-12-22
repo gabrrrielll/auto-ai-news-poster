@@ -247,26 +247,7 @@ function generate_simple_text_prompt(string $system_message, string $user_messag
 function call_ai_api($prompt)
 {
     $options = get_option('auto_ai_news_poster_settings');
-    $use_gemini = isset($options['use_gemini']) && $options['use_gemini'] === 'yes';
-    $use_deepseek = isset($options['use_deepseek']) && $options['use_deepseek'] === 'yes';
-
-    if ($use_gemini) {
-        $api_key = $options['gemini_api_key'] ?? '';
-        $model = $options['gemini_model'] ?? 'gemini-1.5-pro';
-        // Dacă modelul nu are prefixul "models/", îl adăugăm pentru compatibilitate cu API-ul
-        if (strpos($model, 'models/') !== 0) {
-            $model = 'models/' . $model;
-        }
-        error_log('[AUTO_AI_NEWS_POSTER] AI request (provider=Gemini) model=' . $model . ' prompt_len=' . strlen((string) $prompt) . ' prompt_preview=' . substr((string) $prompt, 0, 250));
-        return call_gemini_api($api_key, $model, $prompt);
-    } elseif ($use_deepseek) {
-         // Logica pentru DeepSeek (OpenAI-compatible)
-        $api_key = $options['deepseek_api_key'] ?? '';
-        $model = $options['deepseek_model'] ?? 'deepseek-chat';
-        error_log('[AUTO_AI_NEWS_POSTER] AI request (provider=DeepSeek) model=' . $model . ' prompt_len=' . strlen((string) $prompt) . ' prompt_preview=' . substr((string) $prompt, 0, 250));
-        return call_openai_api($api_key, $prompt, $model, URL_API_DEEPSEEK);
-    }
-    // default to OpenAI
+    // Temporar: doar OpenAI activ (Gemini/DeepSeek dezactivate chiar dacă există în setări).
     $api_key = $options['chatgpt_api_key'] ?? '';
     $selected_model = $options['ai_model'] ?? 'gpt-4o';
     error_log('[AUTO_AI_NEWS_POSTER] AI request (provider=OpenAI) model=' . $selected_model . ' prompt_len=' . strlen((string) $prompt) . ' prompt_preview=' . substr((string) $prompt, 0, 250));
@@ -407,31 +388,7 @@ function call_ai_image_api($dalle_prompt, $feedback = '')
     error_log('Feedback: ' . (!empty($feedback) ? $feedback : 'NONE'));
     
     $options = get_option('auto_ai_news_poster_settings');
-    $use_gemini = isset($options['use_gemini']) && $options['use_gemini'] === 'yes';
-    
-    error_log('Use Gemini: ' . ($use_gemini ? 'YES' : 'NO'));
-    
-    if ($use_gemini) {
-        // Folosim Generative Language API pentru generarea de imagini
-        $api_key = $options['gemini_api_key'] ?? '';
-        $imagen_model = $options['imagen_model'] ?? 'gemini-2.5-flash-image';
-        
-        error_log('Gemini API Key present: ' . (!empty($api_key) ? 'YES' : 'NO'));
-        error_log('Imagen model from settings: ' . $imagen_model);
-        
-        if (empty($api_key)) {
-            error_log('ERROR: Gemini API key missing');
-            return new WP_Error('no_image_api', 'Cheia API Gemini lipsește pentru generarea imaginii.');
-        }
-        
-        error_log('Calling call_gemini_image_api...');
-        $result = call_gemini_image_api($api_key, $imagen_model, $dalle_prompt, $feedback);
-        error_log('call_gemini_image_api result: ' . (is_wp_error($result) ? 'ERROR: ' . $result->get_error_message() : 'SUCCESS'));
-        error_log('=== CALL_AI_IMAGE_API END ===');
-        return $result;
-    }
-    
-    // Default to OpenAI
+    // Temporar: doar OpenAI activ (Gemini dezactivat chiar dacă există în setări).
     error_log('Using OpenAI DALL-E');
     $api_key = $options['chatgpt_api_key'] ?? '';
     if (empty($api_key)) {

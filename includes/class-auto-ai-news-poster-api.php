@@ -991,7 +991,8 @@ class Auto_Ai_News_Poster_Api
         }
 
         $options = get_option('auto_ai_news_poster_settings');
-        $use_gemini = isset($options['use_gemini']) && $options['use_gemini'] === 'yes';
+        // Temporar: doar OpenAI activ (Gemini dezactivat chiar dacă există în setări).
+        $use_gemini = false;
         
         // Verificăm cheia API în funcție de provider
         if ($use_gemini) {
