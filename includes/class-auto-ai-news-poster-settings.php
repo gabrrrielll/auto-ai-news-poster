@@ -391,9 +391,6 @@ class Auto_Ai_News_Poster_Settings
                 <h3 class="settings-card-title">Configurare API AI</h3>
             </div>
             <div class="settings-card-content">
-                <div class="alert alert-warning" style="margin-bottom: 15px; padding: 10px; background: #fff8e5; border: 1px solid #ffe4a3; border-radius: 6px;">
-                    <strong>ℹ️ Temporar:</strong> opțiunile pentru <b>Gemini</b> și <b>DeepSeek</b> sunt dezactivate. Plugin-ul folosește doar <b>OpenAI</b>.
-                </div>
                 <div class="form-grid">
                     <div>
                         <div class="form-group">
