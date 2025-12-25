@@ -553,6 +553,21 @@
     line-height: 1.4;
 }
 
+.metabox-subsection {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.metabox-subsection-title {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
 .metabox-button {
     display: flex;
     align-items: center;

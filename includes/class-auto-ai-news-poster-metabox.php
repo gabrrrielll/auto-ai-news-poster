@@ -147,22 +147,21 @@ class Auto_Ai_News_Poster_Metabox
                 </label>
                 <input type="text" id="external_image_source" name="external_image_source" value="<?php echo esc_attr($external_image_source); ?>" class="metabox-input" placeholder="Sursa imaginii (de ex: Digi24)">
                 <p class="metabox-description">Acest text va fi afișat în articol ca „Sursa foto: ...”.</p>
-            </div>
-
-            <div class="metabox-field-group">
-                <label class="metabox-label">
-                    <span class="metabox-icon">↕️</span>
-                    Poziție afișare „Sursa foto”
-                </label>
-                <div class="mode-switch-container">
-                    <label class="mode-switch-label">
-                        <input type="radio" name="external_image_source_position" value="before" <?php checked('before', $external_image_source_position); ?>>
-                        Înainte de articol
-                    </label>
-                    <label class="mode-switch-label">
-                        <input type="radio" name="external_image_source_position" value="after" <?php checked('after', $external_image_source_position); ?>>
-                        După articol
-                    </label>
+                <div class="metabox-subsection">
+                    <div class="metabox-subsection-title">
+                        <span class="metabox-icon">↕️</span>
+                        Poziție afișare „Sursa foto”
+                    </div>
+                    <div class="mode-switch-container">
+                        <label class="mode-switch-label">
+                            <input type="radio" name="external_image_source_position" value="before" <?php checked('before', $external_image_source_position); ?>>
+                            Înainte de articol
+                        </label>
+                        <label class="mode-switch-label">
+                            <input type="radio" name="external_image_source_position" value="after" <?php checked('after', $external_image_source_position); ?>>
+                            După articol
+                        </label>
+                    </div>
                 </div>
             </div>
             
