@@ -666,9 +666,18 @@
 
 /* Responsive styles for header */
 @media screen and (max-width: 782px) {
+    .auto-ai-news-poster-admin {
+        padding: 8px;
+    }
+
+    .auto-ai-news-poster-admin .wrap {
+        border-radius: 0;
+    }
+
     .auto-ai-news-poster-header {
         top: 46px;
         /* WordPress admin bar height on mobile */
+        padding: 16px;
     }
 
     .auto-ai-news-poster-header .header-content {
@@ -686,7 +695,7 @@
     }
 
     .auto-ai-news-poster-header h1 {
-        font-size: 2rem;
+        font-size: 1.7rem;
     }
 
     .auto-ai-news-poster-header p {
@@ -695,5 +704,30 @@
 
     .btn-save-header {
         width: 100%;
+    }
+
+    .auto-ai-news-poster-form {
+        padding: 12px;
+    }
+
+    .settings-card {
+        margin-bottom: 12px;
+    }
+
+    .settings-card-header {
+        padding: 14px;
+    }
+
+    .settings-card-content {
+        padding: 14px;
+    }
+
+    .api-instructions-container {
+        margin-top: 16px !important;
+        padding-top: 12px !important;
+    }
+
+    .api-instructions {
+        padding: 12px;
     }
 }
