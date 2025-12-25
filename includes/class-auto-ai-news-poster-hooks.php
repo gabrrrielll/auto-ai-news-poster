@@ -28,6 +28,10 @@ class Auto_Ai_News_Poster_Hooks
         // Preluăm URL-ul imaginii externe și sursa
         $external_image_url = get_post_meta($post->ID, '_external_image_url', true);
         $external_image_source = trim((string) get_post_meta($post->ID, '_external_image_source', true));
+        $external_image_source_position = get_post_meta($post->ID, '_external_image_source_position', true);
+        if (empty($external_image_source_position)) {
+            $external_image_source_position = 'before'; // backwards compatible default
+        }
 
         // Dacă folosim imagini externe și există un URL extern
         if ($use_external_images === 'external' && !empty($external_image_url)) {
@@ -51,7 +55,12 @@ class Auto_Ai_News_Poster_Hooks
                 $info_icon = '<span class="info-icon">i</span>';
             }
 
-            $content = '<p id="sursa-foto"><em>Sursa foto: <b>' . esc_html($external_image_source) . '</b></em>' . $info_icon . '</p><br>' . $content;
+            $source_html = '<p id="sursa-foto"><em>Sursa foto: <b>' . esc_html($external_image_source) . '</b></em>' . $info_icon . '</p>';
+            if ($external_image_source_position === 'after') {
+                $content = $content . '<br>' . $source_html;
+            } else {
+                $content = $source_html . '<br>' . $content;
+            }
         }
 
         return $content;
