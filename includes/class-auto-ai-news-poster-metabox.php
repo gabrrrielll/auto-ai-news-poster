@@ -124,6 +124,10 @@ class Auto_Ai_News_Poster_Metabox
         // Preluăm URL-ul imaginii reprezentative externe dacă există
         $external_image_url = get_post_meta($post->ID, '_external_image_url', true);
         $external_image_source = get_post_meta($post->ID, '_external_image_source', true);
+        $external_image_source_position = get_post_meta($post->ID, '_external_image_source_position', true);
+        if (empty($external_image_source_position)) {
+            $external_image_source_position = 'before'; // backwards compatible default
+        }
         ?>
         <div class="inside auto-ai-metabox-content">
             <div class="metabox-field-group">
@@ -142,6 +146,24 @@ class Auto_Ai_News_Poster_Metabox
                     Sursa imaginii
                 </label>
                 <input type="text" id="external_image_source" name="external_image_source" value="<?php echo esc_attr($external_image_source); ?>" class="metabox-input" placeholder="Sursa imaginii (de ex: Digi24)">
+                <p class="metabox-description">Acest text va fi afișat în articol ca „Sursa foto: ...”.</p>
+            </div>
+
+            <div class="metabox-field-group">
+                <label class="metabox-label">
+                    <span class="metabox-icon">↕️</span>
+                    Poziție afișare „Sursa foto”
+                </label>
+                <div class="mode-switch-container">
+                    <label class="mode-switch-label">
+                        <input type="radio" name="external_image_source_position" value="before" <?php checked('before', $external_image_source_position); ?>>
+                        Înainte de articol
+                    </label>
+                    <label class="mode-switch-label">
+                        <input type="radio" name="external_image_source_position" value="after" <?php checked('after', $external_image_source_position); ?>>
+                        După articol
+                    </label>
+                </div>
             </div>
             
             <div class="metabox-field-group">
@@ -233,6 +255,15 @@ class Auto_Ai_News_Poster_Metabox
             if (isset($_POST['external_image_source'])) {
                 update_post_meta($post_id, '_external_image_source', sanitize_text_field($_POST['external_image_source']));
             }
+        }
+
+        // Salvăm poziția pentru afișarea "Sursa foto"
+        if (isset($_POST['external_image_source_position'])) {
+            $pos = sanitize_text_field($_POST['external_image_source_position']);
+            if (!in_array($pos, ['before', 'after'], true)) {
+                $pos = 'before';
+            }
+            update_post_meta($post_id, '_external_image_source_position', $pos);
         }
     }
 
