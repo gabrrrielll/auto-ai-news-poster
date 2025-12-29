@@ -125,7 +125,7 @@ class Auto_Ai_News_Poster_Settings
             'Mod de generare',
             [self::class, 'generation_mode_callback'],
             AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
-            'main_section'
+            'auto_ai_news_poster_main_section'
         );
 
         // Camp pentru selectarea modului de publicare
@@ -134,7 +134,7 @@ class Auto_Ai_News_Poster_Settings
             'Mod de publicare',
             [self::class, 'mode_callback'],
             AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
-            'main_section'
+            'auto_ai_news_poster_main_section'
         );
 
         // Camp pentru selectarea categoriilor de publicare
@@ -143,7 +143,7 @@ class Auto_Ai_News_Poster_Settings
             'Categorii de publicare',
             [self::class, 'specific_search_category_callback'],
             AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
-            'main_section'
+            'auto_ai_news_poster_main_section'
         );
 
         // In modul automat, se poate seta rularea automata a categoriilor
@@ -152,7 +152,7 @@ class Auto_Ai_News_Poster_Settings
             'Rulează automat categoriile',
             [self::class, 'auto_rotate_categories_callback'],
             AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
-            'main_section'
+            'auto_ai_news_poster_main_section'
         );
 
         // Camp pentru sursele de stiri
@@ -161,7 +161,7 @@ class Auto_Ai_News_Poster_Settings
             'Surse de știri',
             [self::class, 'news_sources_callback'],
             AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
-            'main_section'
+            'auto_ai_news_poster_main_section'
         );
 
         // Configurare API AI (OpenAI + Gemini + selector provider)
@@ -170,7 +170,7 @@ class Auto_Ai_News_Poster_Settings
             'Configurare API AI',
             [self::class, 'chatgpt_api_key_callback'],
             AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
-            'main_section'
+            'auto_ai_news_poster_main_section'
         );
 
 
@@ -180,7 +180,7 @@ class Auto_Ai_News_Poster_Settings
             'Intervalul pentru cron job',
             [self::class, 'cron_interval_callback'],
             AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
-            'main_section'
+            'auto_ai_news_poster_main_section'
         );
 
         // Camp pentru numele autorului de articole generate
@@ -189,7 +189,7 @@ class Auto_Ai_News_Poster_Settings
             'Nume autor articole generate',
             [self::class, 'author_name_callback'],
             AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
-            'main_section'
+            'auto_ai_news_poster_main_section'
         );
 
         // Camp pentru instructiuni AI (textarea) - Mod Parsare Link
@@ -198,7 +198,7 @@ class Auto_Ai_News_Poster_Settings
             'Instrucțiuni AI (Parsare Link)',
             [self::class, 'parse_link_ai_instructions_callback'],
             AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
-            'main_section'
+            'auto_ai_news_poster_main_section'
         );
 
         // Camp pentru instructiuni AI (textarea) - Mod AI Browsing
@@ -207,7 +207,7 @@ class Auto_Ai_News_Poster_Settings
             'Instrucțiuni AI (AI Browsing)',
             [self::class, 'ai_browsing_instructions_callback'],
             'auto_ai_news_poster_settings_page',
-            'main_section'
+            'auto_ai_news_poster_main_section'
         );
 
         // Camp pentru controlul generării etichetelor
@@ -216,7 +216,7 @@ class Auto_Ai_News_Poster_Settings
             'Generează etichete',
             [self::class, 'generate_tags_callback'],
             'auto_ai_news_poster_settings_page',
-            'main_section'
+            'auto_ai_news_poster_main_section'
         );
 
         // În funcția register_settings()
@@ -225,7 +225,7 @@ class Auto_Ai_News_Poster_Settings
             'Selectează dimensiunea articolului',
             [self::class, 'article_length_option_callback'],
             'auto_ai_news_poster_settings_page',
-            'main_section'
+            'auto_ai_news_poster_main_section'
         );
 
         add_settings_field(
@@ -233,7 +233,7 @@ class Auto_Ai_News_Poster_Settings
             'Configurare Imagini',
             [self::class, 'image_configuration_callback'],
             'auto_ai_news_poster_settings_page',
-            'main_section'
+            'auto_ai_news_poster_main_section'
         );
 
 
@@ -1373,7 +1373,7 @@ class Auto_Ai_News_Poster_Settings
     public static function sanitize_checkbox_settings($input)
     {
         // Obținem setările existente
-        $existing_options = get_option('auto_ai_news_poster_settings', []);
+        $existing_options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, []);
 
         // Păstrăm toate setările existente
         $sanitized = $existing_options;
@@ -1426,6 +1426,11 @@ class Auto_Ai_News_Poster_Settings
         }
 
         return $sanitized;
+    }
+
+    public static function section_callback()
+    {
+        echo '<p>Configurează setările principale ale pluginului.</p>';
     }
 
 }
