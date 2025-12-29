@@ -602,7 +602,7 @@ class Auto_Ai_News_Poster_Api
             'messages' => [
                 [
                     'role' => 'system',
-                    'content' => AI_BROWSING_SYSTEM_MESSAGE
+                    'content' => Auto_Ai_News_Poster_Prompts::get_ai_browsing_system_message()
                 ],
                 [
                     'role' => 'user',
@@ -706,7 +706,7 @@ class Auto_Ai_News_Poster_Api
         $messages = [
             [
                 'role' => 'system',
-                'content' => AI_BROWSING_SYSTEM_MESSAGE
+                'content' => Auto_Ai_News_Poster_Prompts::get_ai_browsing_system_message()
             ],
             [
                 'role' => 'user',

@@ -238,4 +238,95 @@ class Auto_Ai_News_Poster_Prompts
 
         return $prompt;
     }
+    public static function get_ai_browsing_system_message()
+    {
+        return 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.';
+    }
+
+    public static function get_ai_browsing_prompt($news_sources, $category_name, $latest_titles_str, $final_instructions, $length_instruction)
+    {
+        return "
+        **Rol:** Ești un redactor de știri expert în domeniul **{$category_name}**, specializat în găsirea celor mai recente și relevante subiecte.
+
+        **Context:** Ai la dispoziție următoarele resurse și constrângeri:
+        1. **Surse de informare preferate:**
+        {$news_sources}
+        2. **Categorie de interes:** {$category_name}
+        3. **Ultimele articole publicate pe site-ul nostru în această categorie (EVITĂ ACESTE SUBIECTE):**
+        - {$latest_titles_str}
+
+        **IMPORTANT - Folosește web browsing:**
+        Pentru a găsi știri recente, FOLOSEȘTE OBLIGATORIU funcția de web browsing pentru a căuta pe site-urile specificate. Nu inventa informații - accesează direct sursele pentru a găsi știri reale din ultimele 24-48 de ore.
+
+        **Sarcina ta:**
+        1. **Cercetare:** Folosește web browsing pentru a accesa și citi articole din sursele specificate. Caută subiecte foarte recente (din ultimele 24-48 de ore), importante și relevante pentru categoria **{$category_name}**.
+        2. **Verificarea unicității:** Asigură-te că subiectul ales NU este similar cu niciunul dintre titlurile deja publicate. Dacă este, alege alt subiect din browsing.
+        3. **Scrierea articolului:** {$final_instructions} {$length_instruction}
+        4. **Generare titlu:** Creează un titlu concis și atractiv pentru articol.
+        5. **Generare etichete:** Generează între 1 și 3 etichete relevante (cuvinte_cheie) pentru articol. Fiecare cuvânt trebuie să înceapă cu majusculă.
+        6. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol.
+
+        **IMPORTANT - Formatarea articolului:**
+        - NU folosi titluri explicite precum \"Introducere\", \"Dezvoltare\", \"Concluzie\" în text
+        - Articolul trebuie să fie un text fluent și natural, fără secțiuni marcate explicit
+        - Folosește formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly
+        - Subtitlurile H2/H3 trebuie să fie descriptive și relevante pentru conținut, nu generice
+        - Fiecare paragraf să aibă sens complet și să fie bine conectat cu următorul
+
+        **Format de răspuns OBLIGATORIU:**
+        Răspunsul tău trebuie să fie EXACT UN OBIECT JSON, fără niciun alt text înainte sau după. NU adăuga mai multe obiecte JSON. NU adăuga text explicativ. Structura trebuie să fie următoarea:
+        {
+          \"titlu\": \"Titlul articolului generat de tine\",
+          \"continut\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie.\",
+          \"imagine_prompt\": \"Descrierea detaliată pentru imaginea reprezentativă.\",
+          \"meta_descriere\": \"O meta descriere de maximum 160 de caractere, optimizată SEO.\",
+          \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]
+        }
+
+        **PASUL 1:** Începe prin a folosi web browsing pentru a căuta pe site-urile specificate și găsi știri recente din categoria {$category_name}.
+        ";
+    }
+
+    public static function get_retry_browsing_prompt($category_name)
+    {
+        return "Scrie un articol de știri ca un jurnalist profesionist. \r\n\r\nCategoria: {$category_name}\r\n\r\nCerințe:\r\n- Titlu atractiv și descriptiv\r\n- Conținut fluent și natural, fără secțiuni marcate explicit\r\n- NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"\r\n- Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly\r\n- Generează între 1 și 3 etichete relevante (cuvinte_cheie)\r\n- Limbă română\r\n- Stil jurnalistic obiectiv și informativ\r\n\r\nReturnează DOAR acest JSON:\r\n{\r\n  \"titlu\": \"Titlul articolului\",\r\n  \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",\r\n  \"meta_descriere\": \"Meta descriere SEO\",\r\n  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]\r\n}";
+    }
+
+    public static function get_dalle_abstraction_system_message()
+    {
+        return 'Ești un asistent AI specializat în transformarea descrierilor de text în prompturi vizuale pentru generarea de imagini fotorealiste și naturale. Sarcina ta este să creezi un prompt care să genereze o imagine care să pară o fotografie reală realizată cu ocazia evenimentului descris în text. 
+
+IMPORTANT - Stilul imaginii:
+- Imaginea trebuie să fie FOTOREALISTĂ și NATURALĂ, ca o fotografie profesională de știri
+- Stil: fotografie jurnalistică, natural lighting, composition profesională, depth of field realistă
+- Calitate: high resolution, sharp focus, natural colors, realistic textures
+- Perspectivă: unghi natural, ca și cum ar fi o fotografie făcută de un fotograf profesionist
+- Evită stiluri artistice, abstracte sau ilustrații - doar fotografie reală
+- Dacă apar oameni în imagine, aceștia trebuie să aibă trăsături specifice est-europene/românești, îmbrăcăminte și stil specific României sau Europei de Est, dacă nu se specifică altfel.
+
+IMPORTANT - Conținutul:
+- Elimină orice referință directă la evenimente politice sensibile, conflicte militare, violență explicită, sau conținut sensibil
+- Concentrează-te pe aspectele vizuale și scenografice ale evenimentului, fără a încălca politicile de siguranță
+- Dacă textul menționează persoane publice sau evenimente politice, transformă-le în scene generale și naturale (ex: oameni într-o sală de conferințe, oameni la un eveniment public, etc.)
+- NU menționa nume specifice de persoane, țări sau termeni militari dacă pot cauza probleme de safety
+
+IMPORTANT - Formatul promptului:
+- Promptul trebuie să fie în limba română
+- Include detalii despre iluminare naturală, compoziție, unghi de vedere
+- Descrie scenele ca și cum ar fi fotografii reale de știri
+- Folosește termeni fotografici: "fotografie profesională", "iluminare naturală", "compoziție jurnalistică", etc.';
+    }
+
+    public static function get_dalle_abstraction_user_message($original_prompt)
+    {
+        return "Transformă următoarea descriere într-un prompt vizual pentru generarea unei imagini FOTOREALISTE și NATURALE, ca o fotografie profesională de știri realizată cu ocazia evenimentului descris. Promptul trebuie să genereze o imagine care să pară o fotografie reală, nu o ilustrație sau artă abstractă: \"{$original_prompt}\"";
+    }
+
+    public static function get_photorealism_instructions()
+    {
+        $prefix = 'Fotografie profesională de știri, fotorealistă și naturală, realizată cu ocazia evenimentului. ';
+        $suffix = ' Stil: fotografie jurnalistică profesională, iluminare naturală, compoziție profesională, culori naturale, texturi realiste, sharp focus, high resolution. Imaginea trebuie să pară o fotografie reală, nu o ilustrație sau artă abstractă. Dacă apar oameni, ei trebuie să aibă trăsături românești/est-europene.';
+        
+        return ['prefix' => $prefix, 'suffix' => $suffix];
+    }
 }
