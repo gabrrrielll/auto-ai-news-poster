@@ -32,7 +32,9 @@ function auto_ai_news_poster_inline_admin_css()
         $current_screen_id = $screen ? $screen->id : 'no_screen';
 
         // Verificăm dacă suntem pe pagina de setări sau pe pagina de editare articol
-        $allowed_screens = ['posts_page_auto-ai-news-poster', 'post', 'post-new'];
+        // Verificăm dacă suntem pe pagina de setări sau pe pagina de editare articol
+        $settings_page_id = 'toplevel_page_' . AUTO_AI_NEWS_POSTER_SETTINGS_PAGE;
+        $allowed_screens = [$settings_page_id, 'post', 'post-new'];
         if (!in_array($current_screen_id, $allowed_screens)) {
             return; // Ieșim dacă nu suntem pe paginile corecte
         }
@@ -54,13 +56,15 @@ function auto_ai_news_poster_inline_admin_js()
         $current_screen_id = $screen ? $screen->id : 'no_screen';
 
         // Verificăm dacă suntem pe pagina de setări sau pe pagina de editare articol
-        $allowed_screens = ['posts_page_auto-ai-news-poster', 'post', 'post-new'];
+        // Verificăm dacă suntem pe pagina de setări sau pe pagina de editare articol
+        $settings_page_id = 'toplevel_page_' . AUTO_AI_NEWS_POSTER_SETTINGS_PAGE;
+        $allowed_screens = [$settings_page_id, 'post', 'post-new'];
         if (!in_array($current_screen_id, $allowed_screens)) {
             return; // Ieșim dacă nu suntem pe paginile corecte
         }
 
         // Alegem fișierul JS potrivit în funcție de pagină
-        if ($current_screen_id === 'posts_page_auto-ai-news-poster') {
+        if ($current_screen_id === $settings_page_id) {
             // Pagina de setări
             $js_path = plugin_dir_path(__FILE__) . 'includes/js/auto-ai-news-poster-settings.js';
         } else {
