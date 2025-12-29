@@ -25,12 +25,24 @@ class Auto_Ai_News_Poster_Hooks
         $options = get_option('auto_ai_news_poster_settings');
         $use_external_images = $options['use_external_images'] ?? 'external';
 
+        // Preluăm setarea globală pentru poziția sursei foto (default: before)
+        $global_source_position = $options['source_photo_position'] ?? 'before';
+
         // Preluăm URL-ul imaginii externe și sursa
         $external_image_url = get_post_meta($post->ID, '_external_image_url', true);
         $external_image_source = trim((string) get_post_meta($post->ID, '_external_image_source', true));
         $external_image_source_position = get_post_meta($post->ID, '_external_image_source_position', true);
         if (empty($external_image_source_position)) {
             $external_image_source_position = 'before'; // backwards compatible default
+        }
+
+        // Preluăm setarea locală pentru poziția sursei foto
+        $local_source_position = get_post_meta($post->ID, '_source_photo_position', true);
+
+        // Determinăm poziția finală
+        $final_source_position = $global_source_position;
+        if (!empty($local_source_position) && $local_source_position !== 'global') {
+            $final_source_position = $local_source_position;
         }
 
         // Dacă folosim imagini externe și există un URL extern
@@ -43,23 +55,41 @@ class Auto_Ai_News_Poster_Hooks
 
             // Adăugăm imaginea externă înainte de conținut
             $content = $image_html . $content;
-        } // Dacă folosim importul de imagini, afișăm imaginea reprezentativă din WordPress
+        } 
+        
+        // Afișăm sursa foto indiferent de tipul imaginii (externă sau featured image standard)
+        if (has_post_thumbnail($post->ID) || ($use_external_images === 'external' && !empty($external_image_url))) {
+            if (!empty($external_image_source)) {
+                 $info_icon = '';
+                if (str_contains(strtolower($external_image_source), 'imagine generat')) {
+                    $info_icon = '<span class="info-icon">i</span>';
+                }
+                
+                $source_html = '<p id="sursa-foto"><em>Sursa foto: <b>' . esc_html($external_image_source) . '</b></em>' . $info_icon . '</p>';
+                
+                if ($final_source_position === 'before') {
+                    // Adăugăm sursa foto înainte de conținut (dar după imaginea externă dacă există, deoarece $content deja o conține)
+                    // Notă: Dacă imaginea externă e deja în $content, sursa va fi pusă între imagine și text sau înainte de tot dacă nu e imagine externă.
+                    // Ideal sursa ar trebui să fie imediat sub imagine.
+                    // Dacă $content începe cu div-ul external-image, vrem ca sursa să fie după el.
+                    if (strpos($content, '<div class="external-image">') === 0) {
+                        // Inserăm după închiderea div-ului
+                        $close_div_pos = strpos($content, '</div>');
+                        if ($close_div_pos !== false) {
+                            $part1 = substr($content, 0, $close_div_pos + 6); // +6 pentru </div>
+                            $part2 = substr($content, $close_div_pos + 6);
+                            $content = $part1 . '<br>' . $source_html . '<br>' . $part2;
+                        } else {
+                             $content = $source_html . '<br>' . $content;
+                        }
+                    } else {
+                         $content = $source_html . '<br>' . $content;
+                    }
 
-        $has_any_image = (has_post_thumbnail($post->ID) || ($use_external_images === 'external' && !empty($external_image_url)));
-        // IMPORTANT: dacă input-ul "Sursa imaginii" e gol, nu afișăm nimic (în orice situație).
-        if ($has_any_image && !empty($external_image_source)) {
-            $info_icon = '';
-            if (
-                str_contains(strtolower($external_image_source), 'imagine generat')
-            ) {
-                $info_icon = '<span class="info-icon">i</span>';
-            }
-
-            $source_html = '<p id="sursa-foto"><em>Sursa foto: <b>' . esc_html($external_image_source) . '</b></em>' . $info_icon . '</p>';
-            if ($external_image_source_position === 'after') {
-                $content = $content . '<br>' . $source_html;
-            } else {
-                $content = $source_html . '<br>' . $content;
+                } else {
+                    // Adăugăm sursa foto după conținut
+                    $content .= '<br>' . $source_html;
+                }
             }
         }
 

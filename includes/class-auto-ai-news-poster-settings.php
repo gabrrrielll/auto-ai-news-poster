@@ -227,7 +227,44 @@ class Auto_Ai_News_Poster_Settings
             'main_section'
         );
 
+        // Camp pentru pozitia sursei foto
+        add_settings_field(
+            'source_photo_position',
+            'Poziție afișare „Sursa foto”',
+            [self::class, 'source_photo_position_callback'],
+            'auto_ai_news_poster_settings_page',
+            'main_section'
+        );
 
+
+    }
+
+    // Callback pentru pozitia sursei foto
+    public static function source_photo_position_callback()
+    {
+        $options = get_option('auto_ai_news_poster_settings');
+        // Default value: before
+        $position = $options['source_photo_position'] ?? 'before';
+        ?>
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">📍</div>
+                <h3 class="settings-card-title">Poziție afișare „Sursa foto”</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <label class="control-label">Alege unde să fie afișată sursa fotografiei</label>
+                    <div class="mode-switch">
+                        <input type="radio" id="source_pos_before" name="auto_ai_news_poster_settings[source_photo_position]" value="before" <?php checked($position, 'before'); ?>>
+                        <label for="source_pos_before">Înainte de articol</label>
+
+                        <input type="radio" id="source_pos_after" name="auto_ai_news_poster_settings[source_photo_position]" value="after" <?php checked($position, 'after'); ?>>
+                        <label for="source_pos_after">După articol</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
     }
 
     // Callback pentru noul camp "Mod de generare"

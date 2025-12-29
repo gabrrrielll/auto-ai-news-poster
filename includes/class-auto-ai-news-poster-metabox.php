@@ -164,6 +164,34 @@ class Auto_Ai_News_Poster_Metabox
                     </div>
                 </div>
             </div>
+
+            <?php
+            // Adăugăm câmp pentru poziția sursei foto (local override)
+            $source_photo_position = get_post_meta($post->ID, '_source_photo_position', true);
+            if (empty($source_photo_position)) {
+                $source_photo_position = 'global'; // default
+            }
+            ?>
+            <div class="metabox-field-group">
+                <label class="metabox-label">
+                    <span class="metabox-icon">📍</span>
+                    Poziție afișare „Sursa foto”
+                </label>
+                <div class="metabox-radio-group">
+                    <label style="display:block; margin-bottom:5px;">
+                        <input type="radio" name="source_photo_position" value="global" <?php checked($source_photo_position, 'global'); ?>>
+                        Folosește setarea globală
+                    </label>
+                    <label style="display:block; margin-bottom:5px;">
+                        <input type="radio" name="source_photo_position" value="before" <?php checked($source_photo_position, 'before'); ?>>
+                        Înainte de articol
+                    </label>
+                    <label style="display:block; margin-bottom:5px;">
+                        <input type="radio" name="source_photo_position" value="after" <?php checked($source_photo_position, 'after'); ?>>
+                        După articol
+                    </label>
+                </div>
+            </div>
             
             <div class="metabox-field-group">
                 <label for="feedback-text" class="metabox-label">
@@ -253,6 +281,10 @@ class Auto_Ai_News_Poster_Metabox
 
             if (isset($_POST['external_image_source'])) {
                 update_post_meta($post_id, '_external_image_source', sanitize_text_field($_POST['external_image_source']));
+            }
+
+            if (isset($_POST['source_photo_position'])) {
+                update_post_meta($post_id, '_source_photo_position', sanitize_text_field($_POST['source_photo_position']));
             }
         }
 
