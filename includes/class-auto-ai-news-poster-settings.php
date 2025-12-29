@@ -193,45 +193,9 @@ class Auto_Ai_News_Poster_Settings
         );
 
         add_settings_field(
-            'generate_image',
-            'Generare automată imagine',
-            [self::class, 'generate_image_callback'],
-            'auto_ai_news_poster_settings_page',
-            'main_section'
-        );
-
-        // Camp pentru selectarea modului de imagine (externă/importată)
-        add_settings_field(
-            'use_external_images',
-            'Mod imagini',
-            [self::class, 'use_external_images_callback'],
-            'auto_ai_news_poster_settings_page',
-            'main_section'
-        );
-
-        // Înregistrăm un nou câmp în setările pluginului pentru lista de linkuri sursă
-        add_settings_field(
-            'bulk_custom_source_urls',
-            'Lista de linkuri sursă personalizate',
-            [self::class, 'bulk_custom_source_urls_callback'],
-            'auto_ai_news_poster_settings_page',
-            'main_section'
-        );
-
-        // În funcția register_settings()
-        add_settings_field(
-            'run_until_bulk_exhausted',
-            'Rulează automat doar până la epuizarea listei de linkuri',
-            [self::class, 'run_until_bulk_exhausted_callback'],
-            'auto_ai_news_poster_settings_page',
-            'main_section'
-        );
-
-        // Camp pentru pozitia sursei foto
-        add_settings_field(
-            'source_photo_position',
-            'Poziție afișare „Sursa foto”',
-            [self::class, 'source_photo_position_callback'],
+            'image_configuration',
+            'Configurare Imagini',
+            [self::class, 'image_configuration_callback'],
             'auto_ai_news_poster_settings_page',
             'main_section'
         );
@@ -239,21 +203,41 @@ class Auto_Ai_News_Poster_Settings
 
     }
 
-    // Callback pentru pozitia sursei foto
-    public static function source_photo_position_callback()
+    // Callback unificat pentru Configurare Imagini
+    public static function image_configuration_callback()
     {
         $options = get_option('auto_ai_news_poster_settings');
-        // Default value: before
+        // Retrieve values
+        $use_external_images = $options['use_external_images'] ?? 'external';
+        $generate_image = $options['generate_image'] ?? 'no';
         $position = $options['source_photo_position'] ?? 'before';
         ?>
         <div class="settings-card">
             <div class="settings-card-header">
-                <div class="settings-card-icon">📍</div>
-                <h3 class="settings-card-title">Poziție afișare „Sursa foto”</h3>
+                <div class="settings-card-icon">🖼️</div>
+                <h3 class="settings-card-title">Configurare Imagini</h3>
             </div>
             <div class="settings-card-content">
+                <!-- 1. Mod Imagini -->
+                <div class="form-group" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
+                    <label for="use_external_images" class="control-label">Folosire imagini:</label>
+                    <select name="auto_ai_news_poster_settings[use_external_images]" class="form-control" id="use_external_images">
+                        <option value="external" <?php selected($use_external_images, 'external'); ?>>Folosește imagini externe</option>
+                        <option value="import" <?php selected($use_external_images, 'import'); ?>>Importă imagini în WordPress</option>
+                    </select>
+                </div>
+
+                <!-- 2. Generare Automată -->
+                <div class="form-group" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
+                    <div class="checkbox-modern">
+                        <input type="checkbox" name="auto_ai_news_poster_settings[generate_image]" value="yes" <?php checked($generate_image, 'yes'); ?> />
+                        <label>Da, generează automat imaginea (dacă nu există)</label>
+                    </div>
+                </div>
+
+                <!-- 3. Poziție Sursă Foto -->
                 <div class="form-group">
-                    <label class="control-label">Alege unde să fie afișată sursa fotografiei</label>
+                    <label class="control-label">Poziție afișare „Sursa foto”</label>
                     <div class="mode-switch">
                         <input type="radio" id="source_pos_before" name="auto_ai_news_poster_settings[source_photo_position]" value="before" <?php checked($position, 'before'); ?>>
                         <label for="source_pos_before">Înainte de articol</label>
@@ -798,50 +782,7 @@ class Auto_Ai_News_Poster_Settings
     }
 
 
-    // Callback pentru selectarea modului de imagine (externă/importată)
-    public static function use_external_images_callback()
-    {
-        $options = get_option('auto_ai_news_poster_settings');
-        $use_external_images = $options['use_external_images'] ?? 'external';
-        ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">🖼️</div>
-                <h3 class="settings-card-title">Configurare Imagini</h3>
-            </div>
-            <div class="settings-card-content">
-                <div class="form-group">
-                    <label for="use_external_images" class="control-label">Folosire imagini:</label>
-                    <select name="auto_ai_news_poster_settings[use_external_images]" class="form-control" id="use_external_images">
-                        <option value="external" <?php selected($use_external_images, 'external'); ?>>Folosește imagini externe</option>
-                        <option value="import" <?php selected($use_external_images, 'import'); ?>>Importă imagini în WordPress</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
 
-
-    // Callback pentru opțiunea de generare automată a imaginii
-    public static function generate_image_callback()
-    {
-        $options = get_option('auto_ai_news_poster_settings');
-        ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">🎨</div>
-                <h3 class="settings-card-title">Generare Automată Imagini</h3>
-            </div>
-            <div class="settings-card-content">
-                <div class="checkbox-modern">
-                    <input type="checkbox" name="auto_ai_news_poster_settings[generate_image]" value="yes" <?php checked($options['generate_image'], 'yes'); ?> />
-                    <label>Da, generează automat imaginea</label>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
 
     public static function bulk_custom_source_urls_callback()
     {
