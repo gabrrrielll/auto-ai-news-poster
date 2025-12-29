@@ -12,6 +12,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Include fișierele necesare
+require_once plugin_dir_path(__FILE__) . 'includes/constants/config.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-settings.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-cron.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-metabox.php';
