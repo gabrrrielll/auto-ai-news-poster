@@ -25,18 +25,19 @@ class Auto_Ai_News_Poster_Settings
     // Adăugare meniu în zona articolelor din admin
     public static function add_menu()
     {
-        add_submenu_page(
-            'edit.php',
-            'Auto AI News Poster Settings',
-            'Auto AI News Poster',
-            'manage_options',
-            'auto-ai-news-poster',
-            [self::class, 'settings_page']
+        add_menu_page(
+            'Auto AI News Poster Settings', // Titlul paginii
+            'Auto AI News Poster', // Titlul din meniu
+            'manage_options', // Capacitatea necesară
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE, // Slug-ul meniului
+            [self::class, 'settings_page_html'], // Funcția callback
+            'dashicons-robot', // Iconiță
+            2 // Poziția
         );
     }
 
     // Afișare pagina de setări
-    public static function settings_page()
+    public static function settings_page_html()
     {
         self::display_settings_page();
     }
@@ -65,8 +66,8 @@ class Auto_Ai_News_Poster_Settings
                 <div class="auto-ai-news-poster-form">
                     <form method="post" action="options.php" id="auto-ai-news-poster-settings-form">
                         <?php
-                        settings_fields('auto_ai_news_poster_settings_group');
-        do_settings_sections('auto_ai_news_poster_settings_page');
+                        settings_fields(AUTO_AI_NEWS_POSTER_SETTINGS_GROUP);
+        do_settings_sections(AUTO_AI_NEWS_POSTER_SETTINGS_PAGE);
         ?>
                     </form>
                 </div>
@@ -75,20 +76,55 @@ class Auto_Ai_News_Poster_Settings
         <?php
     }
 
+    public static function enqueue_admin_scripts($hook_suffix)
+    {
+        // Verificăm dacă suntem pe pagina de setări
+        if ($hook_suffix != 'toplevel_page_' . AUTO_AI_NEWS_POSTER_SETTINGS_PAGE) {
+            return;
+        }
+
+        // Adăugăm Google Fonts (Inter)
+        wp_enqueue_style('google-fonts-inter', 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap', [], null);
+
+        // Bootstrap (opțional, dacă e necesar)
+        // wp_enqueue_style('bootstrap-css', 'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css');
+
+        // FontAwesome
+        wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css');
+
+        // Select2
+        wp_enqueue_style('select2-css', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css');
+        wp_enqueue_script('select2-js', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', ['jquery'], null, true);
+
+        // Stilurile personalizate ale plugin-ului
+        wp_enqueue_style('auto-ai-news-poster-admin-style', plugin_dir_url(__FILE__) . 'css/auto-ai-news-poster.css', [], '1.2.0');
+
+        // Scripturile personalizate ale plugin-ului
+        wp_enqueue_script('auto-ai-news-poster-admin-script', plugin_dir_url(__FILE__) . 'js/auto-ai-news-poster-settings.js', ['jquery', 'select2-js'], '1.2.0', true);
+
+        // Localizare script pentru AJAX
+        wp_localize_script('auto-ai-news-poster-admin-script', 'auto_ai_news_poster_ajax', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'force_refresh_now_nonce' => wp_create_nonce('force_refresh_now_nonce'),
+            'check_settings_nonce' => wp_create_nonce('auto_ai_news_poster_check_settings'),
+            'clear_transient_nonce' => wp_create_nonce('clear_transient_nonce')
+        ]);
+    }
+
     public static function register_settings()
     {
-        register_setting('auto_ai_news_poster_settings_group', 'auto_ai_news_poster_settings', [
+        register_setting(AUTO_AI_NEWS_POSTER_SETTINGS_GROUP, AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, [
             'sanitize_callback' => [self::class, 'sanitize_checkbox_settings']
         ]);
 
-        add_settings_section('main_section', 'Main Settings', null, 'auto_ai_news_poster_settings_page');
+        add_settings_section('auto_ai_news_poster_main_section', 'Setări Principale', [self::class, 'section_callback'], AUTO_AI_NEWS_POSTER_SETTINGS_PAGE);
 
         // Camp pentru selectarea modului de generare (AI Browsing vs. Parsare Link)
         add_settings_field(
             'generation_mode',
             'Mod de generare',
             [self::class, 'generation_mode_callback'],
-            'auto_ai_news_poster_settings_page',
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'main_section'
         );
 
@@ -97,7 +133,7 @@ class Auto_Ai_News_Poster_Settings
             'mode',
             'Mod de publicare',
             [self::class, 'mode_callback'],
-            'auto_ai_news_poster_settings_page',
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'main_section'
         );
 
@@ -106,7 +142,7 @@ class Auto_Ai_News_Poster_Settings
             'categories',
             'Categorii de publicare',
             [self::class, 'specific_search_category_callback'],
-            'auto_ai_news_poster_settings_page',
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'main_section'
         );
 
@@ -115,7 +151,7 @@ class Auto_Ai_News_Poster_Settings
             'auto_rotate_categories',
             'Rulează automat categoriile',
             [self::class, 'auto_rotate_categories_callback'],
-            'auto_ai_news_poster_settings_page',
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'main_section'
         );
 
@@ -124,7 +160,7 @@ class Auto_Ai_News_Poster_Settings
             'news_sources',
             'Surse de știri',
             [self::class, 'news_sources_callback'],
-            'auto_ai_news_poster_settings_page',
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'main_section'
         );
 
@@ -133,7 +169,7 @@ class Auto_Ai_News_Poster_Settings
             'ai_providers',
             'Configurare API AI',
             [self::class, 'chatgpt_api_key_callback'],
-            'auto_ai_news_poster_settings_page',
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'main_section'
         );
 
@@ -143,7 +179,7 @@ class Auto_Ai_News_Poster_Settings
             'cron_interval',
             'Intervalul pentru cron job',
             [self::class, 'cron_interval_callback'],
-            'auto_ai_news_poster_settings_page',
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'main_section'
         );
 
@@ -152,7 +188,7 @@ class Auto_Ai_News_Poster_Settings
             'author_name',
             'Nume autor articole generate',
             [self::class, 'author_name_callback'],
-            'auto_ai_news_poster_settings_page',
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'main_section'
         );
 
@@ -161,7 +197,7 @@ class Auto_Ai_News_Poster_Settings
             'parse_link_ai_instructions',
             'Instrucțiuni AI (Parsare Link)',
             [self::class, 'parse_link_ai_instructions_callback'],
-            'auto_ai_news_poster_settings_page',
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'main_section'
         );
 
@@ -206,7 +242,7 @@ class Auto_Ai_News_Poster_Settings
     // Callback unificat pentru Configurare Imagini
     public static function image_configuration_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         // Retrieve values
         $use_external_images = $options['use_external_images'] ?? 'external';
         $generate_image = $options['generate_image'] ?? 'no';
@@ -254,7 +290,7 @@ class Auto_Ai_News_Poster_Settings
     // Callback pentru noul camp "Mod de generare"
     public static function generation_mode_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $generation_mode = $options['generation_mode'] ?? 'parse_link';
         ?>
         <div class="settings-card">
@@ -285,7 +321,7 @@ class Auto_Ai_News_Poster_Settings
     // Callback pentru campul Mod de publicare
     public static function mode_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         ?>
         <div class="settings-card">
             <div class="settings-card-header">
@@ -316,7 +352,7 @@ class Auto_Ai_News_Poster_Settings
     // Callback pentru selectarea categoriei specifice pentru căutare
     public static function specific_search_category_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $selected_category = $options['specific_search_category'] ?? '';
 
         $categories = get_categories(['hide_empty' => false]);
@@ -349,7 +385,7 @@ class Auto_Ai_News_Poster_Settings
     // Callback pentru opțiunea de rulare automată a categoriilor
     public static function auto_rotate_categories_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         ?>
         <div class="settings-group settings-group-ai_browsing">
             <div class="settings-card">
@@ -372,7 +408,7 @@ class Auto_Ai_News_Poster_Settings
     // Callback pentru sursele de stiri
     public static function news_sources_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         ?>
         <div class="settings-group settings-group-ai_browsing">
             <div class="settings-card">
@@ -396,9 +432,9 @@ class Auto_Ai_News_Poster_Settings
     // Callback pentru cheia API
     public static function chatgpt_api_key_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $api_key = $options['chatgpt_api_key'] ?? '';
-        $selected_model = $options['ai_model'] ?? 'gpt-4o';
+        $selected_model = $options['ai_model'] ?? DEFAULT_AI_MODEL;
 
         // Obținem lista de modele disponibile pentru OpenAI
         $available_models = self::get_cached_openai_models($api_key);
@@ -587,7 +623,7 @@ class Auto_Ai_News_Poster_Settings
     // Callback pentru setarea intervalului cron
     public static function cron_interval_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $hours = $options['cron_interval_hours'] ?? 1;
         $minutes = $options['cron_interval_minutes'] ?? 0;
         ?>
@@ -627,7 +663,7 @@ class Auto_Ai_News_Poster_Settings
     // Callback pentru selectarea autorului
     public static function author_name_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $selected_author = $options['author_name'] ?? get_current_user_id();
 
         // Obținem lista de utilizatori cu rolul 'Author' sau 'Administrator'
@@ -661,7 +697,7 @@ class Auto_Ai_News_Poster_Settings
     // Callback pentru instrucțiunile AI (textarea) - Mod Parsare Link
     public static function parse_link_ai_instructions_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $instructions = $options['parse_link_ai_instructions'] ?? 'Creează un articol unic pe baza textului extras. Respectă structura JSON cu titlu, conținut, etichete, și rezumat. Asigură-te că articolul este obiectiv și bine formatat.';
         ?>
         <div class="settings-group settings-group-parse_link">
@@ -686,7 +722,7 @@ class Auto_Ai_News_Poster_Settings
     // Callback pentru instrucțiunile AI (textarea) - Mod AI Browsing
     public static function ai_browsing_instructions_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $instructions = $options['ai_browsing_instructions'] ?? 'Scrie un articol de știre original, în limba română ca un jurnalist. Articolul trebuie să fie obiectiv, informativ și bine structurat (introducere, cuprins, încheiere).';
         ?>
         <div class="settings-group settings-group-ai_browsing">
@@ -711,7 +747,7 @@ class Auto_Ai_News_Poster_Settings
     // Callback pentru controlul generării etichetelor
     public static function generate_tags_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $generate_tags = $options['generate_tags'] ?? 'yes';
         ?>
         <div class="settings-card">
@@ -742,7 +778,7 @@ class Auto_Ai_News_Poster_Settings
     // Select pentru dimensiunea articolului
     public static function article_length_option_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $selected_option = $options['article_length_option'] ?? 'same_as_source';
         $min_length = $options['min_length'] ?? '';
         $max_length = $options['max_length'] ?? '';
@@ -786,7 +822,7 @@ class Auto_Ai_News_Poster_Settings
 
     public static function bulk_custom_source_urls_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $bulk_links = $options['bulk_custom_source_urls'] ?? '';
         ?>
         <div class="settings-group settings-group-parse_link">
@@ -809,7 +845,7 @@ class Auto_Ai_News_Poster_Settings
 
     public static function run_until_bulk_exhausted_callback()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $is_auto_mode = isset($options['mode']) && $options['mode'] === 'auto'; // Verificăm dacă modul este "auto"
         $run_until_bulk_exhausted = $options['run_until_bulk_exhausted'] ?? ''; // Valoare implicită pentru cheie
         ?>

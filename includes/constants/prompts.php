@@ -12,7 +12,7 @@ class Auto_Ai_News_Poster_Prompts
      */
     public static function get_custom_source_prompt($article_text_content, $additional_instructions = '', $source_link = '')
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
 
         // Obținem setările de lungime a articolului
         $article_length_option = $options['article_length_option'] ?? 'same_as_source';
@@ -162,7 +162,7 @@ class Auto_Ai_News_Poster_Prompts
         $category_list = implode(', ', $category_names);
 
         // Obținem categoria selectată din opțiunile de setări
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
 
         $article_length_option = $options['article_length_option'] ?? 'same_as_source';
         $min_length = $options['min_length'] ?? 800;

@@ -1,11 +1,12 @@
 <?php
 
 require_once __DIR__ . '/prompts.php';
+require_once __DIR__ . '/constants.php';
 
 // Funcție pentru generarea promptului
-const URL_API_OPENAI = 'https://api.openai.com/v1/chat/completions';
-const URL_API_IMAGE = 'https://api.openai.com/v1/images/generations';
-const URL_API_DEEPSEEK = 'https://api.deepseek.com/chat/completions';
+const URL_API_OPENAI = URL_API_OPENAI_CHAT; // Backward compatibility alias
+const URL_API_IMAGE = URL_API_OPENAI_IMAGE;   // Backward compatibility alias
+const URL_API_DEEPSEEK = URL_API_DEEPSEEK_CHAT; // Backward compatibility alias
 
 function generate_custom_source_prompt($article_text_content, $additional_instructions = '', $source_link = '')
 {
@@ -39,7 +40,7 @@ function call_ai_api($prompt)
     $options = get_option('auto_ai_news_poster_settings');
     // Temporar: doar OpenAI activ (Gemini/DeepSeek dezactivate chiar dacă există în setări).
     $api_key = $options['chatgpt_api_key'] ?? '';
-    $selected_model = $options['ai_model'] ?? 'gpt-4o';
+    $selected_model = $options['ai_model'] ?? DEFAULT_AI_MODEL;
     error_log('[AUTO_AI_NEWS_POSTER] AI request (provider=OpenAI) model=' . $selected_model . ' prompt_len=' . strlen((string) $prompt) . ' prompt_preview=' . substr((string) $prompt, 0, 250));
     return call_openai_api($api_key, $prompt);
 }
@@ -51,7 +52,7 @@ function call_openai_api($api_key, $prompt, $model = null, $api_url = URL_API_OP
     $selected_model = $model;
     if (empty($selected_model)) {
         $options = get_option('auto_ai_news_poster_settings', []);
-        $selected_model = $options['ai_model'] ?? 'gpt-4o';
+        $selected_model = $options['ai_model'] ?? DEFAULT_AI_MODEL;
     }
 
 
@@ -162,7 +163,7 @@ function call_openai_api($api_key, $prompt, $model = null, $api_url = URL_API_OP
             'Content-Type' => 'application/json',
         ],
         'body' => json_encode($request_body),
-        'timeout' => 300, // Mărit timeout-ul la 300 de secunde (5 minute)
+        'timeout' => DEFAULT_TIMEOUT_SECONDS, // Mărit timeout-ul la 300 de secunde (5 minute)
     ]);
 
     return $response;
@@ -220,7 +221,7 @@ function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
             'Content-Type'  => 'application/json',
         ],
         'body' => json_encode($request_body),
-        'timeout' => 90,
+        'timeout' => DEFAULT_IMAGE_TIMEOUT_SECONDS,
     ]);
 
     return $response;
@@ -233,7 +234,7 @@ function call_gemini_api($api_key, $model, $prompt)
         return ['error' => 'Missing Gemini API key'];
     }
 
-    $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . urlencode($model) . ':generateContent?key=' . urlencode($api_key);
+    $endpoint = URL_API_GEMINI_BASE . urlencode($model) . ':generateContent?key=' . urlencode($api_key);
 
     $body = [
         'contents' => [
@@ -343,7 +344,7 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
 
     // Case 1: Imagen 4.0 Model (Uses generateImages)
     if ($api_model === 'imagen-4') {
-        $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/imagen-4:generateImages';
+        $endpoint = URL_API_GEMINI_IMAGEN_4;
         
         $body = [
             'prompt' => $final_prompt,
@@ -360,7 +361,7 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
                 'Content-Type' => 'application/json'
             ],
             'body' => wp_json_encode($body),
-            'timeout' => 120,
+            'timeout' => DEFAULT_IMAGE_TIMEOUT_SECONDS,
         ]);
 
         if (is_wp_error($response)) {
@@ -389,7 +390,7 @@ function call_gemini_image_api($api_key, $model, $prompt, $feedback = '')
     }
 
     // Case 2: Gemini Flash/Pro Series (Uses generateContent)
-    $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' . urlencode($api_model) . ':generateContent';
+    $endpoint = URL_API_GEMINI_BASE . urlencode($api_model) . ':generateContent';
     
     // imageConfig este deja definit mai sus pentru toate modelele Gemini
 
@@ -655,7 +656,7 @@ function call_vertex_ai_imagen_api($project_id, $location, $service_account_json
 
     // Endpoint Vertex AI pentru Imagen
     $endpoint = sprintf(
-        'https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:predict',
+        URL_API_VERTEX_BASE,
         $location,
         $project_id,
         $location,
@@ -789,8 +790,8 @@ function get_vertex_ai_access_token($service_account)
 
     $jwt_claim = [
         'iss' => $service_account['client_email'],
-        'scope' => 'https://www.googleapis.com/auth/cloud-platform',
-        'aud' => 'https://oauth2.googleapis.com/token',
+        'scope' => URL_GOOGLE_CLOUD_PLATFORM_SCOPE,
+        'aud' => URL_GOOGLE_OAUTH_TOKEN,
         'exp' => $now + 3600,
         'iat' => $now
     ];
@@ -816,7 +817,7 @@ function get_vertex_ai_access_token($service_account)
     $jwt = $signature_input . '.' . $base64_signature;
 
     // Obținem access token
-    $token_response = wp_remote_post('https://oauth2.googleapis.com/token', [
+    $token_response = wp_remote_post(URL_GOOGLE_OAUTH_TOKEN, [
         'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
         'body' => [
             'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',

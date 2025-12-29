@@ -22,7 +22,7 @@ class Auto_Ai_News_Poster_Api
 
     public static function get_article_from_sources()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $publication_mode = $options['mode']; // Verificăm dacă este 'manual' sau 'auto'
 
         if ($publication_mode === 'manual') {
@@ -44,7 +44,7 @@ class Auto_Ai_News_Poster_Api
     // Funcție pentru a obține categoria următoare
     public static function get_next_category()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
 
         // Verificăm dacă rularea automată a categoriilor este activată și modul este automat
         if ($options['auto_rotate_categories'] === 'yes' && $options['mode'] === 'auto') {
@@ -53,7 +53,7 @@ class Auto_Ai_News_Poster_Api
             $category_ids = wp_list_pluck($categories, 'term_id'); // Obținem ID-urile categoriilor
 
             // Obținem indexul ultimei categorii utilizate
-            $current_index = get_option('auto_ai_news_poster_current_category_index', 0);
+            $current_index = get_option(AUTO_AI_NEWS_POSTER_CURRENT_CATEGORY_INDEX, 0);
 
             // Calculăm următoarea categorie
             $next_category_id = $category_ids[$current_index];
@@ -62,7 +62,7 @@ class Auto_Ai_News_Poster_Api
 
             // Actualizăm indexul pentru următoarea utilizare
             $current_index = ($current_index + 1) % count($category_ids); // Resetăm la 0 când ajungem la finalul listei
-            update_option('auto_ai_news_poster_current_category_index', $current_index);
+            update_option(AUTO_AI_NEWS_POSTER_CURRENT_CATEGORY_INDEX, $current_index);
 
             return $next_category_name; // Returnăm numele categoriei
         }
@@ -216,7 +216,7 @@ class Auto_Ai_News_Poster_Api
 
             // Immediately update the option with the shortened list to prevent race conditions
             $options['bulk_custom_source_urls'] = implode("\n", $bulk_links);
-            update_option('auto_ai_news_poster_settings', $options);
+            update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
             set_transient('auto_ai_news_poster_force_refresh', 'yes', MINUTE_IN_SECONDS); // Signal frontend to refresh
 
             // For CRON jobs, determine mode from settings. The parameter $generation_mode is from manual metabox.
@@ -406,7 +406,7 @@ class Auto_Ai_News_Poster_Api
         // Actualizează timpul ultimului articol publicat pentru cron (doar pentru procesarea în masă)
         if ($is_bulk_processing && !$is_ajax_call) {
             $post_time = time();
-            update_option('auto_ai_news_poster_last_post_time', $post_time);
+            update_option(AUTO_AI_NEWS_POSTER_LAST_POST_TIME, $post_time);
             error_log('CRON PROCESS: Article published successfully! Post ID: ' . $new_post_id . ', Link: ' . $source_link . ', Time: ' . date('Y-m-d H:i:s', $post_time));
         }
 
@@ -545,9 +545,9 @@ class Auto_Ai_News_Poster_Api
 
         // Actualizează timpul ultimului articol publicat pentru cron (doar pentru procesarea automată)
         // Verificăm dacă suntem în modul automat prin verificarea setărilor
-        $settings = get_option('auto_ai_news_poster_settings', []);
+        $settings = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, []);
         if (isset($settings['mode']) && $settings['mode'] === 'auto') {
-            update_option('auto_ai_news_poster_last_post_time', time());
+            update_option(AUTO_AI_NEWS_POSTER_LAST_POST_TIME, time());
         }
 
         // Generăm imaginea dacă este activată opțiunea
@@ -590,8 +590,8 @@ class Auto_Ai_News_Poster_Api
     private static function call_openai_api_with_browsing($api_key, $prompt)
     {
         // Obținem modelul selectat din setări
-        $options = get_option('auto_ai_news_poster_settings', []);
-        $selected_model = $options['ai_model'] ?? 'gpt-4o';
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, []);
+        $selected_model = $options['ai_model'] ?? DEFAULT_AI_MODEL;
 
         // Obținem max_length pentru a seta max_completion_tokens
         $max_length = $options['max_length'] ?? 1200;
@@ -678,7 +678,7 @@ class Auto_Ai_News_Poster_Api
         $tools_count = isset($request_body['tools']) && is_array($request_body['tools']) ? count($request_body['tools']) : 0;
         error_log('[AUTO_AI_NEWS_POSTER] AI browsing request model=' . $selected_model . ' response_format=' . (string) $response_format_type . ' tools=' . $tools_count . ' messages=' . wp_json_encode($messages_preview));
 
-        $response = wp_remote_post(URL_API_OPENAI, [
+        $response = wp_remote_post(URL_API_OPENAI_CHAT, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $api_key,
                 'Content-Type' => 'application/json',
@@ -695,8 +695,8 @@ class Auto_Ai_News_Poster_Api
      */
     private static function continue_conversation_with_tool_calls($api_key, $original_prompt, $tool_calls)
     {
-        $options = get_option('auto_ai_news_poster_settings', []);
-        $selected_model = $options['ai_model'] ?? 'gpt-4o';
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, []);
+        $selected_model = $options['ai_model'] ?? DEFAULT_AI_MODEL;
 
         // Obținem max_length pentru a seta max_completion_tokens
         $max_length = $options['max_length'] ?? 1200;
@@ -810,7 +810,7 @@ class Auto_Ai_News_Poster_Api
                 'Content-Type' => 'application/json',
             ],
             'body' => json_encode($request_body),
-            'timeout' => 300,
+            'timeout' => DEFAULT_TIMEOUT_SECONDS,
         ]);
 
         return $response;
@@ -876,8 +876,8 @@ class Auto_Ai_News_Poster_Api
      */
     private static function retry_ai_browsing_with_clearer_prompt($api_key, $news_sources, $category_name, $latest_titles)
     {
-        $options = get_option('auto_ai_news_poster_settings', []);
-        $selected_model = $options['ai_model'] ?? 'gpt-4o';
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, []);
+        $selected_model = $options['ai_model'] ?? DEFAULT_AI_MODEL;
 
         $simple_prompt = generate_retry_browsing_prompt($category_name);
 
@@ -923,7 +923,7 @@ class Auto_Ai_News_Poster_Api
                 'Content-Type' => 'application/json',
             ],
             'body' => json_encode($request_body),
-            'timeout' => 120,
+            'timeout' => DEFAULT_IMAGE_TIMEOUT_SECONDS,
         ]);
 
         if (is_wp_error($response)) {
@@ -990,7 +990,7 @@ class Auto_Ai_News_Poster_Api
             return;
         }
 
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         // Temporar: doar OpenAI activ (Gemini dezactivat chiar dacă există în setări).
         $use_gemini = false;
         
@@ -1301,13 +1301,13 @@ class Auto_Ai_News_Poster_Api
 
     private static function force_mode_change_to_manual()
     {
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $options['mode'] = 'manual';
         // Uncheck the "run until exhausted" checkbox
         if (isset($options['run_until_bulk_exhausted'])) {
             $options['run_until_bulk_exhausted'] = 0;
         }
-        update_option('auto_ai_news_poster_settings', $options);
+        update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
 
         // Set a transient to notify the frontend to refresh
         set_transient('auto_ai_news_poster_force_refresh', 'yes', MINUTE_IN_SECONDS);
@@ -1337,7 +1337,7 @@ class Auto_Ai_News_Poster_Api
             return;
         }
 
-        $options = get_option('auto_ai_news_poster_settings');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         // Ensure the array key exists and is an array. The links are stored as a string, so we need to convert.
         $bulk_links_str = $options['bulk_custom_source_urls'] ?? '';
         $bulk_links = array_filter(explode("\n", trim($bulk_links_str)), 'trim');
@@ -1346,7 +1346,7 @@ class Auto_Ai_News_Poster_Api
         if (!in_array($link, $bulk_links)) {
             $bulk_links[] = $link;
             $options['bulk_custom_source_urls'] = implode("\n", $bulk_links);
-            update_option('auto_ai_news_poster_settings', $options);
+            update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
             error_log('CRON PROCESS: Link re-added to bulk list: ' . $link . ' (Reason: ' . $reason . ', Total links now: ' . count($bulk_links) . ')');
         } else {
             error_log('CRON PROCESS: Link already exists in bulk list, skipping re-add: ' . $link . ' (Reason: ' . $reason . ')');
