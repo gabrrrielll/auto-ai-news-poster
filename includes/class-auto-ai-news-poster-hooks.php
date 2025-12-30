@@ -32,18 +32,14 @@ class Auto_Ai_News_Poster_Hooks
         $external_image_url = get_post_meta($post->ID, '_external_image_url', true);
         $external_image_source = trim((string) get_post_meta($post->ID, '_external_image_source', true));
         $external_image_source_position = get_post_meta($post->ID, '_external_image_source_position', true);
+        
+        // Dacă poziția nu este setată explicit pe articol, folosim setarea globală
         if (empty($external_image_source_position)) {
-            $external_image_source_position = 'before'; // backwards compatible default
+            $external_image_source_position = $global_source_position;
         }
 
-        // Preluăm setarea locală pentru poziția sursei foto
-        $local_source_position = get_post_meta($post->ID, '_source_photo_position', true);
-
-        // Determinăm poziția finală
-        $final_source_position = $global_source_position;
-        if (!empty($local_source_position) && $local_source_position !== 'global') {
-            $final_source_position = $local_source_position;
-        }
+        // Determinăm poziția finală (care este acum doar external_image_source_position)
+        $final_source_position = $external_image_source_position;
 
         // Dacă folosim imagini externe și există un URL extern
         if ($use_external_images === 'external' && !empty($external_image_url)) {
