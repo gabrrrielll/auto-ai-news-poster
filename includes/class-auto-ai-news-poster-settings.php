@@ -201,6 +201,24 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_main_section'
         );
 
+        // Camp pentru lista de linkuri bulk
+        add_settings_field(
+            'bulk_custom_source_urls',
+            'Lista de Linkuri Sursă',
+            [self::class, 'bulk_custom_source_urls_callback'],
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
+            'auto_ai_news_poster_main_section'
+        );
+
+        // Camp pentru opțiunea de oprire la epuizarea listei
+        add_settings_field(
+            'run_until_bulk_exhausted',
+            'Oprește la epuizare',
+            [self::class, 'run_until_bulk_exhausted_callback'],
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
+            'auto_ai_news_poster_main_section'
+        );
+
         // Camp pentru instructiuni AI (textarea) - Mod AI Browsing
         add_settings_field(
             'ai_browsing_instructions',
