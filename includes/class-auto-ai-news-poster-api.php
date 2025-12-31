@@ -1228,7 +1228,7 @@ class Auto_Ai_News_Poster_Api
             
             if (is_wp_error($set_image_result)) {
                 error_log('Error setting featured image: ' . $set_image_result->get_error_message());
-                return;
+                wp_die();
             }
             
             update_post_meta($post_id, '_external_image_source', 'Imagine generată AI');
@@ -1241,16 +1241,16 @@ class Auto_Ai_News_Poster_Api
 
                 if (is_wp_error($update_result)) {
                     error_log('Error updating post: ' . $update_result->get_error_message());
-                    return;
+                    wp_die();
                 }
                 error_log('Post status updated successfully');
             }
 
             error_log('Image processing completed successfully');
         } catch (Exception $e) {
-            error_log('Exception caught: ' . $e->getMessage());
             error_log('Stack trace: ' . $e->getTraceAsString());
         }
+        wp_die();
     }
 
 
