@@ -318,7 +318,12 @@ class Auto_Ai_News_Poster_Api
                 self::re_add_link_to_bulk($source_link, 'Empty AI Response');
             }
             if ($is_ajax_call) {
-                wp_send_json_error(['message' => $error_message, 'response' => json_encode($decoded_response, JSON_UNESCAPED_UNICODE)]);
+                // Return also the full response for easier debugging in the frontend console
+                wp_send_json_error([
+                    'message' => $error_message, 
+                    'api_response' => $body,
+                    'is_error' => true
+                ]);
             }
             return;
         }

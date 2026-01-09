@@ -166,6 +166,16 @@ function call_openai_api($api_key, $prompt, $model = null, $api_url = URL_API_OP
         'timeout' => DEFAULT_TIMEOUT_SECONDS, // Mărit timeout-ul la 300 de secunde (5 minute)
     ]);
 
+    if (!is_wp_error($response)) {
+        $response_code = wp_remote_retrieve_response_code($response);
+        if ($response_code !== 200) {
+            $body = wp_remote_retrieve_body($response);
+            $decoded_error = json_decode($body, true);
+            $error_message = $decoded_error['error']['message'] ?? 'Unknown OpenAI API Error';
+            return new WP_Error('openai_api_error', 'OpenAI API Error (' . $response_code . '): ' . $error_message, $body);
+        }
+    }
+
     return $response;
 }
 

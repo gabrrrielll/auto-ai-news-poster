@@ -106,7 +106,9 @@ class Auto_Ai_News_Poster_Prompts
         $prompt .= "  \"content\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie. INCLUDE toate linkurile din textul sursă folosind tag-uri <a href=\\\"URL\\\">Text Link</a>.\",\n";
         $prompt .= "  \"summary\": \"O meta descriere de maximum 160 de caractere, optimizată SEO.\",\n";
         $prompt .= "  \"tags\": [\"intre_1_si_3_etichete_relevante\"],\n";
-        $prompt .= "  \"category\": \"Numele categoriei selectate din lista de categorii existente\"\n";
+        $prompt .= "  \"category\": \"Numele categoriei selectate din lista de categorii existente\",\n";
+        $prompt .= "  \"sources\": [\"URL-ul complet al stirii citite\"],\n";
+        $prompt .= "  \"source_titles\": [\"Titlul exact al articolului parsat si citit\"]\n";
         $prompt .= "}\n";
 
         // Adăugăm instrucțiuni suplimentare, dacă există (pentru apelurile manuale unde se poate adăuga text extra)
