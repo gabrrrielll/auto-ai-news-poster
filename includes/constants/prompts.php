@@ -70,7 +70,7 @@ class Auto_Ai_News_Poster_Prompts
         $prompt .= "1. **NU menționa niciodată** 'textul furnizat', 'articolul sursă', 'materialul analizat' sau orice expresie similară. Articolul trebuie să fie independent și să nu facă referire la sursa ta de informație.\n";
         $prompt .= "2. **Reformulează** cu propriile tale cuvinte informațiile din textul furnizat, integrându-le natural în noul articol. **NU copia și lipi (copy-paste) fragmente din textul sursă.**\n";
         $prompt .= "3. Scrie un articol obiectiv, bine structurat, cu un titlu captivant, un conținut informativ și o listă de etichete (tags) relevante. **Păstrează toate faptele, detaliile, numele, numerele și listele (ex: liste de filme, produse, evenimente) EXACT așa cum apar în textul sursă. Nu omite și nu adăuga elemente noi în liste.** {$length_instruction}\n";
-        $prompt .= "   **REGULĂ STRICTĂ LINKURI:** Limitează numărul de linkuri HTML din conținut la maximum 3. Include DOAR linkuri care fac referință directă la sursele citate sau la informații esențiale din text. **EVITĂ COMPLET** linkurile comerciale, publicitare, linkurile de afiliere sau recomandările de produse care nu sunt parte integrantă din știrea editorială.\n";
+        $prompt .= "   **REGULĂ STRICTĂ LINKURI:** Limitează numărul de linkuri din conținut la maximum 3. Include DOAR linkuri care fac referință directă la sursele citate sau la informații esențiale din text. **Formatează obligatoriu linkurile în HTML** folosind tag-uri <a href=\"URL\">Text Link</a>. **EVITĂ COMPLET** linkurile comerciale, publicitare, linkurile de afiliere sau recomandările de produse care nu sunt parte integrantă din știrea editorială.\n";
         $prompt .= "4. Articolul trebuie să fie o reformulare fidelă a textului sursă, nu un sumar sau un comentariu personal. Menține tonul și perspectiva originală.\n";
         $prompt .= "5. **ATENȚIE la conținutul non-articolistic:** Identifică și ignoră blocurile de text care reprezintă liste de servicii, recomandări de produse, reclame, secțiuni de navigare, subsoluri, anteturi sau orice alt conținut care nu face parte direct din articolul principal. Nu le reproduce în textul generat, chiar dacă apar în textul sursă.\n";
         $prompt .= "6. **EXCLUDE TOT CE E NON-EDITORIAL:** Ignoră complet orice text care arată ca tabele de comparație, liste de prețuri, specificații tehnice listate, matrice de planuri, comparații side-by-side, și orice alt format care nu este text editorial continuu. Dacă vezi linii de tipul: \"Brightspeed\", \"Spectrum\", \"T-Mobile Home Internet\", \"Verizon Fios\" cu prețuri și specificații - IGNORĂ TOTUL. Nu menționa deloc astfel de liste sau tabele.\n";
@@ -102,7 +102,7 @@ class Auto_Ai_News_Poster_Prompts
         $prompt .= "**DOAR** returnează obiectul JSON cu articolul generat. Structura trebuie să fie următoarea:\n";
         $prompt .= "{\n";
         $prompt .= "  \"title\": \"Titlul articolului generat de tine\",\n";
-        $prompt .= "  \"content\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie. Include MAXIMUM 3 linkuri relevante către surse, evitându-le pe cele comerciale.\",\n";
+        $prompt .= "  \"content\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie. Include MAXIMUM 3 linkuri relevante către surse, DOAR în format HTML <a href=\\\"URL\\\">Text Link</a>, evitându-le pe cele comerciale.\",\n";
         $prompt .= "  \"summary\": \"O meta descriere de maximum 160 de caractere, optimizată SEO.\",\n";
         $prompt .= "  \"tags\": [\"intre_1_si_3_etichete_relevante\"],\n";
         $prompt .= "  \"category\": \"Numele categoriei selectate din lista de categorii existente\",\n";
@@ -231,7 +231,7 @@ class Auto_Ai_News_Poster_Prompts
         $prompt .= " Etichetele sugerate pot fi din lista existentă de etichete: '$existing_tag_list'. Dacă nu există potriviri relevante, sugerează noi etichete.\n";
         $prompt .= "3. Numește numele categoriei care se potrivește mai bine din lista: '$category_list'.\n";
         $prompt .= "4. Creează un rezumat al articolului (summary).\n";
-        $prompt .= "5. Generează un articol cu respectarea strictă a dimensiunii $length_instruction, detaliat, folosește un stil jurnalistic în exprimare, nu include titlul în interiorul acestuia și nu omite nici un aspect din informația preluată. **REGULĂ LINKURI:** Include maximum 3 linkuri relevante către sursele citate, evitând orice link comercial sau publicitar.";
+        $prompt .= "5. Generează un articol cu respectarea strictă a dimensiunii $length_instruction, detaliat, folosește un stil jurnalistic în exprimare, nu include titlul în interiorul acestuia și nu omite nici un aspect din informația preluată. **REGULĂ LINKURI:** Include maximum 3 linkuri relevante către sursele citate, formatate obligatoriu în HTML (<a href=\\\"URL\\\">Text Link</a>), evitând orice link comercial sau publicitar.";
         $prompt .= ' ATENȚIE: Nu adăuga informații care nu sunt în sursele de știri! Dacă sursele menționează o listă specifică (ex: filme, persoane, evenimente), copiază EXACT aceeași listă, nu o modifica sau nu adăuga alte elemente.';
         $prompt .= " Structura articolului (poate să includă dacă consideri necesar - una, două sau trei subtitluri semantice de tip H2, H3) și să fie formatată în HTML pentru o structură SEO-friendly astfel încât să aibă și un design plăcut (content).\n";
         $prompt .= "6. Copiază adresele URL complete ale articolelor pe care le-ai parsat și de unde ai extras informația (sources).\n";
@@ -278,7 +278,7 @@ class Auto_Ai_News_Poster_Prompts
         Răspunsul tău trebuie să fie EXACT UN OBIECT JSON, fără niciun alt text înainte sau după. NU adăuga mai multe obiecte JSON. NU adăuga text explicativ. Structura trebuie să fie următoarea:
         {
           \"titlu\": \"Titlul articolului generat de tine\",
-          \"continut\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie. Include MAXIMUM 3 linkuri către sursele citate, evitând linkurile comerciale.\",
+          \"continut\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie. Include MAXIMUM 3 linkuri către sursele citate, formatate OBLIGATORIU în HTML (<a href=\\\"URL\\\">Text Link</a>), evitând linkurile comerciale.\",
           \"imagine_prompt\": \"Descrierea detaliată pentru imaginea reprezentativă.\",
           \"meta_descriere\": \"O meta descriere de maximum 160 de caractere, optimizată SEO.\",
           \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]
