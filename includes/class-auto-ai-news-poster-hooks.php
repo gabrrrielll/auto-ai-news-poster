@@ -58,7 +58,7 @@ class Auto_Ai_News_Poster_Hooks
             if (!empty($external_image_source)) {
                  $info_icon = '';
                 if (str_contains(strtolower($external_image_source), 'imagine generat')) {
-                    $info_icon = '<span class="info-icon">i</span>';
+                    $info_icon = ' <span class="info-icon tooltip">i<span class="tooltiptext">Această imagine a fost generată automat de AI pe baza rezumatului articolului și nu reprezintă un moment real fotografiat.</span></span>';
                 }
                 
                 $source_html = '<p id="sursa-foto"><em>Sursa foto: <b>' . esc_html($external_image_source) . '</b></em>' . $info_icon . '</p>';

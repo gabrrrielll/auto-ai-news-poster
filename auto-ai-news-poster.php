@@ -24,6 +24,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-hoo
 // Implementarea inline pentru CSS și JS (metodă testată pe server)
 add_action('admin_head', 'auto_ai_news_poster_inline_admin_css');
 add_action('admin_footer', 'auto_ai_news_poster_inline_admin_js');
+add_action('wp_head', 'auto_ai_news_poster_inline_frontend_css'); // CSS pe frontend pentru tooltip
 
 function auto_ai_news_poster_inline_admin_css()
 {
@@ -79,6 +80,19 @@ function auto_ai_news_poster_inline_admin_js()
         }
     }
 }
+
+function auto_ai_news_poster_inline_frontend_css()
+{
+    // Încărcăm CSS-ul pe frontend pentru tooltip-ul info icon
+    $css_path = plugin_dir_path(__FILE__) . 'includes/css/auto-ai-news-poster.css';
+    
+    if (file_exists($css_path)) {
+        echo '<style type="text/css">';
+        echo file_get_contents($css_path);
+        echo '</style>';
+    }
+}
+
 
 // Remove the old, problematic inline asset loading method
 // This is critical. We ensure the old function is not being called.
