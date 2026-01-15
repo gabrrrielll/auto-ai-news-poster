@@ -16,7 +16,6 @@ class Auto_Ai_News_Poster_Settings
         // Handler AJAX pentru actualizarea listei de modele
         add_action('wp_ajax_refresh_openai_models', [self::class, 'ajax_refresh_openai_models']);
         add_action('wp_ajax_refresh_gemini_models', [self::class, 'ajax_refresh_gemini_models']);
-        add_action('wp_ajax_refresh_gemini_models', [self::class, 'ajax_refresh_gemini_models']);
         add_action('wp_ajax_refresh_deepseek_models', [self::class, 'ajax_refresh_deepseek_models']);
         
         // Site Analyzer AJAX
@@ -1720,6 +1719,7 @@ class Auto_Ai_News_Poster_Settings
 
     public static function ajax_scan_site()
     {
+        check_ajax_referer('auto_ai_news_poster_check_settings', 'nonce');
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Unauthorized');
         }
@@ -1758,6 +1758,7 @@ class Auto_Ai_News_Poster_Settings
 
     public static function ajax_import_selected()
     {
+        check_ajax_referer('auto_ai_news_poster_check_settings', 'nonce');
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Unauthorized');
         }

@@ -75,6 +75,16 @@ function auto_ai_news_poster_inline_admin_js()
 
         if (file_exists($js_path)) {
             echo '<script type="text/javascript">';
+            
+            // Inject required localized data manually since we are not using wp_enqueue_script/wp_localize_script
+            $ajax_data = [
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'force_refresh_now_nonce' => wp_create_nonce('force_refresh_now_nonce'),
+                'check_settings_nonce' => wp_create_nonce('auto_ai_news_poster_check_settings'),
+                'clear_transient_nonce' => wp_create_nonce('clear_transient_nonce')
+            ];
+            echo 'var auto_ai_news_poster_ajax = ' . json_encode($ajax_data) . ';';
+
             echo file_get_contents($js_path);
             echo '</script>';
         }

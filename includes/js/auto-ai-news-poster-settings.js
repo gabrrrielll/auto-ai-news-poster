@@ -51,11 +51,11 @@ jQuery(document).ready(function ($) {
         console.log("⚠️ AANP Settings JS: No radio buttons found to attach event listener.");
     }
     // --- Site Analyzer JS Logic ---
-    
-    $('#btn_scan_site').on('click', function() {
+
+    $('#btn_scan_site').on('click', function () {
         var url = $('#sa_target_url').val();
         var context = $('#sa_context').val();
-        
+
         if (!url) {
             alert('Please enter a Target URL.');
             return;
@@ -68,20 +68,21 @@ jQuery(document).ready(function ($) {
         $.post(auto_ai_news_poster_ajax.ajax_url, {
             action: 'auto_ai_scan_site',
             url: url,
-            context: context
-        }, function(response) {
+            context: context,
+            nonce: auto_ai_news_poster_ajax.check_settings_nonce
+        }, function (response) {
             $('#sa_loading_spinner').hide();
-            
+
             if (response.success) {
                 var candidates = response.data.candidates;
                 $('#sa_result_count').text(response.data.count);
-                
+
                 if (candidates.length === 0) {
                     alert('AI found no relevant articles matching your context.');
                     return;
                 }
 
-                candidates.forEach(function(item, index) {
+                candidates.forEach(function (item, index) {
                     var row = `<tr>
                         <td><input type="checkbox" class="sa-item-checkbox" data-url="${item.url}" data-title="${item.title}" checked></td>
                         <td>${item.title}</td>
@@ -97,13 +98,13 @@ jQuery(document).ready(function ($) {
         });
     });
 
-    $('#sa_select_all').on('change', function() {
+    $('#sa_select_all').on('change', function () {
         $('.sa-item-checkbox').prop('checked', $(this).is(':checked'));
     });
 
-    $('#btn_sa_import_selected').on('click', function() {
+    $('#btn_sa_import_selected').on('click', function () {
         var selected = [];
-        $('.sa-item-checkbox:checked').each(function() {
+        $('.sa-item-checkbox:checked').each(function () {
             selected.push({
                 url: $(this).data('url'),
                 title: $(this).data('title')
@@ -120,8 +121,9 @@ jQuery(document).ready(function ($) {
 
         $.post(auto_ai_news_poster_ajax.ajax_url, {
             action: 'auto_ai_import_selected',
-            items: selected
-        }, function(response) {
+            items: selected,
+            nonce: auto_ai_news_poster_ajax.check_settings_nonce
+        }, function (response) {
             btn.prop('disabled', false).text('Import Selected to Queue');
             if (response.success) {
                 $('#sa_import_status').text('✅ ' + response.data).fadeIn().delay(3000).fadeOut();
