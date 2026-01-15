@@ -1250,7 +1250,7 @@ class Auto_Ai_News_Poster_Settings
     // Funcție pentru apelarea API-ului Gemini pentru modele
     public static function get_available_gemini_models($api_key)
     {
-        $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models?key=' . urlencode($api_key);
+        $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models?key=' . urlencode($api_key) . '&pageSize=1000';
 
         $response = wp_remote_get($endpoint, [
             'headers' => [
@@ -1290,8 +1290,17 @@ class Auto_Ai_News_Poster_Settings
             ];
         }
 
+            ];
+        }
+
+        // Log raw models for debugging
+        error_log('AUTO AI NEWS POSTER - Gemini Models Raw Count: ' . count($data['models']));
+
         // Filtrează doar modelele Gemini relevante (exclude Imagen și alte modele non-text)
         $filtered_models = self::filter_gemini_models($data['models']);
+        
+        error_log('AUTO AI NEWS POSTER - Gemini Models Filtered Count: ' . count($filtered_models));
+        error_log('AUTO AI NEWS POSTER - Gemini Filtered Names: ' . print_r(array_column($filtered_models, 'name'), true));
 
         if (empty($filtered_models)) {
             return [
@@ -1318,11 +1327,11 @@ class Auto_Ai_News_Poster_Settings
     {
         return array_filter($models, function ($model) {
             $name = $model['name'] ?? '';
-            // Include doar modelele Gemini (nu Imagen sau alte modele)
-            // Modelele Gemini au formatul: models/gemini-X.X-XXX
-            return strpos($name, 'models/gemini-') === 0 && 
-                   strpos($name, 'imagen') === false &&
-                   strpos($name, 'embedding') === false;
+            // Păstrăm tot ce începe cu "models/", dar excludem embeddings, aqa și imagen
+            return strpos($name, 'models/') === 0 && 
+                   strpos($name, 'embedding') === false &&
+                   strpos($name, 'aqa') === false &&
+                   strpos($name, 'imagen') === false;
         });
     }
 
