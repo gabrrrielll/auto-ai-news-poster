@@ -1250,7 +1250,9 @@ class Auto_Ai_News_Poster_Settings
     // Funcție pentru apelarea API-ului Gemini pentru modele
     public static function get_available_gemini_models($api_key)
     {
-        $endpoint = 'https://generativelanguage.googleapis.com/v1beta/models?key=' . urlencode($api_key) . '&pageSize=1000';
+        // Use constant if available, otherwise fallback (though constant should be there)
+        $base_url = defined('URL_API_GEMINI_MODELS') ? URL_API_GEMINI_MODELS : 'https://generativelanguage.googleapis.com/v1beta/models';
+        $endpoint = $base_url . '?key=' . urlencode($api_key) . '&pageSize=1000';
 
         $response = wp_remote_get($endpoint, [
             'headers' => [
@@ -1290,8 +1292,7 @@ class Auto_Ai_News_Poster_Settings
             ];
         }
 
-            ];
-        }
+
 
         // Log raw models for debugging
         error_log('AUTO AI NEWS POSTER - Gemini Models Raw Count: ' . count($data['models']));
@@ -1309,14 +1310,23 @@ class Auto_Ai_News_Poster_Settings
             ];
         }
 
-        // Organizează modelele într-un array asociativ
-        // Folosim numele modelului fără prefixul "models/" ca cheie pentru compatibilitate
+        // Initialize descriptions
+        //$descriptions = self::get_gemini_model_descriptions_map(); // We can rely on API display names now
+
         $models_array = [];
         foreach ($filtered_models as $model) {
-            $model_name = $model['name'] ?? '';
-            // Eliminăm prefixul "models/" pentru a păstra compatibilitatea cu setările existente
-            $clean_name = str_replace('models/', '', $model_name);
-            $models_array[$clean_name] = $model;
+            $model_name = $model['name'] ?? ''; // e.g., models/gemini-1.5-flash
+            $display_name = $model['displayName'] ?? $model_name;
+            $description = $model['description'] ?? '';
+            
+            // Construct a readable label
+            $label = $display_name;
+            if ($model_name !== $display_name) {
+                $label .= " ({$model_name})"; 
+            }
+            
+            // Use the full model name as key (including models/ prefix)
+            $models_array[$model_name] = $label;
         }
 
         return $models_array;
@@ -1394,7 +1404,8 @@ class Auto_Ai_News_Poster_Settings
 
     public static function get_available_deepseek_models($api_key)
     {
-        $response = wp_remote_get('https://api.deepseek.com/models', [
+        $endpoint = defined('URL_API_DEEPSEEK_MODELS') ? URL_API_DEEPSEEK_MODELS : 'https://api.deepseek.com/models';
+        $response = wp_remote_get($endpoint, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $api_key,
                 'Content-Type' => 'application/json',
@@ -1521,6 +1532,8 @@ class Auto_Ai_News_Poster_Settings
         if ($models && !empty($models) && !isset($models['error'])) {
             // Salvăm în cache pentru 24 ore
             set_transient('gemini_models_cache', $models, 24 * HOUR_IN_SECONDS);
+            // Updating the option so the dropdown reflects the new list immediately
+            update_option('auto_ai_news_poster_gemini_models', $models);
             wp_send_json_success('Gemini models list updated successfully');
         } else {
             $error_msg = isset($models['error']) ? $models['error'] : 'Failed to fetch models from Gemini API';
@@ -1559,6 +1572,8 @@ class Auto_Ai_News_Poster_Settings
         if ($models && !empty($models) && !isset($models['error'])) {
             // Salvăm în cache pentru 24 ore
             set_transient('deepseek_models_cache', $models, 24 * HOUR_IN_SECONDS);
+            // Update the option for DeepSeek too
+            update_option('auto_ai_news_poster_deepseek_models', $models);
             wp_send_json_success('DeepSeek models list updated successfully');
         } else {
             $error_msg = isset($models['error']) ? $models['error'] : 'Failed to fetch models from DeepSeek API';
