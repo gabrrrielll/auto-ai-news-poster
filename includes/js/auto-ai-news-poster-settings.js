@@ -127,7 +127,37 @@ jQuery(document).ready(function ($) {
             btn.prop('disabled', false).text('Import Selected to Queue');
             if (response.success) {
                 $('#sa_import_status').text('✅ ' + response.data).fadeIn().delay(3000).fadeOut();
-                // Optional: Clear selection or mark as imported
+
+                // CRITICAL: Update the textarea on the page so the user sees the links 
+                // and they don't get overwritten when clicking "Save Changes"
+                var $textarea = $('#bulk_custom_source_urls');
+                var currentVal = $textarea.val().trim();
+                var newLinks = selected.map(function (item) { return item.url; }).join('\n');
+
+                var finalVal = currentVal;
+                if (finalVal.length > 0) {
+                    finalVal += '\n' + newLinks;
+                } else {
+                    finalVal = newLinks;
+                }
+
+                $textarea.val(finalVal);
+
+                // Clear checkboxes
+                $('.sa-item-checkbox').prop('checked', false);
+                $('#sa_select_all').prop('checked', false);
+
+                // Scroll to the bulk list to show progress
+                $('html, body').animate({
+                    scrollTop: $textarea.offset().top - 100
+                }, 500);
+
+                // Flash the textarea to show it was updated
+                $textarea.css('background-color', '#e7f9ed');
+                setTimeout(function () {
+                    $textarea.css('background-color', '');
+                }, 1000);
+
             } else {
                 alert('Error: ' + response.data);
             }

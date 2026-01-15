@@ -1031,7 +1031,7 @@ class Auto_Ai_News_Poster_Settings
                 <div class="settings-card-content">
                     <div class="form-group">
                         <label class="control-label">Lista de linkuri sursă personalizate</label>
-                        <textarea name="auto_ai_news_poster_settings[bulk_custom_source_urls]" class="form-control" rows="6" placeholder="Introduceți câte un link pe fiecare rând"><?php echo esc_textarea($bulk_links); ?></textarea>
+                        <textarea name="auto_ai_news_poster_settings[bulk_custom_source_urls]" id="bulk_custom_source_urls" class="form-control" rows="6" placeholder="Introduceți câte un link pe fiecare rând"><?php echo esc_textarea($bulk_links); ?></textarea>
                         <small class="form-text text-muted">Introduceți o listă de linkuri sursă. Acestea vor fi folosite automat sau manual pentru generarea articolelor.</small>
                     </div>
                 </div>
