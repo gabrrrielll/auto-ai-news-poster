@@ -15,9 +15,8 @@ class Auto_Ai_News_Poster_Settings
 
         // Handler AJAX pentru actualizarea listei de modele
         add_action('wp_ajax_refresh_openai_models', [self::class, 'ajax_refresh_openai_models']);
-        // Temporar: Gemini & DeepSeek dezactivate (UI + provider)
-        // add_action('wp_ajax_refresh_gemini_models', [self::class, 'ajax_refresh_gemini_models']);
-        // add_action('wp_ajax_refresh_deepseek_models', [self::class, 'ajax_refresh_deepseek_models']);
+        add_action('wp_ajax_refresh_gemini_models', [self::class, 'ajax_refresh_gemini_models']);
+        add_action('wp_ajax_refresh_deepseek_models', [self::class, 'ajax_refresh_deepseek_models']);
     }
 
 
@@ -561,18 +560,33 @@ class Auto_Ai_News_Poster_Settings
                                 <label for="gemini_model" class="control-label">Model Gemini</label>
                                 <select name="auto_ai_news_poster_settings[gemini_model]" class="form-control" id="gemini_model">
                                     <?php 
-                                    $gemini_models = [
+                                    $gemini_models = get_option('auto_ai_news_poster_gemini_models', [
                                         'gemini-2.0-flash-exp' => 'Gemini 2.0 Flash (Experimental)',
                                         'gemini-1.5-pro' => 'Gemini 1.5 Pro',
                                         'gemini-1.5-flash' => 'Gemini 1.5 Flash',
                                         'gemini-pro' => 'Gemini 1.0 Pro',
-                                    ];
+                                    ]);
+                                    // If for some reason options saved badly, revert to defaults
+                                    if (!is_array($gemini_models) || empty($gemini_models)) {
+                                          $gemini_models = [
+                                            'gemini-1.5-pro' => 'Gemini 1.5 Pro (Fallback)',
+                                            'gemini-1.5-flash' => 'Gemini 1.5 Flash (Fallback)'
+                                          ];
+                                    }
+
                                     $current_gemini_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
+                                    
+                                    // Group if possible, or just list
                                     foreach ($gemini_models as $gid => $gname) {
                                         echo '<option value="' . esc_attr($gid) . '" ' . selected($current_gemini_model, $gid, false) . '>' . esc_html($gname) . '</option>';
                                     }
                                     ?>
                                 </select>
+                                <div class="form-description">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshGeminiModels()" style="margin-top: 5px;">
+                                        🔄 Actualizează lista Gemini
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -592,16 +606,28 @@ class Auto_Ai_News_Poster_Settings
                                 <label for="deepseek_model" class="control-label">Model DeepSeek</label>
                                 <select name="auto_ai_news_poster_settings[deepseek_model]" class="form-control" id="deepseek_model">
                                     <?php 
-                                    $ds_models = [
+                                    $ds_models = get_option('auto_ai_news_poster_deepseek_models', [
                                         'deepseek-chat' => 'DeepSeek V3 (Chat)',
                                         'deepseek-coder' => 'DeepSeek Coder V2',
-                                    ];
+                                    ]);
+                                     // Fallback
+                                    if (!is_array($ds_models) || empty($ds_models)) {
+                                          $ds_models = [
+                                            'deepseek-chat' => 'DeepSeek V3 (Fallback)',
+                                            'deepseek-coder' => 'DeepSeek Coder (Fallback)'
+                                          ];
+                                    }
                                     $current_ds_model = $options['deepseek_model'] ?? 'deepseek-chat';
                                     foreach ($ds_models as $did => $dname) {
                                         echo '<option value="' . esc_attr($did) . '" ' . selected($current_ds_model, $did, false) . '>' . esc_html($dname) . '</option>';
                                     }
                                     ?>
                                 </select>
+                                <div class="form-description">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshDeepSeekModels()" style="margin-top: 5px;">
+                                        🔄 Actualizează lista DeepSeek
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -694,6 +720,56 @@ class Auto_Ai_News_Poster_Settings
                 refreshBtn.innerHTML = originalText;
                 refreshBtn.disabled = false;
             });
+        }
+
+        }
+
+        function refreshGeminiModels() {
+            const apiKey = document.getElementById('gemini_api_key').value;
+            if (!apiKey) { alert('Introduceți cheia API Gemini.'); return; }
+            
+            const btn = document.querySelector('button[onclick="refreshGeminiModels()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ ...'; btn.disabled = true;
+
+            fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({
+                    action: 'refresh_gemini_models',
+                    api_key: apiKey
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.success) { location.reload(); }
+                else { alert('Eroare Gemini: ' + data.data); }
+            })
+            .finally(() => { btn.innerHTML = originalText; btn.disabled = false; });
+        }
+
+        function refreshDeepSeekModels() {
+            const apiKey = document.getElementById('deepseek_api_key').value;
+            if (!apiKey) { alert('Introduceți cheia API DeepSeek.'); return; }
+
+            const btn = document.querySelector('button[onclick="refreshDeepSeekModels()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ ...'; btn.disabled = true;
+
+            fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({
+                    action: 'refresh_deepseek_models',
+                    api_key: apiKey
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.success) { location.reload(); }
+                else { alert('Eroare DeepSeek: ' + data.data); }
+            })
+            .finally(() => { btn.innerHTML = originalText; btn.disabled = false; });
         }
 
         // Logică pentru schimbarea providerului și afișarea câmpurilor relevante
@@ -1365,6 +1441,10 @@ class Auto_Ai_News_Poster_Settings
     // Handler AJAX pentru actualizarea listei de modele
     public static function ajax_refresh_openai_models()
     {
+        // Verificăm nonce-ul
+        /*if (!wp_verify_nonce($_POST['nonce'], 'refresh_models_nonce')) {
+             // Removed verification temporarily as nonce passing in settings.js needs to be consistent
+        }*/
         // Verificăm nonce-ul
         if (!wp_verify_nonce($_POST['nonce'], 'refresh_models_nonce')) {
             wp_send_json_error('Nonce verification failed');
