@@ -265,7 +265,7 @@ function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
 function call_gemini_api($api_key, $model, $prompt)
 {
     if (empty($api_key)) {
-        return ['error' => 'Missing Gemini API key'];
+        return new WP_Error('gemini_missing_key', 'Missing Gemini API key');
     }
 
     $endpoint = URL_API_GEMINI_BASE . urlencode($model) . ':generateContent?key=' . urlencode($api_key);
@@ -288,7 +288,7 @@ function call_gemini_api($api_key, $model, $prompt)
     ]);
 
     if (is_wp_error($response)) {
-        return ['error' => $response->get_error_message()];
+        return $response; // Already a WP_Error
     }
 
     $code = wp_remote_retrieve_response_code($response);
@@ -296,7 +296,13 @@ function call_gemini_api($api_key, $model, $prompt)
     $data = json_decode($raw, true);
 
     if ($code !== 200) {
-        return ['error' => 'Gemini HTTP ' . $code, 'raw' => $raw];
+        $error_msg = 'Gemini HTTP ' . $code;
+        if (isset($data['error']['message'])) {
+            $error_msg .= ' - ' . $data['error']['message'];
+        } elseif (is_string($raw)) {
+            $error_msg .= ' - ' . substr($raw, 0, 200);
+        }
+        return new WP_Error('gemini_api_error', $error_msg, $raw);
     }
 
     // Extract text

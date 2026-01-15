@@ -17,10 +17,11 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-set
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-cron.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-metabox.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-parser.php';
-require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-api.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-hooks.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-logs.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-auto-ai-news-poster-scanner.php';
 
-// --- Asset Enqueuing ---
+// Initialize Classest Enqueuing ---
 // Implementarea inline pentru CSS și JS (metodă testată pe server)
 add_action('admin_head', 'auto_ai_news_poster_inline_admin_css');
 add_action('admin_footer', 'auto_ai_news_poster_inline_admin_js');

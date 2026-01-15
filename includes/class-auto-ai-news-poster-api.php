@@ -170,6 +170,7 @@ class Auto_Ai_News_Poster_Api
         $extracted_content = '';
         $is_bulk_processing = false;
         $additional_instructions = '';
+        $log_prefix = $is_ajax_call ? 'MANUAL PROCESS:' : 'CRON PROCESS:';
 
         // --- Determine the source of the article content ---
         if ($is_ajax_call) {
@@ -200,10 +201,10 @@ class Auto_Ai_News_Poster_Api
             $bulk_links_str = $options['bulk_custom_source_urls'] ?? '';
             $bulk_links = array_filter(explode("\n", trim($bulk_links_str)), 'trim');
 
-            error_log('CRON PROCESS: Starting bulk processing. Total links in list: ' . count($bulk_links));
+            error_log($log_prefix . ' Starting bulk processing. Total links in list: ' . count($bulk_links));
 
             if (empty($bulk_links)) {
-                error_log('CRON PROCESS: Bulk links list is empty');
+                error_log($log_prefix . ' Bulk links list is empty');
                 if (isset($options['run_until_bulk_exhausted']) && $options['run_until_bulk_exhausted']) {
                     self::force_mode_change_to_manual();
                 }
@@ -212,7 +213,7 @@ class Auto_Ai_News_Poster_Api
 
             // Take the first link from the list
             $source_link = array_shift($bulk_links);
-            error_log('CRON PROCESS: Processing link: ' . $source_link . ' (Remaining links: ' . count($bulk_links) . ')');
+            error_log($log_prefix . ' Processing link: ' . $source_link . ' (Remaining links: ' . count($bulk_links) . ')');
 
             // Immediately update the option with the shortened list to prevent race conditions
             $options['bulk_custom_source_urls'] = implode("\n", $bulk_links);
@@ -222,12 +223,12 @@ class Auto_Ai_News_Poster_Api
             // For CRON jobs, determine mode from settings. The parameter $generation_mode is from manual metabox.
             $cron_generation_mode = $options['generation_mode'] ?? 'parse_link';
             if ($cron_generation_mode === 'ai_browsing') {
-                error_log('CRON PROCESS: Using AI browsing mode for link: ' . $source_link);
+                error_log($log_prefix . ' Using AI browsing mode for link: ' . $source_link);
                 // In CRON, generate_article_with_browsing will determine categories and titles
                 self::generate_article_with_browsing($source_link, null, null, $options['ai_browsing_instructions'] ?? '');
                 return;
             } else {
-                error_log('CRON PROCESS: Extracting content from URL: ' . $source_link);
+                error_log($log_prefix . ' Extracting content from URL: ' . $source_link);
                 $extracted_content = Auto_AI_News_Poster_Parser::extract_content_from_url($source_link);
             }
         }
@@ -240,10 +241,10 @@ class Auto_Ai_News_Poster_Api
         if (is_wp_error($extracted_content) || empty(trim($extracted_content))) {
             $error_message = is_wp_error($extracted_content) ? $extracted_content->get_error_message() : 'Extracted content is empty.';
             
-            error_log('CRON PROCESS: Failed to extract content from: ' . $source_link . ' - Error: ' . $error_message);
+            error_log($log_prefix . ' Failed to extract content from: ' . $source_link . ' - Error: ' . $error_message);
 
             if ($is_bulk_processing) {
-                error_log('CRON PROCESS: Re-adding link to bulk list: ' . $source_link);
+                error_log($log_prefix . ' Re-adding link to bulk list: ' . $source_link);
                 self::re_add_link_to_bulk($source_link, 'Failed to extract content');
             }
             if ($is_ajax_call) {
@@ -252,7 +253,7 @@ class Auto_Ai_News_Poster_Api
             return;
         }
         
-        error_log('CRON PROCESS: Content extracted successfully from: ' . $source_link . ' (Length: ' . strlen($extracted_content) . ' chars)');
+        error_log($log_prefix . ' Content extracted successfully from: ' . $source_link . ' (Length: ' . strlen($extracted_content) . ' chars)');
 
         // --- Validate extracted content for suspicious patterns ---
         $suspicious_patterns = [
@@ -268,9 +269,9 @@ class Auto_Ai_News_Poster_Api
         }
 
         if ($is_suspicious_content) {
-            error_log('CRON PROCESS: Suspicious content detected for: ' . $source_link);
+            error_log($log_prefix . ' Suspicious content detected for: ' . $source_link);
             if ($is_bulk_processing) {
-                error_log('CRON PROCESS: Re-adding link to bulk list due to suspicious content: ' . $source_link);
+                error_log($log_prefix . ' Re-adding link to bulk list due to suspicious content: ' . $source_link);
                 self::re_add_link_to_bulk($source_link, 'Suspicious content detected - possible parsing failure');
             }
             if ($is_ajax_call) {
@@ -284,16 +285,16 @@ class Auto_Ai_News_Poster_Api
 
 
         // --- Call OpenAI API ---
-        error_log('CRON PROCESS: Calling AI API for: ' . $source_link);
+        error_log($log_prefix . ' Calling AI API for: ' . $source_link);
         $prompt = generate_custom_source_prompt($extracted_content, $additional_instructions, $source_link);
         $response = call_ai_api($prompt);
 
         if (is_wp_error($response)) {
-            $error_message = 'OpenAI API Error: ' . $response->get_error_message();
-            error_log('CRON PROCESS: AI API error for: ' . $source_link . ' - ' . $error_message);
+            $error_message = 'AI API Error: ' . $response->get_error_message(); // Generic error message
+            error_log($log_prefix . ' AI API error for: ' . $source_link . ' - ' . $error_message);
 
             if ($is_bulk_processing) {
-                error_log('CRON PROCESS: Re-adding link to bulk list due to API error: ' . $source_link);
+                error_log($log_prefix . ' Re-adding link to bulk list due to API error: ' . $source_link);
                 self::re_add_link_to_bulk($source_link, 'OpenAI API Error');
             }
             if ($is_ajax_call) {
@@ -302,7 +303,7 @@ class Auto_Ai_News_Poster_Api
             return;
         }
         
-        error_log('CRON PROCESS: AI API response received for: ' . $source_link);
+        error_log($log_prefix . ' AI API response received for: ' . $source_link);
 
         // --- Process API Response ---
         $body = wp_remote_retrieve_body($response);
@@ -311,10 +312,10 @@ class Auto_Ai_News_Poster_Api
 
         if (empty($ai_content_json)) {
             $error_message = '❌ AI response is empty or in an unexpected format.';
-            error_log('CRON PROCESS: Empty AI response for: ' . $source_link);
+            error_log($log_prefix . ' Empty AI response for: ' . $source_link);
 
             if ($is_bulk_processing) {
-                error_log('CRON PROCESS: Re-adding link to bulk list due to empty AI response: ' . $source_link);
+                error_log($log_prefix . ' Re-adding link to bulk list due to empty AI response: ' . $source_link);
                 self::re_add_link_to_bulk($source_link, 'Empty AI Response');
             }
             if ($is_ajax_call) {
@@ -332,10 +333,10 @@ class Auto_Ai_News_Poster_Api
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             $error_message = '❌ Failed to decode article data JSON from AI response. Error: ' . json_last_error_msg();
-            error_log('CRON PROCESS: JSON decode error for: ' . $source_link . ' - ' . $error_message);
+            error_log($log_prefix . ' JSON decode error for: ' . $source_link . ' - ' . $error_message);
 
             if ($is_bulk_processing) {
-                error_log('CRON PROCESS: Re-adding link to bulk list due to JSON decode error: ' . $source_link);
+                error_log($log_prefix . ' Re-adding link to bulk list due to JSON decode error: ' . $source_link);
                 self::re_add_link_to_bulk($source_link, 'JSON Decode Error');
             }
             if ($is_ajax_call) {
@@ -346,10 +347,10 @@ class Auto_Ai_News_Poster_Api
 
         if (empty($article_data['content']) || empty($article_data['title'])) {
             $error_message = '❌ AI response was valid JSON but missing required "content" or "title".';
-            error_log('CRON PROCESS: Missing content/title in AI JSON for: ' . $source_link);
+            error_log($log_prefix . ' Missing content/title in AI JSON for: ' . $source_link);
 
             if ($is_bulk_processing) {
-                error_log('CRON PROCESS: Re-adding link to bulk list due to missing content: ' . $source_link);
+                error_log($log_prefix . ' Re-adding link to bulk list due to missing content: ' . $source_link);
                 self::re_add_link_to_bulk($source_link, 'Missing Content in AI JSON');
             }
             if ($is_ajax_call) {
@@ -358,7 +359,7 @@ class Auto_Ai_News_Poster_Api
             return;
         }
         
-        error_log('CRON PROCESS: Article data extracted successfully. Title: ' . $article_data['title']);
+        error_log($log_prefix . ' Article data extracted successfully. Title: ' . $article_data['title']);
 
         // --- Prepare and Save Post ---
         $post_id = $is_ajax_call ? (isset($_POST['post_id']) ? intval($_POST['post_id']) : null) : null;
@@ -375,15 +376,15 @@ class Auto_Ai_News_Poster_Api
             $post_data['ID'] = $post_id;
         }
 
-        error_log('CRON PROCESS: Saving post to database for: ' . $source_link);
+        error_log($log_prefix . ' Saving post to database for: ' . $source_link);
         $new_post_id = Post_Manager::insert_or_update_post($post_id, $post_data);
 
         if (is_wp_error($new_post_id)) {
             $error_message = '❌ Failed to save post to database: ' . $new_post_id->get_error_message();
-            error_log('CRON PROCESS: Failed to save post for: ' . $source_link . ' - ' . $error_message);
+            error_log($log_prefix . ' Failed to save post for: ' . $source_link . ' - ' . $error_message);
 
             if ($is_bulk_processing) {
-                error_log('CRON PROCESS: Re-adding link to bulk list due to DB save error: ' . $source_link);
+                error_log($log_prefix . ' Re-adding link to bulk list due to DB save error: ' . $source_link);
                 self::re_add_link_to_bulk($source_link, 'DB Save Error');
             }
             if ($is_ajax_call) {
@@ -392,7 +393,7 @@ class Auto_Ai_News_Poster_Api
             return;
         }
         
-        error_log('CRON PROCESS: Post saved successfully! Post ID: ' . $new_post_id . ' for link: ' . $source_link);
+        error_log($log_prefix . ' Post saved successfully! Post ID: ' . $new_post_id . ' for link: ' . $source_link);
 
         // --- Set Taxonomies and Meta ---
         Post_Manager::set_post_tags($new_post_id, $article_data['tags'] ?? []);
@@ -412,7 +413,7 @@ class Auto_Ai_News_Poster_Api
         if ($is_bulk_processing && !$is_ajax_call) {
             $post_time = time();
             update_option(AUTO_AI_NEWS_POSTER_LAST_POST_TIME, $post_time);
-            error_log('CRON PROCESS: Article published successfully! Post ID: ' . $new_post_id . ', Link: ' . $source_link . ', Time: ' . date('Y-m-d H:i:s', $post_time));
+            error_log($log_prefix . ' Article published successfully! Post ID: ' . $new_post_id . ', Link: ' . $source_link . ', Time: ' . date('Y-m-d H:i:s', $post_time));
         }
 
         // --- Generate Image if enabled ---
