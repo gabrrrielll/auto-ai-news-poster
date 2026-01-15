@@ -737,7 +737,8 @@ class Auto_Ai_News_Poster_Settings
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                 body: new URLSearchParams({
                     action: 'refresh_gemini_models',
-                    api_key: apiKey
+                    api_key: apiKey,
+                    nonce: '<?php echo wp_create_nonce('refresh_gemini_models_nonce'); ?>'
                 })
             })
             .then(r => r.json())
@@ -761,7 +762,8 @@ class Auto_Ai_News_Poster_Settings
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                 body: new URLSearchParams({
                     action: 'refresh_deepseek_models',
-                    api_key: apiKey
+                    api_key: apiKey,
+                    nonce: '<?php echo wp_create_nonce('refresh_deepseek_models_nonce'); ?>'
                 })
             })
             .then(r => r.json())
