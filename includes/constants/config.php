@@ -90,13 +90,8 @@ function call_openai_api($api_key, $prompt, $model = null, $api_url = URL_API_OP
     // Verificăm dacă este DeepSeek (care nu suportă încă json_schema strict)
     $is_deepseek = ($api_url === URL_API_DEEPSEEK);
 
-    // Mesajul de sistem de bază
-    $system_content = 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.';
-
-    // Dacă e DeepSeek, adăugăm instrucțiuni explicite despre JSON în prompt, deoarece nu folosim json_schema strict
-    if ($is_deepseek) {
-        $system_content .= " ERROR HANDLING: You MUST respond with valid JSON only. The JSON must follow this structure: {\"title\": \"...\", \"content\": \"...\", \"summary\": \"...\", \"category\": \"...\", \"tags\": [\"...\"], \"sources\": [\"...\"], \"source_titles\": [\"...\"]}";
-    }
+    // Mesajul de sistem de bază (centralizat în prompts.php)
+    $system_content = Auto_Ai_News_Poster_Prompts::get_universal_system_message($is_deepseek);
 
     $request_body = [
         'model' => $selected_model,
@@ -272,10 +267,14 @@ function call_gemini_api($api_key, $model, $prompt)
     $clean_model = str_replace('models/', '', $model);
     $endpoint = URL_API_GEMINI_BASE . urlencode($clean_model) . ':generateContent?key=' . urlencode($api_key);
 
+    // Prepend the universal system message to propertly guide Gemini as well (same as OpenAI)
+    $system_content = Auto_Ai_News_Poster_Prompts::get_universal_system_message(false);
+    $full_prompt = $system_content . "\n\n" . "[USER REQUEST]: " . $prompt;
+
     $body = [
         'contents' => [
             [
-                'parts' => [ ['text' => $prompt] ]
+                'parts' => [ ['text' => $full_prompt] ]
             ]
         ]
     ];

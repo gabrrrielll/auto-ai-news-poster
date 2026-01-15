@@ -330,4 +330,23 @@ IMPORTANT - Formatul promptului:
         
         return ['prefix' => $prefix, 'suffix' => $suffix];
     }
+
+    /**
+     * Returnează mesajul de sistem universal pentru toate modelele AI (OpenAI, DeepSeek, Gemini).
+     * Asigură consistența instrucțiunilor (Persona, Reguli, Formatare).
+     *
+     * @param bool $is_deepseek Dacă true, adaugă instrucțiuni specifice pentru JSON strict.
+     * @return string Mesajul de sistem.
+     */
+    public static function get_universal_system_message($is_deepseek = false)
+    {
+        $system_content = 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.';
+
+        // Dacă e DeepSeek, adăugăm instrucțiuni explicite despre JSON în prompt
+        if ($is_deepseek) {
+            $system_content .= " ERROR HANDLING: You MUST respond with valid JSON only. The JSON must follow this structure: {\"title\": \"...\", \"content\": \"...\", \"summary\": \"...\", \"category\": \"...\", \"tags\": [\"...\"], \"sources\": [\"...\"], \"source_titles\": [\"...\"]}";
+        }
+
+        return $system_content;
+    }
 }
