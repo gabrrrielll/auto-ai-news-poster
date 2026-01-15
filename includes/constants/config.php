@@ -8,10 +8,6 @@ const URL_API_OPENAI = URL_API_OPENAI_CHAT; // Backward compatibility alias
 const URL_API_IMAGE = URL_API_OPENAI_IMAGE;   // Backward compatibility alias
 const URL_API_DEEPSEEK = URL_API_DEEPSEEK_CHAT; // Backward compatibility alias
 
-// Models API Endpoints
-const URL_API_GEMINI_MODELS = 'https://generativelanguage.googleapis.com/v1beta/models';
-const URL_API_DEEPSEEK_MODELS = 'https://api.deepseek.com/models';
-
 function generate_custom_source_prompt($article_text_content, $additional_instructions = '', $source_link = '')
 {
     return Auto_Ai_News_Poster_Prompts::get_custom_source_prompt($article_text_content, $additional_instructions, $source_link);

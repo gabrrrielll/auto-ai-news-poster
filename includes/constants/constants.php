@@ -24,6 +24,7 @@ const URL_API_DEEPSEEK_CHAT = 'https://api.deepseek.com/chat/completions';
 const URL_API_DEEPSEEK_MODELS = 'https://api.deepseek.com/models';
 
 const URL_API_GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+const URL_API_GEMINI_MODELS = 'https://generativelanguage.googleapis.com/v1beta/models';
 const URL_API_GEMINI_IMAGEN_4 = 'https://generativelanguage.googleapis.com/v1beta/models/imagen-4:generateImages';
 
 const URL_API_VERTEX_BASE = 'https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:predict';
