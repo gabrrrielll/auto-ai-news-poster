@@ -112,4 +112,108 @@ class Auto_Ai_News_Poster_Scanner
 
         return false;
     }
+
+
+    /**
+     * Filters a list of candidate links using AI to identify relevant news.
+     *
+     * @param array $candidates Array of ['url' => ..., 'title' => ...] candidates.
+     * @param string $context The category or keyword context to look for (e.g. "Technology", "Politics").
+     * @return array|WP_Error Filtered array of candidates or WP_Error.
+     */
+    public static function filter_candidates_with_ai($candidates, $context = 'General News')
+    {
+        if (empty($candidates)) {
+            return [];
+        }
+
+        // Limit candidates to avoid token overflow (e.g., analyze top 50 matches only)
+        $candidates_slice = array_slice($candidates, 0, 50);
+        
+        // Prepare list for AI
+        $list_text = "";
+        foreach ($candidates_slice as $index => $item) {
+            $list_text .= "[$index] Title: " . $item['title'] . " | URL: " . $item['url'] . "\n";
+        }
+
+        // Construct Prompt
+        $prompt = "You are a professional news editor assistant. Your goal is to filter a list of potential article links and identify ONLY the ones that appear to be valid, significant NEWS articles about: \"$context\".\n\n";
+        $prompt .= "CRITERIA:\n";
+        $prompt .= "1. Exclude ads, homepage links, navigation items, subscriptions, or unrelated content.\n";
+        $prompt .= "2. Exclude old archives or generic pages.\n";
+        $prompt .= "3. Include ONLY specific news stories or articles relevant to the topic.\n\n";
+        $prompt .= "LIST TO ANALYZE:\n";
+        $prompt .= $list_text;
+        $prompt .= "\n\n";
+        $prompt .= "INSTRUCTIONS:\n";
+        $prompt .= "Return a JSON object with a single key 'valid_indices' containing an array of the integer indices (from the list above) that are valid news articles.\n";
+        $prompt .= "Example JSON format: {\"valid_indices\": [0, 3, 5, 12]}\n";
+        $prompt .= "Reply strictly with the JSON object and nothing else.";
+
+        // Call Centralized API
+        // Note: call_ai_api automatically handles provider selection (OpenAI, Gemini, DeepSeek)
+        $response = call_ai_api($prompt);
+
+        if (is_wp_error($response)) {
+            return $response;
+        }
+
+        // Parse Response
+        $body = $response['body'] ?? '';
+        // Handle nested structure if necessary (call_ai_api returns WP_Remote formatted array)
+        if (empty($body)) {
+             // Sometimes call_ai_api might return just the body string or different structure depending on provider wrapper
+             // Verification needed: call_ai_api usually returns a result that simulates WP remote response
+             return new WP_Error('empty_ai_response', 'AI returned empty response during filtering.');
+        }
+
+        // Decode JSON
+        // Clean markdown code blocks if any (common with Gemini)
+        $clean_body = $body;
+        if (preg_match('/```json\s*(.*?)\s*```/s', $body, $matches)) {
+            $clean_body = $matches[1];
+        } elseif (preg_match('/```\s*(.*?)\s*```/s', $body, $matches)) {
+             $clean_body = $matches[1];
+        }
+        
+        // Ensure we are parsing the CONTENT of the response, not the entire wrapper if it's nested
+        // call_ai_api for OpenAI returns json with choices... content.
+        // Let's decode the main response first.
+        $response_data = json_decode($body, true);
+        
+        // Extract content string based on OpenAI format (which call_ai_api standardizes to)
+        $ai_content = '';
+        if (isset($response_data['choices'][0]['message']['content'])) {
+            $ai_content = $response_data['choices'][0]['message']['content'];
+        } elseif (isset($response_data['candidates'][0]['content']['parts'][0]['text'])) { // Raw Gemini fallback
+             $ai_content = $response_data['candidates'][0]['content']['parts'][0]['text'];
+        } else {
+             // Fallback: maybe the body itself is the content if modified wrappers are involved
+             $ai_content = $body;
+        }
+
+        // Clean content again just in case it was inside the JSON structure
+        if (preg_match('/```json\s*(.*?)\s*```/s', $ai_content, $matches)) {
+            $ai_content = $matches[1];
+        } elseif (preg_match('/```\s*(.*?)\s*```/s', $ai_content, $matches)) {
+             $ai_content = $matches[1];
+        }
+
+        $result_json = json_decode($ai_content, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($result_json['valid_indices']) || !is_array($result_json['valid_indices'])) {
+             error_log("Site Analyzer AI JSON parse error: " . json_last_error_msg() . " | Content: " . substr($ai_content, 0, 200));
+             return new WP_Error('invalid_json', 'AI Filtering returned invalid JSON.');
+        }
+
+        // Reconstruct filtered list
+        $filtered = [];
+        foreach ($result_json['valid_indices'] as $idx) {
+            if (isset($candidates_slice[$idx])) {
+                $filtered[] = $candidates_slice[$idx];
+            }
+        }
+
+        return $filtered;
+    }
 }
