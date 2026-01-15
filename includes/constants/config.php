@@ -35,14 +35,38 @@ function generate_simple_text_prompt(string $system_message, string $user_messag
 
 // Funcție pentru apelarea API-ului OpenAI
 // Provider selection wrapper for text generation
+// Provider selection wrapper for text generation
 function call_ai_api($prompt)
 {
     $options = get_option('auto_ai_news_poster_settings');
-    // Temporar: doar OpenAI activ (Gemini/DeepSeek dezactivate chiar dacă există în setări).
-    $api_key = $options['chatgpt_api_key'] ?? '';
-    $selected_model = $options['ai_model'] ?? DEFAULT_AI_MODEL;
-    error_log('[AUTO_AI_NEWS_POSTER] AI request (provider=OpenAI) model=' . $selected_model . ' prompt_len=' . strlen((string) $prompt) . ' prompt_preview=' . substr((string) $prompt, 0, 250));
-    return call_openai_api($api_key, $prompt);
+    $provider = $options['api_provider'] ?? 'openai';
+    
+    // Logging start request
+    error_log('[AUTO_AI_NEWS_POSTER] AI request details START');
+    error_log('Provider: ' . $provider);
+    error_log('Prompt Length: ' . strlen((string) $prompt));
+    error_log('Prompt Preview: ' . substr((string) $prompt, 0, 500) . '...');
+
+    if ($provider === 'gemini') {
+        $api_key = $options['gemini_api_key'] ?? '';
+        $model = $options['gemini_model'] ?? 'gemini-1.5-pro';
+        error_log('Selected Model (Gemini): ' . $model);
+        return call_gemini_api($api_key, $model, $prompt);
+    } 
+    elseif ($provider === 'deepseek') {
+        $api_key = $options['deepseek_api_key'] ?? '';
+        $model = $options['deepseek_model'] ?? 'deepseek-chat';
+        error_log('Selected Model (DeepSeek): ' . $model);
+        // DeepSeek uses OpenAI-compatible API
+        return call_openai_api($api_key, $prompt, $model, URL_API_DEEPSEEK);
+    } 
+    else {
+        // Default OpenAI
+        $api_key = $options['chatgpt_api_key'] ?? '';
+        $model = $options['ai_model'] ?? DEFAULT_AI_MODEL;
+        error_log('Selected Model (OpenAI): ' . $model);
+        return call_openai_api($api_key, $prompt, $model, URL_API_OPENAI);
+    }
 }
 
 function call_openai_api($api_key, $prompt, $model = null, $api_url = URL_API_OPENAI)
@@ -281,8 +305,22 @@ function call_gemini_api($api_key, $model, $prompt)
         $text = $data['candidates'][0]['content']['parts'][0]['text'];
     }
     
+    // Log raw response for debugging
+    error_log('[AUTO_AI_NEWS_POSTER] Gemini Raw Response: ' . substr($raw, 0, 1000));
+
     // Simulăm structura de răspuns OpenAI pentru compatibilitate cu functiile existente
-    $simulated_choices = [ 'choices' => [ ['message' => ['content' => $text]] ] ];
+    // Structure: choices[0].message.content = JSON string
+    // Gemini usually returns plain text, but our prompt asks for JSON.
+    // If text contains ```json ... ```, strip it.
+    
+    $clean_text = $text;
+    if (preg_match('/```json\s*(.*?)\s*```/s', $text, $matches)) {
+        $clean_text = $matches[1];
+    } elseif (preg_match('/```\s*(.*?)\s*```/s', $text, $matches)) {
+         $clean_text = $matches[1];
+    }
+
+    $simulated_choices = [ 'choices' => [ ['message' => ['content' => $clean_text]] ] ];
     
     // Returnăm un array care simulează structura de răspuns a wp_remote_post
     return [
