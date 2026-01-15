@@ -722,7 +722,7 @@ class Auto_Ai_News_Poster_Settings
             });
         }
 
-        }
+
 
         function refreshGeminiModels() {
             const apiKey = document.getElementById('gemini_api_key').value;
