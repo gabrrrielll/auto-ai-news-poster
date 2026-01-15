@@ -36,11 +36,21 @@ function generate_simple_text_prompt(string $system_message, string $user_messag
 // Funcție pentru apelarea API-ului OpenAI
 // Provider selection wrapper for text generation
 // Provider selection wrapper for text generation
-function call_ai_api($prompt)
+/**
+ * Provider selection wrapper for text generation
+ * 
+ * @param string $prompt The user prompt.
+ * @param array $args Optional arguments: ['system_message' => ..., 'response_format' => ...]
+ */
+function call_ai_api($prompt, $args = [])
 {
     $options = get_option('auto_ai_news_poster_settings');
     $provider = $options['api_provider'] ?? 'openai';
     
+    // Extract optional args for flexibility
+    $system_message = $args['system_message'] ?? null;
+    $response_format = $args['response_format'] ?? null;
+
     // Logging start request
     error_log('[AUTO_AI_NEWS_POSTER] AI request details START');
     error_log('Provider: ' . $provider);
@@ -51,27 +61,26 @@ function call_ai_api($prompt)
         $api_key = $options['gemini_api_key'] ?? '';
         $model = $options['gemini_model'] ?? 'gemini-1.5-pro';
         error_log('Selected Model (Gemini): ' . $model);
-        return call_gemini_api($api_key, $model, $prompt);
+        return call_gemini_api($api_key, $model, $prompt, $system_message);
     } 
     elseif ($provider === 'deepseek') {
         $api_key = $options['deepseek_api_key'] ?? '';
         $model = $options['deepseek_model'] ?? 'deepseek-chat';
         error_log('Selected Model (DeepSeek): ' . $model);
         // DeepSeek uses OpenAI-compatible API
-        return call_openai_api($api_key, $prompt, $model, URL_API_DEEPSEEK);
+        return call_openai_api($api_key, $prompt, $model, URL_API_DEEPSEEK, $system_message, $response_format);
     } 
     else {
         // Default OpenAI
         $api_key = $options['chatgpt_api_key'] ?? '';
         $model = $options['ai_model'] ?? DEFAULT_AI_MODEL;
         error_log('Selected Model (OpenAI): ' . $model);
-        return call_openai_api($api_key, $prompt, $model, URL_API_OPENAI);
+        return call_openai_api($api_key, $prompt, $model, URL_API_OPENAI, $system_message, $response_format);
     }
 }
 
-function call_openai_api($api_key, $prompt, $model = null, $api_url = URL_API_OPENAI)
+function call_openai_api($api_key, $prompt, $model = null, $api_url = URL_API_OPENAI, $system_message = null, $response_format = null)
 {
-
     // Obținem modelul selectat din setări (doar dacă nu e specificat explicit)
     $selected_model = $model;
     if (empty($selected_model)) {
@@ -79,19 +88,14 @@ function call_openai_api($api_key, $prompt, $model = null, $api_url = URL_API_OP
         $selected_model = $options['ai_model'] ?? DEFAULT_AI_MODEL;
     }
 
-
-    // Preluăm setările pentru a vedea dacă trebuie să generăm etichete
-    // $options = get_option('auto_ai_news_poster_settings', []); // Deja preluat mai sus
-    // $generate_tags_option = $options['generate_tags'] ?? 'yes'; // Nu mai este necesar aici pentru a condiționa required
-
-    // Setăm toate proprietățile ca fiind obligatorii (inclusiv tags)
-    $required_properties = ['title', 'content', 'summary', 'category', 'tags', 'sources', 'source_titles'];
-
     // Verificăm dacă este DeepSeek (care nu suportă încă json_schema strict)
     $is_deepseek = ($api_url === URL_API_DEEPSEEK);
 
-    // Mesajul de sistem de bază (centralizat în prompts.php)
-    $system_content = Auto_Ai_News_Poster_Prompts::get_universal_system_message($is_deepseek);
+    // Mesajul de sistem: folosește parametrul dacă e prezent, altfel fallback la cel universal
+    $system_content = $system_message;
+    if (empty($system_content)) {
+        $system_content = Auto_Ai_News_Poster_Prompts::get_universal_system_message($is_deepseek);
+    }
 
     $request_body = [
         'model' => $selected_model,
@@ -99,65 +103,47 @@ function call_openai_api($api_key, $prompt, $model = null, $api_url = URL_API_OP
             ['role' => 'system', 'content' => $system_content],
             ['role' => 'user', 'content' => $prompt],
         ],
-        'max_completion_tokens' => 8000, // Limita safe pentru majoritatea modelelor
+        'max_completion_tokens' => 8000,
     ];
 
-    if ($is_deepseek) {
-        // DeepSeek folosește 'json_object' standard
-        $request_body['response_format'] = ['type' => 'json_object'];
+    // Response Format logic
+    if ($response_format) {
+         // Dacă avem format explicit (ex: de la Site Analyzer)
+         // DeepSeek nu suportă json_schema strict, așa că facem fallback la json_object
+         if ($is_deepseek && isset($response_format['type']) && $response_format['type'] === 'json_schema') {
+             $request_body['response_format'] = ['type' => 'json_object'];
+         } else {
+             $request_body['response_format'] = $response_format;
+         }
     } else {
-        // OpenAI folosește 'json_schema' pentru Structured Outputs
-        $request_body['response_format'] = [
-            'type' => 'json_schema',
-            'json_schema' => [
-                'name' => 'article_response',
-                'strict' => true,
-                'schema' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'title' => [
-                            'type' => 'string',
-                            'description' => 'Titlul articolului generat'
+        // Fallback la schema de articol (DEFAULT)
+        if ($is_deepseek) {
+            // DeepSeek folosește 'json_object' standard
+            $request_body['response_format'] = ['type' => 'json_object'];
+        } else {
+            // OpenAI folosește 'json_schema' pentru Structured Outputs (Articol)
+            $request_body['response_format'] = [
+                'type' => 'json_schema',
+                'json_schema' => [
+                    'name' => 'article_response',
+                    'strict' => true,
+                    'schema' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'title' => ['type' => 'string'],
+                            'content' => ['type' => 'string'],
+                            'summary' => ['type' => 'string'],
+                            'category' => ['type' => 'string'],
+                            'tags' => ['type' => 'array', 'items' => ['type' => 'string']],
+                            'sources' => ['type' => 'array', 'items' => ['type' => 'string']],
+                            'source_titles' => ['type' => 'array', 'items' => ['type' => 'string']]
                         ],
-                        'content' => [
-                            'type' => 'string',
-                            'description' => 'Conținutul complet al articolului generat'
-                        ],
-                        'summary' => [
-                            'type' => 'string',
-                            'description' => 'Un rezumat al articolului generat'
-                        ],
-                        'category' => [
-                            'type' => 'string',
-                            'description' => 'Categoria articolului generat'
-                        ],
-                        'tags' => [
-                            'type' => 'array',
-                            'description' => 'Etichete relevante pentru articol',
-                            'items' => [
-                                'type' => 'string'
-                            ]
-                        ],
-                        'sources' => [
-                            'type' => 'array',
-                            'description' => 'URL-urile complete ale știrilor citite',
-                            'items' => [
-                                'type' => 'string'
-                            ]
-                        ],
-                        'source_titles' => [
-                            'type' => 'array',
-                            'description' => 'Titlurile exacte ale articolelor parsate si citite',
-                            'items' => [
-                                'type' => 'string'
-                            ]
-                        ]
-                    ],
-                    'required' => $required_properties,
-                    'additionalProperties' => false
+                        'required' => ['title', 'content', 'summary', 'category', 'tags', 'sources', 'source_titles'],
+                        'additionalProperties' => false
+                    ]
                 ]
-            ]
-        ];
+            ];
+        }
     }
 
     // --- Debug logs: model + message payload preview (fără chei API) ---
@@ -257,7 +243,7 @@ function call_openai_image_api($api_key, $dalle_prompt, $feedback = '')
 }
 
 // --- Google Gemini (text) ---
-function call_gemini_api($api_key, $model, $prompt)
+function call_gemini_api($api_key, $model, $prompt, $system_message = null)
 {
     if (empty($api_key)) {
         return new WP_Error('gemini_missing_key', 'Missing Gemini API key');
@@ -267,8 +253,12 @@ function call_gemini_api($api_key, $model, $prompt)
     $clean_model = str_replace('models/', '', $model);
     $endpoint = URL_API_GEMINI_BASE . urlencode($clean_model) . ':generateContent?key=' . urlencode($api_key);
 
-    // Prepend the universal system message to propertly guide Gemini as well (same as OpenAI)
-    $system_content = Auto_Ai_News_Poster_Prompts::get_universal_system_message(false);
+    // Mesajul de sistem: folosește parametrul dacă e prezent, altfel fallback la cel universal
+    $system_content = $system_message;
+    if (empty($system_content)) {
+        $system_content = Auto_Ai_News_Poster_Prompts::get_universal_system_message(false);
+    }
+    
     $full_prompt = $system_content . "\n\n" . "[USER REQUEST]: " . $prompt;
 
     $body = [

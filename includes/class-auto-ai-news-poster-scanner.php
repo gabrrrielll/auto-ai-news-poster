@@ -137,7 +137,7 @@ class Auto_Ai_News_Poster_Scanner
         }
 
         // Construct Prompt
-        $prompt = "You are a professional news editor assistant. Your goal is to filter a list of potential article links and identify ONLY the ones that appear to be valid, significant NEWS articles about: \"$context\".\n\n";
+        $prompt = "Identify ONLY the ones that appear to be valid, significant NEWS articles about: \"$context\".\n\n";
         $prompt .= "CRITERIA:\n";
         $prompt .= "1. Exclude ads, homepage links, navigation items, subscriptions, or unrelated content.\n";
         $prompt .= "2. Exclude old archives or generic pages.\n";
@@ -145,14 +145,37 @@ class Auto_Ai_News_Poster_Scanner
         $prompt .= "LIST TO ANALYZE:\n";
         $prompt .= $list_text;
         $prompt .= "\n\n";
-        $prompt .= "INSTRUCTIONS:\n";
-        $prompt .= "Return a JSON object with a single key 'valid_indices' containing an array of the integer indices (from the list above) that are valid news articles.\n";
-        $prompt .= "Example JSON format: {\"valid_indices\": [0, 3, 5, 12]}\n";
-        $prompt .= "Reply strictly with the JSON object and nothing else.";
+        $prompt .= "Return a JSON object with 'valid_indices' array.";
 
-        // Call Centralized API
-        // Note: call_ai_api automatically handles provider selection (OpenAI, Gemini, DeepSeek)
-        $response = call_ai_api($prompt);
+        // System Message for Filtering
+        $system_message = "You are a professional news editor assistant. Your goal is to filter a list of potential article links and identify ONLY news articles about the requested topic. Respond only with valid JSON.";
+
+        // Response Format for Filtering (Structured Outputs for OpenAI)
+        $response_format = [
+            'type' => 'json_schema',
+            'json_schema' => [
+                'name' => 'link_filter_response',
+                'strict' => true,
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'valid_indices' => [
+                            'type' => 'array',
+                            'items' => ['type' => 'integer'],
+                            'description' => 'List of indices from the input list that are valid news articles.'
+                        ]
+                    ],
+                    'required' => ['valid_indices'],
+                    'additionalProperties' => false
+                ]
+            ]
+        ];
+
+        // Call Centralized API with custom context
+        $response = call_ai_api($prompt, [
+            'system_message' => $system_message,
+            'response_format' => $response_format
+        ]);
 
         if (is_wp_error($response)) {
             return $response;
