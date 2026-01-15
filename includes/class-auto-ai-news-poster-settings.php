@@ -16,7 +16,12 @@ class Auto_Ai_News_Poster_Settings
         // Handler AJAX pentru actualizarea listei de modele
         add_action('wp_ajax_refresh_openai_models', [self::class, 'ajax_refresh_openai_models']);
         add_action('wp_ajax_refresh_gemini_models', [self::class, 'ajax_refresh_gemini_models']);
+        add_action('wp_ajax_refresh_gemini_models', [self::class, 'ajax_refresh_gemini_models']);
         add_action('wp_ajax_refresh_deepseek_models', [self::class, 'ajax_refresh_deepseek_models']);
+        
+        // Site Analyzer AJAX
+        add_action('wp_ajax_auto_ai_scan_site', [self::class, 'ajax_scan_site']);
+        add_action('wp_ajax_auto_ai_import_selected', [self::class, 'ajax_import_selected']);
     }
 
 
@@ -196,6 +201,15 @@ class Auto_Ai_News_Poster_Settings
             'parse_link_ai_instructions',
             'Instrucțiuni AI (Parsare Link)',
             [self::class, 'parse_link_ai_instructions_callback'],
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
+            'auto_ai_news_poster_main_section'
+        );
+
+        // Site Analyzer (New Tab/Card above Source Links)
+        add_settings_field(
+            'site_analyzer_ui',
+            'Site Analyzer & Cleaner',
+            [self::class, 'site_analyzer_ui_callback'],
             AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'auto_ai_news_poster_main_section'
         );
@@ -1645,6 +1659,129 @@ class Auto_Ai_News_Poster_Settings
         echo '<p>Configurează setările principale ale pluginului.</p>';
     }
 
+    // --- Site Analyzer Tool ---
+
+    public static function site_analyzer_ui_callback()
+    {
+        ?>
+        <div class="settings-card site-analyzer-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">🔎</div>
+                <h3 class="settings-card-title">Site Analyzer (AI Filter)</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-row" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 2; min-width: 250px;">
+                        <label for="sa_target_url">Target URL (Site/Section)</label>
+                        <input type="text" id="sa_target_url" class="form-control" placeholder="https://example.com/category/tech">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <label for="sa_context">Context / Category</label>
+                        <input type="text" id="sa_context" class="form-control" placeholder="ex: Technology, Politics">
+                    </div>
+                    <div class="form-group">
+                        <button type="button" id="btn_scan_site" class="button button-primary button-large">
+                            🚀 Scan & Analyze
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="sa_loading_spinner" style="display:none; margin-top: 15px; color: #666;">
+                    <span class="spinner is-active" style="float:none; margin:0 5px 0 0;"></span> Scanning and Filtering with AI... This may take a minute.
+                </div>
+
+                <div id="sa_results_area" style="margin-top: 20px; display: none;">
+                    <h4>Analysis Results (<span id="sa_result_count">0</span>)</h4>
+                    <div class="sa-table-wrapper" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; background: #fff;">
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th class="check-column"><input type="checkbox" id="sa_select_all"></th>
+                                    <th>Title</th>
+                                    <th>URL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sa_results_body">
+                                <!-- Results will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button type="button" id="btn_sa_import_selected" class="button button-primary">
+                            Import Selected to Queue
+                        </button>
+                        <span id="sa_import_status" style="margin-left: 10px; font-weight: bold; color: green;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    public static function ajax_scan_site()
+    {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $url = sanitize_text_field($_POST['url'] ?? '');
+        $context = sanitize_text_field($_POST['context'] ?? 'General News');
+
+        if (empty($url)) {
+            wp_send_json_error('URL is required.');
+        }
+
+        // 2. Scan URL for Links
+        $candidates = Auto_Ai_News_Poster_Scanner::scan_url($url);
+
+        if (is_wp_error($candidates)) {
+            wp_send_json_error($candidates->get_error_message());
+        }
+
+        if (empty($candidates)) {
+            wp_send_json_error('No links found on the page.');
+        }
+
+        // 3. Filter with AI
+        $filtered = Auto_Ai_News_Poster_Scanner::filter_candidates_with_ai($candidates, $context);
+
+        if (is_wp_error($filtered)) {
+            wp_send_json_error('AI Filter Error: ' . $filtered->get_error_message());
+        }
+
+        wp_send_json_success([
+            'count' => count($filtered),
+            'candidates' => $filtered,
+            'original_count' => count($candidates)
+        ]);
+    }
+
+    public static function ajax_import_selected()
+    {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $items = isset($_POST['items']) ? $_POST['items'] : [];
+        if (empty($items) || !is_array($items)) {
+            wp_send_json_error('No items selected.');
+        }
+
+        // Add to the existing Bulk URL option
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $existing_urls = isset($options['bulk_custom_source_urls']) ? $options['bulk_custom_source_urls'] : '';
+        
+        $new_urls_str = "";
+        foreach ($items as $item) {
+            $new_urls_str .= $item['url'] . "\n";
+        }
+
+        $options['bulk_custom_source_urls'] = trim($existing_urls . "\n" . $new_urls_str);
+        
+        update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
+
+        wp_send_json_success('Imported ' . count($items) . ' links to the queue.');
+    }
 }
 
 Auto_Ai_News_Poster_Settings::init();
