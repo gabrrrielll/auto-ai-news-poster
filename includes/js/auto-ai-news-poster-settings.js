@@ -1,55 +1,58 @@
 jQuery(document).ready(function ($) {
     console.log("🚀 AANP Settings JS: Document ready. Starting setup.");
 
-    const generationModeRadios = $('input[name="auto_ai_news_poster_settings[generation_mode]"]');
-    console.log(`🔍 AANP Settings JS: Found ${generationModeRadios.length} mode switch radio buttons.`);
+    const modeTabs = $('.mode-tab');
+    const generationModeHidden = $('#generation_mode_hidden');
 
     function setupConditionalFields() {
         console.log("🔄 AANP Settings JS: Running setupConditionalFields...");
         $('.settings-group').each(function (index) {
             const row = $(this).closest('tr');
-            let addedClass = '';
             if ($(this).hasClass('settings-group-parse_link')) {
                 row.addClass('settings-row-parse_link');
-                addedClass = 'settings-row-parse_link';
             }
             if ($(this).hasClass('settings-group-ai_browsing')) {
                 row.addClass('settings-row-ai_browsing');
-                addedClass = 'settings-row-ai_browsing';
             }
-            console.log(`   - Tagging row ${index} with class: ${addedClass}`);
+            if ($(this).hasClass('settings-group-tasks')) {
+                row.addClass('settings-row-tasks');
+            }
         });
         console.log("✅ AANP Settings JS: Finished tagging parent rows.");
     }
 
     function toggleSettingsVisibility() {
-        console.log("👁️ AANP Settings JS: toggleSettingsVisibility triggered.");
-        if (!generationModeRadios.length) {
-            console.log("   - No radio buttons found. Exiting.");
-            return;
-        }
+        const selectedMode = generationModeHidden.val() || 'parse_link';
+        console.log(`👁️ AANP Settings JS: Toggling visibility for mode: "${selectedMode}"`);
 
-        const selectedMode = $('input[name="auto_ai_news_poster_settings[generation_mode]"]:checked').val();
-        console.log(`   - Selected mode is: "${selectedMode}"`);
-
+        // Hide all conditional rows
         $('tr[class*="settings-row-"]').hide();
-        console.log("   - All conditional rows have been hidden.");
+        $('.settings-group').removeClass('active');
+        $('.tab-description').hide();
 
-        const classToShow = '.settings-row-' + selectedMode;
-        $(classToShow).show();
-        console.log(`   - Attempting to show rows with class: "${classToShow}"`);
-        console.log(`   - Found ${$(classToShow).length} rows to show.`);
+        // Show active mode groups
+        const rowsToShow = '.settings-row-' + selectedMode;
+        $(rowsToShow).show();
+        $('.settings-group-' + selectedMode).addClass('active');
+        $('#tab-description-' + selectedMode).fadeIn();
+
+        console.log(`   - Showing rows with class: "${selectedMode}"`);
     }
+
+    // Tab Click Handler
+    modeTabs.on('click', function () {
+        const mode = $(this).data('mode');
+        console.log("�️ AANP Settings JS: Tab clicked:", mode);
+
+        modeTabs.removeClass('active');
+        $(this).addClass('active');
+
+        generationModeHidden.val(mode);
+        toggleSettingsVisibility();
+    });
 
     setupConditionalFields();
-
-    if (generationModeRadios.length) {
-        console.log("🔗 AANP Settings JS: Attaching 'change' event listener to radio buttons.");
-        toggleSettingsVisibility();
-        generationModeRadios.on('change', toggleSettingsVisibility);
-    } else {
-        console.log("⚠️ AANP Settings JS: No radio buttons found to attach event listener.");
-    }
+    toggleSettingsVisibility();
     // Event listener for Scan button
     $('#btn_scan_site').on('click', function () {
         var context = $('#sa_context').val();

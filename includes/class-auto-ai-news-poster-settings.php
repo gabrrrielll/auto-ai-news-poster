@@ -332,25 +332,46 @@ class Auto_Ai_News_Poster_Settings
         $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $generation_mode = $options['generation_mode'] ?? 'parse_link';
         ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">🧠</div>
-                <h3 class="settings-card-title">Mod Principal de Operare</h3>
+        <div class="settings-card no-padding" style="box-shadow: none; border: none; background: transparent;">
+            <div class="mode-tabs-container">
+                <ul class="mode-tabs">
+                    <li class="mode-tab <?php echo ($generation_mode === 'parse_link') ? 'active' : ''; ?>" data-mode="parse_link">
+                        <span class="tab-icon">🔗</span> Parsare Link
+                    </li>
+                    <li class="mode-tab <?php echo ($generation_mode === 'ai_browsing') ? 'active' : ''; ?>" data-mode="ai_browsing">
+                        <span class="tab-icon">🌐</span> Generare AI
+                    </li>
+                    <li class="mode-tab <?php echo ($generation_mode === 'tasks') ? 'active' : ''; ?>" data-mode="tasks">
+                        <span class="tab-icon">📋</span> Taskuri
+                    </li>
+                </ul>
             </div>
-            <div class="settings-card-content">
-                <div class="form-group">
-                    <label class="control-label">Alege cum vrei să generezi articolele</label>
-                    <div class="mode-switch">
-                        <input type="radio" id="mode_parse_link" name="auto_ai_news_poster_settings[generation_mode]" value="parse_link" <?php checked($generation_mode, 'parse_link'); ?>>
-                        <label for="mode_parse_link">Parsare Link</label>
+            <input type="hidden" id="generation_mode_hidden" name="auto_ai_news_poster_settings[generation_mode]" value="<?php echo esc_attr($generation_mode); ?>">
+            
+            <div class="settings-card-content" style="padding: 10px 0 20px 0;">
+                <div id="tab-description-parse_link" class="tab-description" style="display: <?php echo ($generation_mode === 'parse_link') ? 'block' : 'none'; ?>;">
+                    <p class="form-text text-muted"><b>Parsare Link:</b> Plugin-ul va prelua conținut de la un link specific din lista de surse sau din coada de parsare.</p>
+                </div>
+                <div id="tab-description-ai_browsing" class="tab-description" style="display: <?php echo ($generation_mode === 'ai_browsing') ? 'block' : 'none'; ?>;">
+                    <p class="form-text text-muted"><b>Generare AI:</b> AI-ul va căuta o știre nouă pe internet, folosind sursele de informare și categoria specificată.</p>
+                </div>
+                <div id="tab-description-tasks" class="tab-description" style="display: <?php echo ($generation_mode === 'tasks') ? 'block' : 'none'; ?>;">
+                    <p class="form-text text-muted"><b>Taskuri:</b> Gestionarea și monitorizarea proceselor de fundal și a sarcinilor programate.</p>
+                </div>
+            </div>
+        </div>
 
-                        <input type="radio" id="mode_ai_browsing" name="auto_ai_news_poster_settings[generation_mode]" value="ai_browsing" <?php checked($generation_mode, 'ai_browsing'); ?>>
-                        <label for="mode_ai_browsing">Generare AI</label>
+        <!-- Group: Tasks (Placeholder Card) -->
+        <div class="settings-group settings-group-tasks <?php echo ($generation_mode === 'tasks') ? 'active' : ''; ?>">
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">⚙️</div>
+                    <h3 class="settings-card-title">Gestionare Taskuri</h3>
+                </div>
+                <div class="settings-card-content" style="border-top: 1px solid #eee;">
+                    <div class="alert alert-info" style="margin:0;">
+                        Sectiunea <strong>Taskuri</strong> va fi disponibilă în curând. Aici veți putea configura sarcini complexe de automatizare și reguli specifice pentru AI.
                     </div>
-                    <small class="form-text text-muted" style="margin-top: 10px; display: block;">
-                        <b>Parsare Link:</b> Plugin-ul va prelua conținut de la un link specific din lista de surse.<br>
-                        <b>Generare AI:</b> AI-ul va căuta o știre nouă pe internet, folosind sursele de informare și categoria specificată.
-                    </small>
                 </div>
             </div>
         </div>
