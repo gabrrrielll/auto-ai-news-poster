@@ -204,20 +204,20 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_main_section'
         );
 
+        // Site Analyzer (New Tab/Card above Source Links)
+        add_settings_field(
+            'site_analyzer_ui',
+            'Site Analyzer & Cleaner',
+            [self::class, 'site_analyzer_ui_callback'],
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
+            'auto_ai_news_poster_main_section'
+        );
+
         // Camp pentru lista de linkuri bulk
         add_settings_field(
             'bulk_custom_source_urls',
             'Lista de Linkuri Sursă',
             [self::class, 'bulk_custom_source_urls_callback'],
-            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
-            'auto_ai_news_poster_main_section'
-        );
-
-        // Site Analyzer (New Tab/Card below Source Links)
-        add_settings_field(
-            'site_analyzer_ui',
-            'Site Analyzer & Cleaner',
-            [self::class, 'site_analyzer_ui_callback'],
             AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'auto_ai_news_poster_main_section'
         );
@@ -1745,53 +1745,55 @@ class Auto_Ai_News_Poster_Settings
     public static function site_analyzer_ui_callback()
     {
         ?>
-        <div class="settings-card site-analyzer-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">🔎</div>
-                <h3 class="settings-card-title">Site Analyzer (AI Filter)</h3>
-            </div>
-            <div class="settings-card-content">
-                <div class="form-row" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
-                    <div class="form-group" style="flex: 2; min-width: 150px;">
-                        <label for="sa_context">Context / Category</label>
-                        <input type="text" id="sa_context" class="form-control" placeholder="ex: Technology, Politics">
-                    </div>
-                    <div class="form-group" style="flex: 1; min-width: 100px;">
-                        <label for="sa_max_links">Max Links to Extract</label>
-                        <input type="number" id="sa_max_links" class="form-control" value="10" min="1" max="50">
-                    </div>
-                    <div class="form-group">
-                        <button type="button" id="btn_scan_site" class="button button-primary button-large">
-                            🚀 Scan & Analyze
-                        </button>
-                    </div>
+        <div class="settings-group settings-group-parse_link">
+            <div class="settings-card site-analyzer-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">🔎</div>
+                    <h3 class="settings-card-title">Site Analyzer (AI Filter)</h3>
                 </div>
-                
-                <div id="sa_loading_spinner" style="display:none; margin-top: 15px; color: #666;">
-                    <span class="spinner is-active" style="float:none; margin:0 5px 0 0;"></span> Scanning and Filtering with AI... This may take a minute.
-                </div>
+                <div class="settings-card-content">
+                    <div class="form-row" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 2; min-width: 150px;">
+                            <label for="sa_context">Context / Category</label>
+                            <input type="text" id="sa_context" class="form-control" placeholder="ex: Technology, Politics">
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label for="sa_max_links">Max Links to Extract</label>
+                            <input type="number" id="sa_max_links" class="form-control" value="10" min="1" max="50">
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="btn_scan_site" class="button button-primary button-large">
+                                🚀 Scan & Analyze
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="sa_loading_spinner" style="display:none; margin-top: 15px; color: #666;">
+                        <span class="spinner is-active" style="float:none; margin:0 5px 0 0;"></span> Scanning and Filtering with AI... This may take a minute.
+                    </div>
 
-                <div id="sa_results_area" style="margin-top: 20px; display: none;">
-                    <h4>Analysis Results (<span id="sa_result_count">0</span>)</h4>
-                    <div class="sa-table-wrapper" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; background: #fff;">
-                        <table class="widefat striped">
-                            <thead>
-                                <tr>
-                                    <th class="check-column"><input type="checkbox" id="sa_select_all"></th>
-                                    <th>Title</th>
-                                    <th>URL</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sa_results_body">
-                                <!-- Results will be injected here -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="margin-top: 15px;">
-                        <button type="button" id="btn_sa_import_selected" class="button button-primary">
-                            Import Selected to Queue
-                        </button>
-                        <span id="sa_import_status" style="margin-left: 10px; font-weight: bold; color: green;"></span>
+                    <div id="site_analyzer_results" style="margin-top: 20px; display: none;">
+                        <h4>Analysis Results (<span id="sa_result_count">0</span>)</h4>
+                        <div class="sa-table-wrapper" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; background: #fff;">
+                            <table class="widefat striped">
+                                <thead>
+                                    <tr>
+                                        <th class="check-column"><input type="checkbox" id="sa_select_all"></th>
+                                        <th>Title</th>
+                                        <th>URL</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sa_results_body">
+                                    <!-- Results will be injected here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <button type="button" id="btn_sa_import_selected" class="button button-primary">
+                                Import Selected to Queue
+                            </button>
+                            <span id="sa_import_status" style="margin-left: 10px; font-weight: bold; color: green;"></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1845,7 +1847,7 @@ class Auto_Ai_News_Poster_Settings
         wp_send_json_success([
             'count' => count($filtered),
             'candidates' => $filtered,
-            'original_count' => count($candidates)
+            'original_count' => count($all_candidates)
         ]);
     }
 
