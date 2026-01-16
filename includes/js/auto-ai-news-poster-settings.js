@@ -50,24 +50,34 @@ jQuery(document).ready(function ($) {
     } else {
         console.log("⚠️ AANP Settings JS: No radio buttons found to attach event listener.");
     }
-    // --- Site Analyzer JS Logic ---
-
+    // Event listener for Scan button
     $('#btn_scan_site').on('click', function () {
-        var url = $('#sa_target_url').val();
         var context = $('#sa_context').val();
 
-        if (!url) {
-            alert('Please enter a Target URL.');
+        // Collect all ACTIVE URLs from our new dynamic list
+        var activeUrls = [];
+        $('.bulk-link-row').each(function () {
+            var isActive = $(this).find('input[type="checkbox"]').is(':checked');
+            var url = $(this).find('input[type="text"]').val().trim();
+            if (isActive && url) {
+                activeUrls.push(url);
+            }
+        });
+
+        if (activeUrls.length === 0) {
+            alert('Please add and activate at least one source link in the list above.');
             return;
         }
 
-        $('#sa_loading_spinner').show();
-        $('#sa_results_area').hide();
+        var btn = $(this);
+        btn.prop('disabled', true).text('Scanning ' + activeUrls.length + ' sites...');
+        $('#sa_loading_spinner').show(); // Keep this line from original
+        $('#site_analyzer_results').hide(); // This seems to be a new ID, original was #sa_results_area
         $('#sa_results_body').empty();
 
         $.post(auto_ai_news_poster_ajax.ajax_url, {
             action: 'auto_ai_scan_site',
-            url: url,
+            urls: activeUrls, // Send array of URLs instead of single URL
             context: context,
             nonce: auto_ai_news_poster_ajax.check_settings_nonce
         }, function (response) {
@@ -128,35 +138,26 @@ jQuery(document).ready(function ($) {
             if (response.success) {
                 $('#sa_import_status').text('✅ ' + response.data).fadeIn().delay(3000).fadeOut();
 
-                // CRITICAL: Update the textarea on the page so the user sees the links 
-                // and they don't get overwritten when clicking "Save Changes"
-                var $textarea = $('#bulk_custom_source_urls');
-                var currentVal = $textarea.val().trim();
-                var newLinks = selected.map(function (item) { return item.url; }).join('\n');
+                // CRITICAL: Since we now use a dynamic table, we append new rows
+                var $tableBody = $('#bulk-links-table tbody');
+                selected.forEach(function (item) {
+                    var index = $tableBody.find('tr').length;
+                    var row = '<tr class="bulk-link-row">' +
+                        '<td style="text-align: center;"><input type="checkbox" name="auto_ai_news_poster_settings[bulk_custom_source_urls][' + index + '][active]" value="yes" checked></td>' +
+                        '<td><input type="text" name="auto_ai_news_poster_settings[bulk_custom_source_urls][' + index + '][url]" value="' + item.url + '" class="form-control" style="width: 100%;"></td>' +
+                        '<td><button type="button" class="btn btn-sm btn-danger remove-bulk-link">×</button></td>' +
+                        '</tr>';
+                    $tableBody.append(row);
+                });
 
-                var finalVal = currentVal;
-                if (finalVal.length > 0) {
-                    finalVal += '\n' + newLinks;
-                } else {
-                    finalVal = newLinks;
-                }
-
-                $textarea.val(finalVal);
-
-                // Clear checkboxes
+                // Clear analyzer checkboxes
                 $('.sa-item-checkbox').prop('checked', false);
                 $('#sa_select_all').prop('checked', false);
 
-                // Scroll to the bulk list to show progress
+                // Scroll to the bulk list
                 $('html, body').animate({
-                    scrollTop: $textarea.offset().top - 100
+                    scrollTop: $('#bulk-links-wrapper').offset().top - 100
                 }, 500);
-
-                // Flash the textarea to show it was updated
-                $textarea.css('background-color', '#e7f9ed');
-                setTimeout(function () {
-                    $textarea.css('background-color', '');
-                }, 1000);
 
             } else {
                 alert('Error: ' + response.data);

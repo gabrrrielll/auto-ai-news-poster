@@ -137,7 +137,11 @@ class Auto_Ai_News_Poster_Scanner
         }
 
         // Construct Prompt
-        $prompt = "Identify ONLY the ones that appear to be valid, significant NEWS articles about: \"$context\".\n\n";
+        $context_instruction = !empty($context) 
+            ? "Identify ONLY the ones that appear to be valid, significant NEWS articles about: \"$context\"."
+            : "Identify ONLY the ones that appear to be valid, significant NEWS articles about any interesting topic. You are free to pick any relevant news stories.";
+
+        $prompt = $context_instruction . "\n\n";
         $prompt .= "CRITERIA:\n";
         $prompt .= "1. Exclude ads, homepage links, navigation items, subscriptions, or unrelated content.\n";
         $prompt .= "2. Exclude old archives or generic pages.\n";

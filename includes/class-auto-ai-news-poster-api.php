@@ -198,25 +198,54 @@ class Auto_Ai_News_Poster_Api
         } else {
             // Automatic generation from the bulk list (CRON job)
             $is_bulk_processing = true;
-            $bulk_links_str = $options['bulk_custom_source_urls'] ?? '';
-            $bulk_links = array_filter(explode("\n", trim($bulk_links_str)), 'trim');
+            $bulk_links = $options['bulk_custom_source_urls'] ?? [];
 
-            error_log($log_prefix . ' Starting bulk processing. Total links in list: ' . count($bulk_links));
+            // Handle legacy string migration if necessary
+            if (!is_array($bulk_links)) {
+                $lines = explode("\n", (string)$bulk_links);
+                $bulk_links = [];
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (!empty($line)) {
+                        $bulk_links[] = ['url' => $line, 'active' => 'yes'];
+                    }
+                }
+            }
 
-            if (empty($bulk_links)) {
-                error_log($log_prefix . ' Bulk links list is empty');
-                if (isset($options['run_until_bulk_exhausted']) && $options['run_until_bulk_exhausted']) {
+            // Filter for only ACTIVE links
+            $active_links = array_filter($bulk_links, function($item) {
+                return isset($item['active']) && $item['active'] === 'yes';
+            });
+
+            error_log($log_prefix . ' Starting bulk processing. Total links: ' . count($bulk_links) . ' | Active: ' . count($active_links));
+
+            if (empty($active_links)) {
+                error_log($log_prefix . ' No active links found in bulk list');
+                if (isset($options['run_until_bulk_exhausted']) && $options['run_until_bulk_exhausted'] === 'yes') {
                     self::force_mode_change_to_manual();
                 }
                 return;
             }
 
-            // Take the first link from the list
-            $source_link = array_shift($bulk_links);
-            error_log($log_prefix . ' Processing link: ' . $source_link . ' (Remaining links: ' . count($bulk_links) . ')');
+            // Find the first active link's original index
+            $target_index = -1;
+            foreach ($bulk_links as $i => $item) {
+                if (isset($item['active']) && $item['active'] === 'yes') {
+                    $target_index = $i;
+                    $source_link = $item['url'];
+                    break;
+                }
+            }
 
-            // Immediately update the option with the shortened list to prevent race conditions
-            $options['bulk_custom_source_urls'] = implode("\n", $bulk_links);
+            if ($target_index === -1) return;
+
+            error_log($log_prefix . ' Processing active link: ' . $source_link);
+
+            // Remove the processed link and re-index
+            unset($bulk_links[$target_index]);
+            $bulk_links = array_values($bulk_links);
+            
+            $options['bulk_custom_source_urls'] = $bulk_links;
             update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
             set_transient('auto_ai_news_poster_force_refresh', 'yes', MINUTE_IN_SECONDS); // Signal frontend to refresh
 
