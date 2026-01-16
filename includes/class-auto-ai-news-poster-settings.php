@@ -231,6 +231,15 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_main_section'
         );
 
+        // 4. Tasks Placeholder
+        add_settings_field(
+            'tasks_placeholder',
+            'Gestionare Taskuri',
+            [self::class, 'tasks_management_placeholder_callback'],
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
+            'auto_ai_news_poster_main_section'
+        );
+
         // Camp pentru opțiunea de oprire la epuizarea listei
         add_settings_field(
             'run_until_bulk_exhausted',
@@ -360,23 +369,30 @@ class Auto_Ai_News_Poster_Settings
                 </div>
             </div>
         </div>
+    <?php
+}
 
-        <!-- Group: Tasks (Placeholder Card) -->
-        <div class="settings-group settings-group-tasks <?php echo ($generation_mode === 'tasks') ? 'active' : ''; ?>">
-            <div class="settings-card">
-                <div class="settings-card-header">
-                    <div class="settings-card-icon">⚙️</div>
-                    <h3 class="settings-card-title">Gestionare Taskuri</h3>
-                </div>
-                <div class="settings-card-content" style="border-top: 1px solid #eee;">
-                    <div class="alert alert-info" style="margin:0;">
-                        Sectiunea <strong>Taskuri</strong> va fi disponibilă în curând. Aici veți putea configura sarcini complexe de automatizare și reguli specifice pentru AI.
-                    </div>
+// Callback pentru placeholder-ul de Taskuri
+public static function tasks_management_placeholder_callback()
+{
+    $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+    $generation_mode = $options['generation_mode'] ?? 'parse_link';
+    ?>
+    <div class="settings-group settings-group-tasks <?php echo ($generation_mode === 'tasks') ? 'active' : ''; ?>">
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">⚙️</div>
+                <h3 class="settings-card-title">Gestionare Taskuri</h3>
+            </div>
+            <div class="settings-card-content" style="border-top: 1px solid #eee;">
+                <div class="alert alert-info" style="margin:0;">
+                    Sectiunea <strong>Taskuri</strong> va fi disponibilă în curând. Aici veți putea configura sarcini complexe de automatizare și reguli specifice pentru AI.
                 </div>
             </div>
         </div>
-        <?php
-    }
+    </div>
+    <?php
+}
 
     // Callback pentru campul Mod de publicare
     public static function mode_callback()
