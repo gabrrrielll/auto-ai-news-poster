@@ -425,14 +425,12 @@ class Auto_Ai_News_Poster_Api
             error_log($log_prefix . ' Article published successfully! Post ID: ' . $new_post_id . ', Link: ' . $source_link . ', Time: ' . date('Y-m-d H:i:s', $post_time));
         }
 
-        // --- Generate Image if enabled ---
-        if (isset($options['generate_image']) && $options['generate_image'] === 'yes') {
+        // --- Generate Image if enabled and not already present ---
+        if (isset($options['generate_image']) && $options['generate_image'] === 'yes' && !has_post_thumbnail($new_post_id)) {
             $prompt_for_dalle = !empty($post_data['post_excerpt']) ? $post_data['post_excerpt'] : wp_trim_words($post_data['post_content'], 100, '...');
             if (!empty($prompt_for_dalle)) {
                 self::generate_image_for_article($new_post_id, $prompt_for_dalle);
-            } else {
             }
-        } else {
         }
 
         if ($is_ajax_call) {
@@ -565,9 +563,9 @@ class Auto_Ai_News_Poster_Api
             update_option(AUTO_AI_NEWS_POSTER_LAST_POST_TIME, time());
         }
 
-        // Generăm imaginea dacă este activată opțiunea
+        // Generăm imaginea dacă este activată opțiunea și nu există deja una
         $prompt_for_dalle_browsing = !empty($article_data['meta_descriere']) ? $article_data['meta_descriere'] : wp_trim_words($article_data['continut'], 100, '...');
-        if (!empty($prompt_for_dalle_browsing) && isset($options['generate_image']) && $options['generate_image'] === 'yes') {
+        if (!empty($prompt_for_dalle_browsing) && isset($options['generate_image']) && $options['generate_image'] === 'yes' && !has_post_thumbnail($new_post_id)) {
             self::generate_image_for_article($new_post_id, $prompt_for_dalle_browsing);
         }
     }
