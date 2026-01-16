@@ -204,7 +204,16 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_main_section'
         );
 
-        // Site Analyzer (New Tab/Card above Source Links)
+        // 1. Scanning Sources (New Dynamic Table)
+        add_settings_field(
+            'scanning_source_urls',
+            'Surse principale de scanat',
+            [self::class, 'scanning_source_urls_callback'],
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
+            'auto_ai_news_poster_main_section'
+        );
+
+        // 2. Site Analyzer Tool
         add_settings_field(
             'site_analyzer_ui',
             'Site Analyzer & Cleaner',
@@ -213,10 +222,10 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_main_section'
         );
 
-        // Camp pentru lista de linkuri bulk
+        // 3. Article Queue (Restored Textarea)
         add_settings_field(
             'bulk_custom_source_urls',
-            'Lista de Linkuri Sursă',
+            'Lista de Linkuri pentru Parsare (Queue)',
             [self::class, 'bulk_custom_source_urls_callback'],
             AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'auto_ai_news_poster_main_section'
@@ -1020,48 +1029,70 @@ class Auto_Ai_News_Poster_Settings
     public static function bulk_custom_source_urls_callback()
     {
         $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
-        $bulk_links = $options['bulk_custom_source_urls'] ?? [];
+        $bulk_links = $options['bulk_custom_source_urls'] ?? '';
         
-        // Ensure it's an array (old data was a string)
-        if (!is_array($bulk_links)) {
-            $lines = explode("\n", $bulk_links);
-            $bulk_links = [];
-            foreach ($lines as $line) {
-                $line = trim($line);
-                if (!empty($line)) {
-                    $bulk_links[] = ['url' => $line, 'active' => 'yes'];
-                }
-            }
+        // Safety: If legacy data is an array, convert back to string
+        if (is_array($bulk_links)) {
+            $urls = array_map(function($item) { return $item['url']; }, $bulk_links);
+            $bulk_links = implode("\n", $urls);
+        }
+        ?>
+        <div class="settings-group settings-group-parse_link">
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">🗒️</div>
+                    <h3 class="settings-card-title">Coada de Parsare (Bulk List)</h3>
+                </div>
+                <div class="settings-card-content">
+                    <div class="form-group">
+                        <label class="control-label">Lista de linkuri de articole (Queue)</label>
+                        <textarea name="auto_ai_news_poster_settings[bulk_custom_source_urls]" id="bulk_custom_source_urls" class="form-control" rows="8" placeholder="Introduceți câte un link de articol pe fiecare rând"><?php echo esc_textarea($bulk_links); ?></textarea>
+                        <small class="form-text text-muted">Aceste linkuri vor fi parsite automat de către cron. Linkurile importate din Site Analyzer vor ajunge aici.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    public static function scanning_source_urls_callback()
+    {
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $scan_links = $options['scanning_source_urls'] ?? [];
+        
+        // Migration: if scanning_source_urls is empty but bulk_custom_source_urls contains an array, move it
+        if (empty($scan_links) && isset($options['bulk_custom_source_urls']) && is_array($options['bulk_custom_source_urls'])) {
+            $scan_links = $options['bulk_custom_source_urls'];
         }
         ?>
         <div class="settings-group settings-group-parse_link">
             <div class="settings-card">
                 <div class="settings-card-header">
                     <div class="settings-card-icon">🔗</div>
-                    <h3 class="settings-card-title">Lista de Linkuri Sursă pentru Parsare</h3>
+                    <h3 class="settings-card-title">Surse Principale de Scanat</h3>
                 </div>
                 <div class="settings-card-content">
-                    <div id="bulk-links-wrapper">
-                        <table class="wp-list-table widefat fixed striped" id="bulk-links-table">
+                    <div id="scanning-sources-wrapper">
+                        <table class="wp-list-table widefat fixed striped" id="scanning-sources-table">
                             <thead>
                                 <tr>
                                     <th style="width: 50px; text-align: center;">Activ</th>
-                                    <th>URL Sursă</th>
+                                    <th>URL Sursă (Site-uri de știri)</th>
                                     <th style="width: 50px;">Acțiuni</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if (!empty($bulk_links)): ?>
-                                    <?php foreach ($bulk_links as $index => $item): ?>
-                                        <tr class="bulk-link-row">
+                                <?php if (!empty($scan_links)): ?>
+                                    <?php foreach ($scan_links as $index => $item): ?>
+                                        <tr class="scan-link-row">
                                             <td style="text-align: center;">
-                                                <input type="checkbox" name="auto_ai_news_poster_settings[bulk_custom_source_urls][<?php echo $index; ?>][active]" value="yes" <?php checked($item['active'] ?? 'yes', 'yes'); ?>>
+                                                <input type="checkbox" name="auto_ai_news_poster_settings[scanning_source_urls][<?php echo $index; ?>][active]" value="yes" <?php checked($item['active'] ?? 'yes', 'yes'); ?>>
                                             </td>
                                             <td>
-                                                <input type="text" name="auto_ai_news_poster_settings[bulk_custom_source_urls][<?php echo $index; ?>][url]" value="<?php echo esc_url($item['url']); ?>" class="form-control" style="width: 100%;">
+                                                <input type="text" name="auto_ai_news_poster_settings[scanning_source_urls][<?php echo $index; ?>][url]" value="<?php echo esc_url($item['url']); ?>" class="form-control" style="width: 100%;" placeholder="https://example.com/">
                                             </td>
                                             <td>
-                                                <button type="button" class="btn btn-sm btn-danger remove-bulk-link">×</button>
+                                                <button type="button" class="btn btn-sm btn-danger remove-scan-link">×</button>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -1069,42 +1100,33 @@ class Auto_Ai_News_Poster_Settings
                             </tbody>
                         </table>
                         <div style="margin-top: 15px;">
-                            <button type="button" class="btn btn-primary" id="add-bulk-link">+ Adaugă link</button>
+                            <button type="button" class="btn btn-primary" id="add-scan-link">+ Adaugă sursă</button>
                         </div>
                     </div>
-                    <small class="form-text text-muted" style="margin-top: 10px; display: block;">
-                        Adaugă linkurile pe care vrei să le folosești. Doar cele bifate ca "Activ" vor fi luate în considerare de AI și de Site Analyzer.
-                    </small>
                 </div>
             </div>
         </div>
         <script>
             jQuery(document).ready(function($) {
-                $('#add-bulk-link').on('click', function() {
-                    var index = $('#bulk-links-table tbody tr').length;
-                    var row = '<tr class="bulk-link-row">' +
-                        '<td style="text-align: center;"><input type="checkbox" name="auto_ai_news_poster_settings[bulk_custom_source_urls][' + index + '][active]" value="yes" checked></td>' +
-                        '<td><input type="text" name="auto_ai_news_poster_settings[bulk_custom_source_urls][' + index + '][url]" value="" class="form-control" style="width: 100%;"></td>' +
-                        '<td><button type="button" class="btn btn-sm btn-danger remove-bulk-link">×</button></td>' +
+                $('#add-scan-link').on('click', function() {
+                    var index = $('#scanning-sources-table tbody tr').length;
+                    var row = '<tr class="scan-link-row">' +
+                        '<td style="text-align: center;"><input type="checkbox" name="auto_ai_news_poster_settings[scanning_source_urls][' + index + '][active]" value="yes" checked></td>' +
+                        '<td><input type="text" name="auto_ai_news_poster_settings[scanning_source_urls][' + index + '][url]" value="" class="form-control" style="width: 100%;"></td>' +
+                        '<td><button type="button" class="btn btn-sm btn-danger remove-scan-link">×</button></td>' +
                         '</tr>';
-                    $('#bulk-links-table tbody').append(row);
+                    $('#scanning-sources-table tbody').append(row);
                 });
 
-                $(document).on('click', '.remove-bulk-link', function() {
+                $(document).on('click', '.remove-scan-link', function() {
                     $(this).closest('tr').remove();
-                    // Re-index to ensure PHP processing is correct
-                    $('#bulk-links-table tbody tr').each(function(i) {
-                        $(this).find('input[type="checkbox"]').attr('name', 'auto_ai_news_poster_settings[bulk_custom_source_urls][' + i + '][active]');
-                        $(this).find('input[type="text"]').attr('name', 'auto_ai_news_poster_settings[bulk_custom_source_urls][' + i + '][url]');
+                    $('#scanning-sources-table tbody tr').each(function(i) {
+                        $(this).find('input[type="checkbox"]').attr('name', 'auto_ai_news_poster_settings[scanning_source_urls][' + i + '][active]');
+                        $(this).find('input[type="text"]').attr('name', 'auto_ai_news_poster_settings[scanning_source_urls][' + i + '][url]');
                     });
                 });
             });
         </script>
-        <style>
-            #bulk-links-table th { font-weight: bold; background: #f9f9f9; padding: 10px; }
-            #bulk-links-table td { vertical-align: middle; padding: 10px; }
-            .remove-bulk-link { padding: 2px 8px !important; }
-        </style>
         <?php
     }
 
@@ -1695,10 +1717,10 @@ class Auto_Ai_News_Poster_Settings
                     $sanitized[$key] = sanitize_text_field($value);
                 }
                 // Pentru textarea, folosim o sanitizare specifică
-                elseif ($key === 'news_sources' || $key === 'parse_link_ai_instructions' || $key === 'ai_browsing_instructions') {
+                elseif ($key === 'news_sources' || $key === 'parse_link_ai_instructions' || $key === 'ai_browsing_instructions' || $key === 'bulk_custom_source_urls') {
                     $sanitized[$key] = esc_textarea($value);
                 }
-                elseif ($key === 'bulk_custom_source_urls') {
+                elseif ($key === 'scanning_source_urls') {
                     $sanitized[$key] = [];
                     if (is_array($value)) {
                         foreach ($value as $item) {
@@ -1864,39 +1886,27 @@ class Auto_Ai_News_Poster_Settings
         }
 
         $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
-        $bulk_links = isset($options['bulk_custom_source_urls']) ? $options['bulk_custom_source_urls'] : [];
+        $bulk_links_string = isset($options['bulk_custom_source_urls']) ? $options['bulk_custom_source_urls'] : '';
         
-        // Handle legacy string migration if needed
-        if (!is_array($bulk_links)) {
-            $lines = explode("\n", $bulk_links);
-            $bulk_links = [];
-            foreach ($lines as $line) {
-                $line = trim($line);
-                if (!empty($line)) {
-                    $bulk_links[] = ['url' => $line, 'active' => 'yes'];
-                }
-            }
+        // Ensure it's handled as string for the queue
+        if (is_array($bulk_links_string)) {
+            $urls = array_map(function($item) { return $item['url']; }, $bulk_links_string);
+            $bulk_links_string = implode("\n", $urls);
         }
+
+        $existing_urls = explode("\n", $bulk_links_string);
+        $existing_urls = array_map('trim', $existing_urls);
+        $existing_urls = array_filter($existing_urls);
 
         foreach ($items as $item) {
-            $url = esc_url_raw($item['url']);
-            // Avoid duplicates
-            $exists = false;
-            foreach ($bulk_links as $existing) {
-                if ($existing['url'] === $url) {
-                    $exists = true;
-                    break;
-                }
-            }
-            if (!$exists) {
-                $bulk_links[] = [
-                    'url' => $url,
-                    'active' => 'yes'
-                ];
+            $url = esc_url_raw(trim($item['url']));
+            if (!empty($url) && !in_array($url, $existing_urls)) {
+                $existing_urls[] = $url;
             }
         }
 
-        $options['bulk_custom_source_urls'] = $bulk_links;
+        $options['bulk_custom_source_urls'] = implode("\n", $existing_urls);
+        update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
         update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
 
         wp_send_json_success('Imported ' . count($items) . ' links to the queue.');

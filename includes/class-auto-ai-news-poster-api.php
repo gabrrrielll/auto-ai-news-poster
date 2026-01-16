@@ -198,56 +198,36 @@ class Auto_Ai_News_Poster_Api
         } else {
             // Automatic generation from the bulk list (CRON job)
             $is_bulk_processing = true;
-            $bulk_links = $options['bulk_custom_source_urls'] ?? [];
+            $bulk_links_raw = isset($options['bulk_custom_source_urls']) ? $options['bulk_custom_source_urls'] : '';
 
-            // Handle legacy string migration if necessary
-            if (!is_array($bulk_links)) {
-                $lines = explode("\n", (string)$bulk_links);
-                $bulk_links = [];
-                foreach ($lines as $line) {
-                    $line = trim($line);
-                    if (!empty($line)) {
-                        $bulk_links[] = ['url' => $line, 'active' => 'yes'];
-                    }
-                }
+            // Ensure it's handled as string (queue)
+            if (is_array($bulk_links_raw)) {
+                $urls = array_map(function($item) { return $item['url']; }, $bulk_links_raw);
+                $bulk_links_raw = implode("\n", $urls);
             }
 
-            // Filter for only ACTIVE links
-            $active_links = array_filter($bulk_links, function($item) {
-                return isset($item['active']) && $item['active'] === 'yes';
-            });
+            $bulk_links = explode("\n", (string)$bulk_links_raw);
+            $bulk_links = array_map('trim', $bulk_links);
+            $bulk_links = array_filter($bulk_links);
 
-            error_log($log_prefix . ' Starting bulk processing. Total links: ' . count($bulk_links) . ' | Active: ' . count($active_links));
+            error_log($log_prefix . ' Starting bulk processing. Total links in queue: ' . count($bulk_links));
 
-            if (empty($active_links)) {
-                error_log($log_prefix . ' No active links found in bulk list');
+            if (empty($bulk_links)) {
+                error_log($log_prefix . ' No links found in bulk list (Queue)');
                 if (isset($options['run_until_bulk_exhausted']) && $options['run_until_bulk_exhausted'] === 'yes') {
                     self::force_mode_change_to_manual();
                 }
                 return;
             }
 
-            // Find the first active link's original index
-            $target_index = -1;
-            foreach ($bulk_links as $i => $item) {
-                if (isset($item['active']) && $item['active'] === 'yes') {
-                    $target_index = $i;
-                    $source_link = $item['url'];
-                    break;
-                }
-            }
+            // Get the first link from the queue
+            $source_link = array_shift($bulk_links);
+            error_log($log_prefix . ' Processing link: ' . $source_link);
 
-            if ($target_index === -1) return;
-
-            error_log($log_prefix . ' Processing active link: ' . $source_link);
-
-            // Remove the processed link and re-index
-            unset($bulk_links[$target_index]);
-            $bulk_links = array_values($bulk_links);
-            
-            $options['bulk_custom_source_urls'] = $bulk_links;
+            // Save the updated queue (with the processed link removed)
+            $options['bulk_custom_source_urls'] = implode("\n", $bulk_links);
             update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
-            set_transient('auto_ai_news_poster_force_refresh', 'yes', MINUTE_IN_SECONDS); // Signal frontend to refresh
+            set_transient('auto_ai_news_poster_force_refresh', 'yes', MINUTE_IN_SECONDS); // Signal settings to refresh visually if open
 
             // For CRON jobs, determine mode from settings. The parameter $generation_mode is from manual metabox.
             $cron_generation_mode = $options['generation_mode'] ?? 'parse_link';

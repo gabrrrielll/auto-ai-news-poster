@@ -55,9 +55,9 @@ jQuery(document).ready(function ($) {
         var context = $('#sa_context').val();
         var maxLinks = $('#sa_max_links').val() || 10;
 
-        // Collect all ACTIVE URLs from our new dynamic list
+        // Collect all ACTIVE URLs from our new dynamic list of SOURCES
         var activeUrls = [];
-        $('.bulk-link-row').each(function () {
+        $('.scan-link-row').each(function () {
             var isActive = $(this).find('input[type="checkbox"]').is(':checked');
             var url = $(this).find('input[type="text"]').val().trim();
             if (isActive && url) {
@@ -66,70 +66,73 @@ jQuery(document).ready(function ($) {
         });
 
         if (activeUrls.length === 0) {
-            alert('Please add and activate at least one source link in the list above.');
+            alert('Te rugăm să adaugi și să activezi cel puțin un link de sursă în tabelul "Surse principale de scanat" de mai sus.');
             return;
         }
 
         var btn = $(this);
         btn.prop('disabled', true).text('Scanning ' + activeUrls.length + ' sites...');
-        $('#sa_loading_spinner').show(); // Keep this line from original
-        $('#site_analyzer_results').hide(); // This seems to be a new ID, original was #sa_results_area
+        $('#sa_loading_spinner').show();
+        $('#site_analyzer_results').hide();
         $('#sa_results_body').empty();
 
         $.post(auto_ai_news_poster_ajax.ajax_url, {
             action: 'auto_ai_scan_site',
-            urls: activeUrls, // Send array of URLs instead of single URL
+            urls: activeUrls,
             context: context,
             max_links: maxLinks,
             nonce: auto_ai_news_poster_ajax.check_settings_nonce
         }, function (response) {
             $('#sa_loading_spinner').hide();
+            btn.prop('disabled', false).html('🚀 Scan & Analyze');
 
             if (response.success) {
                 var candidates = response.data.candidates;
-                $('#sa_result_count').text(response.data.count);
+                $('#sa_result_count').text(candidates.length);
 
-                if (candidates.length === 0) {
-                    alert('AI found no relevant articles matching your context.');
-                    return;
+                if (candidates.length > 0) {
+                    var html = '';
+                    candidates.forEach(function (item, index) {
+                        html += '<tr>' +
+                            '<td class="check-column"><input type="checkbox" class="sa-select-item" value="' + item.url + '" data-title="' + item.title + '"></td>' +
+                            '<td>' + item.title + '</td>' +
+                            '<td><a href="' + item.url + '" target="_blank">' + item.url + '</a></td>' +
+                            '</tr>';
+                    });
+                    $('#sa_results_body').html(html);
+                    $('#site_analyzer_results').fadeIn();
+                } else {
+                    alert('Nu am găsit niciun link relevant conform criteriilor AI.');
                 }
-
-                candidates.forEach(function (item, index) {
-                    var row = `<tr>
-                        <td><input type="checkbox" class="sa-item-checkbox" data-url="${item.url}" data-title="${item.title}" checked></td>
-                        <td>${item.title}</td>
-                        <td><a href="${item.url}" target="_blank">${item.url}</a></td>
-                    </tr>`;
-                    $('#sa_results_body').append(row);
-                });
-
-                $('#sa_results_area').fadeIn();
             } else {
-                alert('Error: ' + response.data);
+                alert('Eroare: ' + response.data);
             }
         });
     });
 
-    $('#sa_select_all').on('change', function () {
-        $('.sa-item-checkbox').prop('checked', $(this).is(':checked'));
+    // Select all logic
+    $(document).on('change', '#sa_select_all', function () {
+        $('.sa-select-item').prop('checked', $(this).is(':checked'));
     });
 
+    // Import logic
     $('#btn_sa_import_selected').on('click', function () {
         var selected = [];
-        $('.sa-item-checkbox:checked').each(function () {
+        $('.sa-select-item:checked').each(function () {
             selected.push({
-                url: $(this).data('url'),
+                url: $(this).val(),
                 title: $(this).data('title')
             });
         });
 
         if (selected.length === 0) {
-            alert('Please select at least one article.');
+            alert('Selectați cel puțin un link pentru import.');
             return;
         }
 
         var btn = $(this);
         btn.prop('disabled', true).text('Importing...');
+        $('#sa_import_status').text('');
 
         $.post(auto_ai_news_poster_ajax.ajax_url, {
             action: 'auto_ai_import_selected',
@@ -138,31 +141,39 @@ jQuery(document).ready(function ($) {
         }, function (response) {
             btn.prop('disabled', false).text('Import Selected to Queue');
             if (response.success) {
-                $('#sa_import_status').text('✅ ' + response.data).fadeIn().delay(3000).fadeOut();
+                $('#sa_import_status').text('Import reușit!').fadeIn().delay(3000).fadeOut();
 
-                // CRITICAL: Since we now use a dynamic table, we append new rows
-                var $tableBody = $('#bulk-links-table tbody');
-                selected.forEach(function (item) {
-                    var index = $tableBody.find('tr').length;
-                    var row = '<tr class="bulk-link-row">' +
-                        '<td style="text-align: center;"><input type="checkbox" name="auto_ai_news_poster_settings[bulk_custom_source_urls][' + index + '][active]" value="yes" checked></td>' +
-                        '<td><input type="text" name="auto_ai_news_poster_settings[bulk_custom_source_urls][' + index + '][url]" value="' + item.url + '" class="form-control" style="width: 100%;"></td>' +
-                        '<td><button type="button" class="btn btn-sm btn-danger remove-bulk-link">×</button></td>' +
-                        '</tr>';
-                    $tableBody.append(row);
+                // Update the textarea UI in real-time
+                var $textarea = $('#bulk_custom_source_urls');
+                var currentVal = $textarea.val().trim();
+                var newLinks = selected.map(function (item) { return item.url; });
+
+                // Add new links to textarea if not already there
+                var existingLinks = currentVal ? currentVal.split("\n").map(function (s) { return s.trim(); }) : [];
+                newLinks.forEach(function (link) {
+                    if (existingLinks.indexOf(link) === -1) {
+                        existingLinks.push(link);
+                    }
                 });
 
-                // Clear analyzer checkboxes
-                $('.sa-item-checkbox').prop('checked', false);
-                $('#sa_select_all').prop('checked', false);
+                $textarea.val(existingLinks.join("\n"));
 
-                // Scroll to the bulk list
+                // Scroll to the queue
                 $('html, body').animate({
-                    scrollTop: $('#bulk-links-wrapper').offset().top - 100
+                    scrollTop: $textarea.offset().top - 100
                 }, 500);
 
+                // Visual feedback for the textarea
+                $textarea.css('background-color', '#e7f9ed').delay(1000).queue(function (next) {
+                    $(this).css('background-color', '');
+                    next();
+                });
+
+                // Clear selection
+                $('.sa-select-item').prop('checked', false);
+                $('#sa_select_all').prop('checked', false);
             } else {
-                alert('Error: ' + response.data);
+                alert('Eroare la import: ' + response.data);
             }
         });
     });
