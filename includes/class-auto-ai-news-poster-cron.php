@@ -105,8 +105,13 @@ class Auto_Ai_News_Poster_Cron
                 }
                 
                 // Verifică dacă a trecut suficient timp
+                // Adăugăm o toleranță de 2 minute (120s) pentru a compensa timpul de execuție al AI-ului.
+                // WP-Cron programează următoarea rulare de la START-ul celei curente, dar last_post_time 
+                // se actualizează la FINAL. Fără toleranță, următoarea rulare ar fi refuzată de acest IF, 
+                // dublând efectiv intervalul.
                 $time_since_last_post = $current_time - $last_post_time;
-                if ($last_post_time > 0 && $time_since_last_post < $required_interval) {
+                $tolerance = 120; // 2 minute buffer
+                if ($last_post_time > 0 && $time_since_last_post < ($required_interval - $tolerance)) {
                     delete_transient($lock_key); // Eliberează lock-ul
                     return; // Oprește execuția dacă nu a trecut suficient timp
                 }
