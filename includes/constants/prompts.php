@@ -296,14 +296,14 @@ class Auto_Ai_News_Poster_Prompts
         $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $tasks_config = $options['tasks_config'] ?? [];
         
-        // Obținem setările de lungime a articolului (reutilizăm setările globale sau putem adăuga specifice)
-        $article_length_option = $options['article_length_option'] ?? 'same_as_source';
-        $min_length = $options['min_length'] ?? 800;
-        $max_length = $options['max_length'] ?? 1200;
+        // Obținem setările de lungime a articolului specifice pentru Tasks
+        $article_length_option = $tasks_config['article_length_option'] ?? 'same_as_source';
+        $min_length = $tasks_config['min_length'] ?? 800;
+        $max_length = $tasks_config['max_length'] ?? 1200;
 
         $length_instruction = ($article_length_option === 'set_limits' && $min_length && $max_length) 
             ? "Articolul trebuie să aibă între {$min_length} și {$max_length} de cuvinte."
-            : "Articolul trebuie să fie detaliat și cuprinzător.";
+            : "Articolul trebuie să fie detaliat, cuprinzător și bine structurat.";
 
         $prompt = "Ești un jurnalist expert. Sarcina ta este să scrii un articol de știri complet bazat pe următorul titlu: \"{$title}\".\n\n";
         

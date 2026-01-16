@@ -405,11 +405,12 @@ public static function tasks_management_placeholder_callback()
     ?>
     <div class="settings-group settings-group-tasks <?php echo ($generation_mode === 'tasks') ? 'active' : ''; ?>">
         
-        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
             <?php 
                 // Render the reusable components with 'tasks' context
                 self::render_ai_config_component('tasks');
                 self::render_cron_config_component('tasks');
+                self::render_article_length_component('tasks');
             ?>
         </div>
 
@@ -773,41 +774,9 @@ public static function tasks_management_placeholder_callback()
     // Select pentru dimensiunea articolului
     public static function article_length_option_callback()
     {
-        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
-        $selected_option = $options['article_length_option'] ?? 'same_as_source';
-        $min_length = $options['min_length'] ?? '';
-        $max_length = $options['max_length'] ?? '';
-
         ?>
-        <div class="settings-group">
-            <div class="settings-card">
-                <div class="settings-card-header">
-                    <div class="settings-card-icon">📏</div>
-                    <h3 class="settings-card-title">Configurare Dimensiune Articol</h3>
-                </div>
-                <div class="settings-card-content">
-                    <div class="form-group">
-                        <label class="control-label">Selectează dimensiunea articolului</label>
-                        <select name="auto_ai_news_poster_settings[article_length_option]" class="form-control">
-                            <option value="same_as_source" <?php selected($selected_option, 'same_as_source'); ?>>Aceiași dimensiune cu articolul preluat</option>
-                            <option value="set_limits" <?php selected($selected_option, 'set_limits'); ?>>Setează limite</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="control-label">Lungime minimă</label>
-                            <input type="number" name="auto_ai_news_poster_settings[min_length]" class="form-control"
-                                   value="<?php echo esc_attr($min_length); ?>" placeholder="Minim">
-                        </div>
-                        <div class="form-group">
-                            <label class="control-label">Lungime maximă</label>
-                            <input type="number" name="auto_ai_news_poster_settings[max_length]" class="form-control"
-                                   value="<?php echo esc_attr($max_length); ?>" placeholder="Maxim">
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="settings-group settings-group-parse_link settings-group-ai_browsing active">
+            <?php self::render_article_length_component('main'); ?>
         </div>
         <?php
     }
@@ -1953,6 +1922,59 @@ public static function tasks_management_placeholder_callback()
                         <textarea name="<?php echo $fn('ai_instructions'); ?>" class="form-control" rows="3"><?php echo esc_textarea($data['ai_instructions'] ?? ''); ?></textarea>
                     </div>
                 <?php endif; ?>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * REUSABLE COMPONENT: Article Length Configuration Card
+     */
+    public static function render_article_length_component($context = 'main')
+    {
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $is_tasks = ($context === 'tasks');
+        $data = $is_tasks ? ($options['tasks_config'] ?? []) : $options;
+        $name_key = $is_tasks ? 'tasks_config' : '';
+        
+        $selected_option = $data['article_length_option'] ?? 'same_as_source';
+        $min_length = $data['min_length'] ?? '';
+        $max_length = $data['max_length'] ?? '';
+
+        $fn = function ($key) use ($name_key) {
+            return $name_key ? "auto_ai_news_poster_settings[{$name_key}][{$key}]" : "auto_ai_news_poster_settings[{$key}]";
+        };
+
+        ?>
+        <div class="settings-card article-length-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">📏</div>
+                <h3 class="settings-card-title">Dimensiune Articol</h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-group">
+                    <label class="control-label">Opțiune dimensiune</label>
+                    <select name="<?php echo $fn('article_length_option'); ?>" class="form-control">
+                        <option value="same_as_source" <?php selected($selected_option, 'same_as_source'); ?>>
+                            <?php echo $is_tasks ? 'Dimensiune variabilă (Standard AI)' : 'Aceiași dimensiune cu sursa'; ?>
+                        </option>
+                        <option value="set_limits" <?php selected($selected_option, 'set_limits'); ?>>Setează limite (cuvinte)</option>
+                    </select>
+                </div>
+                
+                <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                    <div class="form-group">
+                        <label class="control-label">Minim</label>
+                        <input type="number" name="<?php echo $fn('min_length'); ?>" class="form-control"
+                               value="<?php echo esc_attr($min_length); ?>" placeholder="ex: 300">
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">Maxim</label>
+                        <input type="number" name="<?php echo $fn('max_length'); ?>" class="form-control"
+                               value="<?php echo esc_attr($max_length); ?>" placeholder="ex: 800">
+                    </div>
+                </div>
+                <small class="form-text text-muted">Valori exprimate în număr aproximativ de cuvinte.</small>
             </div>
         </div>
         <?php
