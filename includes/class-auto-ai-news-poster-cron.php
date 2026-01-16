@@ -8,10 +8,16 @@ class Auto_Ai_News_Poster_Cron
         register_activation_hook(__FILE__, [self::class, 'activate']);
         // Dezactivare cron la dezactivarea pluginului
         register_deactivation_hook(__FILE__, [self::class, 'deactivate']);
-        // Acțiune cron
+        
+        // Acțiune cron principală (Parsare/Browsing)
         add_action('auto_ai_news_poster_cron_hook', [self::class, 'auto_post']);
-        // Resetează cron job-ul atunci când se actualizează setările
+        
+        // Acțiune cron separată pentru TASKURI
+        add_action('auto_ai_news_poster_tasks_cron_hook', [self::class, 'tasks_worker']);
+        
+        // Resetează cron job-urile atunci când se actualizează setările
         add_action('update_option_auto_ai_news_poster_settings', [self::class, 'reset_cron']);
+        
         // Adaugă un nou interval de cron bazat pe setările utilizatorului
         add_filter('cron_schedules', [self::class, 'custom_cron_interval']);
     }
@@ -20,8 +26,14 @@ class Auto_Ai_News_Poster_Cron
     {
         add_filter('cron_schedules', [self::class, 'custom_cron_interval']);
 
+        // Main Cron
         if (!wp_next_scheduled('auto_ai_news_poster_cron_hook')) {
             wp_schedule_event(time(), 'custom_interval', 'auto_ai_news_poster_cron_hook');
+        }
+
+        // Tasks Cron (Separate)
+        if (!wp_next_scheduled('auto_ai_news_poster_tasks_cron_hook')) {
+            wp_schedule_event(time() + 60, 'hourly', 'auto_ai_news_poster_tasks_cron_hook');
         }
     }
 
@@ -29,25 +41,31 @@ class Auto_Ai_News_Poster_Cron
     public static function deactivate()
     {
         wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
+        wp_clear_scheduled_hook('auto_ai_news_poster_tasks_cron_hook');
     }
 
     public static function reset_cron()
     {
-        // Dezactivează cronul existent
+        // Dezactivează cronurile existente
         wp_clear_scheduled_hook('auto_ai_news_poster_cron_hook');
+        wp_clear_scheduled_hook('auto_ai_news_poster_tasks_cron_hook');
 
         // Obține setările pentru a verifica dacă modul automat este activat
         $settings = get_option('auto_ai_news_poster_settings', []);
         
-        // Reprogramează cronul cu noul interval doar dacă modul automat este activat
+        // Reprogramează cronul principal cu noul interval doar dacă modul automat este activat
         if (isset($settings['mode']) && $settings['mode'] === 'auto') {
             if (!wp_next_scheduled('auto_ai_news_poster_cron_hook')) {
                 $scheduled_time = time();
                 wp_schedule_event($scheduled_time, 'custom_interval', 'auto_ai_news_poster_cron_hook');
                 
                 // Resetează timpul ultimului articol pentru a permite publicarea imediată a primului articol
-                // după schimbarea setărilor
                 delete_option('auto_ai_news_poster_last_post_time');
+            }
+
+            // Reprogramează cronul de TASKURI (independent)
+            if (!wp_next_scheduled('auto_ai_news_poster_tasks_cron_hook')) {
+                wp_schedule_event(time() + 120, 'hourly', 'auto_ai_news_poster_tasks_cron_hook');
             }
         }
     }
@@ -140,7 +158,41 @@ class Auto_Ai_News_Poster_Cron
                 }
             }
         } finally {
-            // Eliberează lock-ul în orice caz
+            delete_transient($lock_key);
+        }
+    }
+
+    /**
+     * Cron Job separat pentru Taskuri
+     */
+    public static function tasks_worker()
+    {
+        $settings = get_option('auto_ai_news_poster_settings', []);
+        $generation_mode = $settings['generation_mode'] ?? 'parse_link';
+
+        // Verificăm dacă modul automat este pornit
+        if (!isset($settings['mode']) || $settings['mode'] !== 'auto') {
+            return;
+        }
+
+        // Lock mechanism pentru taskuri
+        $lock_key = 'auto_ai_news_poster_tasks_lock';
+        if (get_transient($lock_key) !== false) {
+            return;
+        }
+        set_transient($lock_key, time(), 600); // 10 minute lock
+
+        try {
+            // Aici va veni logica de procesare a taskurilor
+            // Momentan este un placeholder pentru viitoarele funcționalități
+            error_log('AANP Tasks Worker: Rulare taskuri de fundal...');
+            
+            // Exemplu: Dacă generation_mode este 'tasks', aici s-ar putea face procesări specifice
+            if ($generation_mode === 'tasks') {
+                // Logica specifică pentru modul Taskuri
+            }
+
+        } finally {
             delete_transient($lock_key);
         }
     }
