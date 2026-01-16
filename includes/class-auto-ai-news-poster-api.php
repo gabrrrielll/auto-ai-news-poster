@@ -16,7 +16,145 @@ class Auto_Ai_News_Poster_Api
         add_action('wp_ajax_force_refresh_test', [self::class, 'force_refresh_test']);
         add_action('wp_ajax_clear_transient', [self::class, 'clear_transient']);
         add_action('wp_ajax_force_refresh_now', [self::class, 'force_refresh_now']);
+        
+        // Task List Management
+        add_action('wp_ajax_auto_ai_run_task_list_item', [self::class, 'ajax_run_task_list_item']);
+    }
 
+    /**
+     * AJAX handler to process one item from a specific task list.
+     */
+    public static function ajax_run_task_list_item()
+    {
+        check_ajax_referer('auto_ai_news_poster_check_settings', 'nonce');
+        
+        $list_id = isset($_POST['list_id']) ? sanitize_text_field($_POST['list_id']) : '';
+        if (empty($list_id)) {
+            wp_send_json_error(['message' => 'Missing List ID']);
+        }
+
+        $result = self::process_task_list_item($list_id);
+
+        if (is_wp_error($result)) {
+            wp_send_json_error(['message' => $result->get_error_message()]);
+        }
+
+        wp_send_json_success(['message' => 'Articol generat cu succes!', 'post_id' => $result]);
+    }
+
+    /**
+     * Core logic to process one title from a task list.
+     * Can be called from AJAX or Cron.
+     */
+    public static function process_task_list_item($list_id)
+    {
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $task_lists = $options['task_lists'] ?? [];
+        $tasks_config = $options['tasks_config'] ?? [];
+        
+        $list_index = -1;
+        foreach ($task_lists as $index => $list) {
+            if (($list['id'] ?? '') === $list_id) {
+                $list_index = $index;
+                break;
+            }
+        }
+
+        if ($list_index === -1) {
+            return new WP_Error('list_not_found', 'Lista de taskuri nu a fost găsită.');
+        }
+
+        $list = $task_lists[$list_index];
+        $titles_raw = $list['titles'] ?? '';
+        $titles = array_filter(array_map('trim', explode("\n", $titles_raw)));
+
+        if (empty($titles)) {
+            return new WP_Error('no_titles', 'Nu mai există titluri de procesat în această listă.');
+        }
+
+        // 1. Get first title
+        $target_title = array_shift($titles);
+        $category_id = $list['category'] ?? 0;
+        $category_name = ($category_id) ? get_cat_name($category_id) : 'General';
+        $author_id = $list['author'] ?? 1;
+
+        // 2. Determine AI Config (Task specific)
+        $provider = $tasks_config['api_provider'] ?? 'openai';
+        $ai_args = [
+            'provider' => $provider,
+            'api_key'  => ($provider === 'openai') ? ($tasks_config['chatgpt_api_key'] ?? '') : (($provider === 'gemini') ? ($tasks_config['gemini_api_key'] ?? '') : ($tasks_config['deepseek_api_key'] ?? '')),
+            'model'    => ($provider === 'openai') ? ($tasks_config['ai_model'] ?? 'gpt-4o-mini') : (($provider === 'gemini') ? ($tasks_config['gemini_model'] ?? 'gemini-1.5-flash') : ($tasks_config['deepseek_model'] ?? 'deepseek-chat')),
+        ];
+
+        // 3. Call AI
+        $prompt = Auto_Ai_News_Poster_Prompts::get_task_article_prompt($target_title, $category_name, $tasks_config['ai_instructions'] ?? '');
+        $response = call_ai_api($prompt, $ai_args);
+
+        if (is_wp_error($response)) {
+            return $response;
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $decoded = json_decode($body, true);
+        $ai_content_json = $decoded['choices'][0]['message']['content'] ?? null;
+
+        if (empty($ai_content_json)) {
+            return new WP_Error('empty_response', 'Răspunsul AI este gol sau invalid.');
+        }
+
+        $article_data = json_decode($ai_content_json, true);
+        if (!$article_data || empty($article_data['content'])) {
+            // Try cleaning markdown if present
+            if (preg_match('/```json\s*(.*?)\s*```/s', $ai_content_json, $matches)) {
+                $article_data = json_decode($matches[1], true);
+            }
+        }
+
+        if (!$article_data || empty($article_data['content'])) {
+            return new WP_Error('json_error', 'Nu am putut decoda datele articolului din JSON-ul AI.');
+        }
+
+        // 4. Save Article
+        $post_data = [
+            'post_title'   => $article_data['title'] ?? $target_title,
+            'post_content' => wp_kses_post($article_data['content']),
+            'post_status'  => $options['status'] ?? 'draft',
+            'post_author'  => $author_id,
+            'post_excerpt' => $article_data['summary'] ?? '',
+        ];
+
+        $post_id = Post_Manager::insert_or_update_post(null, $post_data);
+
+        if (is_wp_error($post_id)) {
+            return $post_id;
+        }
+
+        // Set Category and Tags
+        if ($category_id) {
+            wp_set_post_categories($post_id, [$category_id]);
+        }
+        
+        $gen_tags = $tasks_config['generate_tags'] ?? 'yes';
+        if ($gen_tags === 'yes') {
+            Post_Manager::set_post_tags($post_id, $article_data['tags'] ?? []);
+        }
+
+        update_post_meta($post_id, '_generation_mode', 'tasks');
+        update_post_meta($post_id, '_task_list_id', $list_id);
+
+        // 5. Update List (Remove processed title)
+        $task_lists[$list_index]['titles'] = implode("\n", $titles);
+        $options['task_lists'] = $task_lists;
+        update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
+
+        // 6. Generate Image if enabled
+        $gen_image = $tasks_config['generate_image'] ?? 'no';
+        if ($gen_image === 'yes') {
+            $image_prompt = $article_data['summary'] ?? $article_data['title'];
+            self::generate_image_for_article($post_id, $image_prompt);
+        }
+
+        return $post_id;
     }
 
 

@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Auto AI News Poster
  * Description: Un plugin care preia știri de pe minim trei surse, le analizează și publică un articol obiectiv în mod automat sau manual.
- * Version: 1.16.0
+ * Version: 1.17.0
  * Author: Gabriel Sandu
  */
 

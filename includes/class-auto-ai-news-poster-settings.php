@@ -100,10 +100,10 @@ class Auto_Ai_News_Poster_Settings
         wp_enqueue_script('select2-js', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', ['jquery'], null, true);
 
         // Stilurile personalizate ale plugin-ului
-        wp_enqueue_style('auto-ai-news-poster-admin-style', plugin_dir_url(__FILE__) . 'css/auto-ai-news-poster.css', [], '1.16.0');
+        wp_enqueue_style('auto-ai-news-poster-admin-style', plugin_dir_url(__FILE__) . 'css/auto-ai-news-poster.css', [], '1.17.0');
 
         // Scripturile personalizate ale plugin-ului
-        wp_enqueue_script('auto-ai-news-poster-admin-script', plugin_dir_url(__FILE__) . 'js/auto-ai-news-poster-settings.js', ['jquery', 'select2-js'], '1.16.0', true);
+        wp_enqueue_script('auto-ai-news-poster-admin-script', plugin_dir_url(__FILE__) . 'js/auto-ai-news-poster-settings.js', ['jquery', 'select2-js'], '1.17.0', true);
 
         // Localizare script pentru AJAX
         wp_localize_script('auto-ai-news-poster-admin-script', 'auto_ai_news_poster_ajax', [
@@ -377,20 +377,248 @@ public static function tasks_management_placeholder_callback()
 {
     $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
     $generation_mode = $options['generation_mode'] ?? 'parse_link';
+    $tasks_config = $options['tasks_config'] ?? [];
+    $task_lists = $options['task_lists'] ?? [];
+    
+    // Helper data for dropdowns
+    $users = get_users(['fields' => ['ID', 'display_name']]);
+    $categories = get_categories(['hide_empty' => false]);
+    
+    // Current Tasks AI Config
+    $current_provider = $tasks_config['api_provider'] ?? 'openai';
+    $openai_key = $tasks_config['chatgpt_api_key'] ?? '';
+    $openai_model = $tasks_config['ai_model'] ?? 'gpt-4o-mini';
+    $gemini_key = $tasks_config['gemini_api_key'] ?? '';
+    $gemini_model = $tasks_config['gemini_model'] ?? '';
+    $deepseek_key = $tasks_config['deepseek_api_key'] ?? '';
+    $deepseek_model = $tasks_config['deepseek_model'] ?? '';
+    
+    // Cron & Control
+    $cron_hours = $tasks_config['cron_interval_hours'] ?? 0;
+    $cron_minutes = $tasks_config['cron_interval_minutes'] ?? 30;
+    $gen_image = $tasks_config['generate_image'] ?? 'no';
+    $gen_tags = $tasks_config['generate_tags'] ?? 'yes';
+    
     ?>
     <div class="settings-group settings-group-tasks <?php echo ($generation_mode === 'tasks') ? 'active' : ''; ?>">
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">⚙️</div>
-                <h3 class="settings-card-title">Gestionare Taskuri</h3>
+        
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <!-- 1. Configurare API AI (Tasks Instance) -->
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">🔑</div>
+                    <h3 class="settings-card-title">Configurare API AI (Tasks)</h3>
+                </div>
+                <div class="settings-card-content">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="control-label">Furnizor AI Principal</label>
+                        <select name="auto_ai_news_poster_settings[tasks_config][api_provider]" class="form-control" id="tasks_api_provider">
+                            <option value="openai" <?php selected($current_provider, 'openai'); ?>>OpenAI (GPT)</option>
+                            <option value="gemini" <?php selected($current_provider, 'gemini'); ?>>Google Gemini</option>
+                            <option value="deepseek" <?php selected($current_provider, 'deepseek'); ?>>DeepSeek V3</option>
+                        </select>
+                    </div>
+
+                    <!-- OpenAI Tasks -->
+                    <div id="tasks-wrapper-openai" class="tasks-provider-wrapper" style="display: <?php echo ($current_provider === 'openai' ? 'block' : 'none'); ?>;">
+                        <div class="form-group">
+                            <label class="control-label">Cheia API OpenAI</label>
+                            <input type="password" name="auto_ai_news_poster_settings[tasks_config][chatgpt_api_key]" value="<?php echo esc_attr($openai_key); ?>" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">Model OpenAI</label>
+                            <select name="auto_ai_news_poster_settings[tasks_config][ai_model]" class="form-control">
+                                <option value="gpt-4o" <?php selected($openai_model, 'gpt-4o'); ?>>GPT-4o (Cel mai capabil)</option>
+                                <option value="gpt-4o-mini" <?php selected($openai_model, 'gpt-4o-mini'); ?>>GPT-4o Mini (Rapid și economic)</option>
+                                <option value="o1-preview" <?php selected($openai_model, 'o1-preview'); ?>>o1-preview</option>
+                                <option value="gpt-3.5-turbo" <?php selected($openai_model, 'gpt-3.5-turbo'); ?>>GPT-3.5 Turbo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Gemini Tasks -->
+                    <div id="tasks-wrapper-gemini" class="tasks-provider-wrapper" style="display: <?php echo ($current_provider === 'gemini' ? 'block' : 'none'); ?>;">
+                        <div class="form-group">
+                            <label class="control-label">Cheia API Google Gemini</label>
+                            <input type="password" name="auto_ai_news_poster_settings[tasks_config][gemini_api_key]" value="<?php echo esc_attr($gemini_key); ?>" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">Model Gemini</label>
+                            <select name="auto_ai_news_poster_settings[tasks_config][gemini_model]" class="form-control">
+                                <option value="gemini-1.5-pro" <?php selected($gemini_model, 'gemini-1.5-pro'); ?>>Gemini 1.5 Pro</option>
+                                <option value="gemini-1.5-flash" <?php selected($gemini_model, 'gemini-1.5-flash'); ?>>Gemini 1.5 Flash</option>
+                                <option value="gemini-1.0-pro" <?php selected($gemini_model, 'gemini-1.0-pro'); ?>>Gemini 1.0 Pro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- DeepSeek Tasks -->
+                    <div id="tasks-wrapper-deepseek" class="tasks-provider-wrapper" style="display: <?php echo ($current_provider === 'deepseek' ? 'block' : 'none'); ?>;">
+                        <div class="form-group">
+                            <label class="control-label">Cheia API DeepSeek</label>
+                            <input type="password" name="auto_ai_news_poster_settings[tasks_config][deepseek_api_key]" value="<?php echo esc_attr($deepseek_key); ?>" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">Model DeepSeek</label>
+                            <select name="auto_ai_news_poster_settings[tasks_config][deepseek_model]" class="form-control">
+                                <option value="deepseek-chat" <?php selected($deepseek_model, 'deepseek-chat'); ?>>DeepSeek V3 (Chat)</option>
+                                <option value="deepseek-reasoner" <?php selected($deepseek_model, 'deepseek-reasoner'); ?>>DeepSeek R1 (Reasoner)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="settings-card-content" style="border-top: 1px solid #eee;">
-                <div class="alert alert-info" style="margin:0;">
-                    Sectiunea <strong>Taskuri</strong> va fi disponibilă în curând. Aici veți putea configura sarcini complexe de automatizare și reguli specifice pentru AI.
+
+            <!-- 2. Configurare Cron & Control (Tasks Instance) -->
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">⏰</div>
+                    <h3 class="settings-card-title">Configurare Execuție Tasks</h3>
+                </div>
+                <div class="settings-card-content">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="control-label">Interval între task-uri (Cron)</label>
+                        <div style="display: flex; gap: 10px;">
+                            <select name="auto_ai_news_poster_settings[tasks_config][cron_interval_hours]" class="form-control">
+                                <?php for($i=0; $i<=23; $i++) : ?>
+                                    <option value="<?php echo $i; ?>" <?php selected($cron_hours, $i); ?>><?php echo $i; ?> ore</option>
+                                <?php endfor; ?>
+                            </select>
+                            <select name="auto_ai_news_poster_settings[tasks_config][cron_interval_minutes]" class="form-control">
+                                <?php foreach([0,1,2,5,10,15,20,30,45] as $m) : ?>
+                                    <option value="<?php echo $m; ?>" <?php selected($cron_minutes, $m); ?>><?php echo $m; ?> minute</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="checkbox-modern" style="margin-bottom: 10px;">
+                            <input type="checkbox" name="auto_ai_news_poster_settings[tasks_config][generate_image]" value="yes" <?php checked($gen_image, 'yes'); ?> />
+                            <label>Generează imagini AI pentru task-uri</label>
+                        </div>
+                        <div class="checkbox-modern">
+                            <input type="checkbox" name="auto_ai_news_poster_settings[tasks_config][generate_tags]" value="yes" <?php checked($gen_tags, 'yes'); ?> />
+                            <label>Generează etichete automate</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+                        <label class="control-label">Instrucțiuni AI specifice pentru Tasks</label>
+                        <textarea name="auto_ai_news_poster_settings[tasks_config][ai_instructions]" class="form-control" rows="3"><?php echo esc_textarea($tasks_config['ai_instructions'] ?? ''); ?></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Dynamic Task Lists -->
+        <div class="settings-card">
+            <div class="settings-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center;">
+                    <div class="settings-card-icon">📋</div>
+                    <h3 class="settings-card-title">Liste de Taskuri (Cozi de Titluri)</h3>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" id="add-task-list-btn">
+                    <i class="fas fa-plus"></i> Adaugă Listă Nouă
+                </button>
+            </div>
+            <div class="settings-card-content">
+                <div id="task-lists-container">
+                    <?php 
+                    if (!empty($task_lists)) :
+                        foreach ($task_lists as $index => $list) : 
+                            $list_id = $list['id'] ?? uniqid();
+                            ?>
+                            <div class="task-list-item settings-card" style="background: #fcfcfc; border: 1px solid #eee; margin-bottom: 20px; box-shadow: none;" data-id="<?php echo esc_attr($list_id); ?>">
+                                <div class="settings-card-header" style="background: rgba(0,0,0,0.02); padding: 10px 15px;">
+                                    <input type="text" name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][name]" value="<?php echo esc_attr($list['name'] ?? 'Listă fără nume'); ?>" class="form-control" style="font-weight: 600; border:none; background:transparent; padding:0;" placeholder="Nume Listă (ex: Știri Sport)">
+                                    <input type="hidden" name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][id]" value="<?php echo esc_attr($list_id); ?>">
+                                    <button type="button" class="btn btn-link text-danger remove-task-list" style="padding:0;"><i class="fas fa-trash"></i></button>
+                                </div>
+                                <div class="settings-card-content" style="padding: 15px;">
+                                    <div class="form-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                                        <div class="form-group">
+                                            <label class="control-label">Lista de Titluri (unul pe rând)</label>
+                                            <textarea name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][titles]" class="form-control" rows="8" placeholder="Titlu 1&#10;Titlu 2&#10;Titlu 3..."><?php echo esc_textarea($list['titles'] ?? ''); ?></textarea>
+                                        </div>
+                                        <div>
+                                            <div class="form-group">
+                                                <label class="control-label">Autor Articole</label>
+                                                <select name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][author]" class="form-control">
+                                                    <?php foreach ($users as $user) : ?>
+                                                        <option value="<?php echo $user->ID; ?>" <?php selected($list['author'] ?? '', $user->ID); ?>><?php echo esc_html($user->display_name); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="control-label">Categorie Destinație</label>
+                                                <select name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][category]" class="form-control">
+                                                    <?php foreach ($categories as $cat) : ?>
+                                                        <option value="<?php echo $cat->term_id; ?>" <?php selected($list['category'] ?? '', $cat->term_id); ?>><?php echo esc_html($cat->name); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                            <div style="margin-top: 20px;">
+                                                <button type="button" class="btn btn-primary btn-block run-task-list-now" data-id="<?php echo esc_attr($list_id); ?>">
+                                                    <i class="fas fa-magic"></i> Generează acum
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; 
+                    else : ?>
+                        <div class="no-task-lists alert alert-light" style="text-align: center; border: 1px dashed #ccc; padding: 40px;">
+                            Nu ai nicio listă de taskuri creată. Apasă butonul de mai sus pentru a începe.
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </div>
+    
+    <!-- Template pentru o nouă listă de task-uri (folosit de JS) -->
+    <script type="text/template" id="task-list-template">
+        <div class="task-list-item settings-card" style="background: #fcfcfc; border: 1px solid #eee; margin-bottom: 20px; box-shadow: none;" data-id="{{ID}}">
+            <div class="settings-card-header" style="background: rgba(0,0,0,0.02); padding: 10px 15px;">
+                <input type="text" name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][name]" value="Listă Nouă" class="form-control" style="font-weight: 600; border:none; background:transparent; padding:0;" placeholder="Nume Listă (ex: Știri Sport)">
+                <input type="hidden" name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][id]" value="{{ID}}">
+                <button type="button" class="btn btn-link text-danger remove-task-list" style="padding:0;"><i class="fas fa-trash"></i></button>
+            </div>
+            <div class="settings-card-content" style="padding: 15px;">
+                <div class="form-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label class="control-label">Lista de Titluri (unul pe rând)</label>
+                        <textarea name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][titles]" class="form-control" rows="8" placeholder="Titlu 1&#10;Titlu 2&#10;Titlu 3..."></textarea>
+                    </div>
+                    <div>
+                        <div class="form-group">
+                            <label class="control-label">Autor Articole</label>
+                            <select name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][author]" class="form-control">
+                                <?php foreach ($users as $user) : ?>
+                                    <option value="<?php echo $user->ID; ?>"><?php echo esc_html($user->display_name); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">Categorie Destinație</label>
+                            <select name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][category]" class="form-control">
+                                <?php foreach ($categories as $cat) : ?>
+                                    <option value="<?php echo $cat->term_id; ?>"><?php echo esc_html($cat->name); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <button type="button" class="btn btn-primary btn-block run-task-list-now" data-id="{{ID}}">
+                                <i class="fas fa-magic"></i> Generează acum
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </script>
     <?php
 }
 
@@ -1742,22 +1970,49 @@ public static function tasks_management_placeholder_callback()
             $sanitized[$checkbox_field] = 'no';
         }
 
-        // Actualizăm doar câmpurile din input
-        if (is_array($input)) {
-            foreach ($input as $key => $value) {
-                // Pentru checkbox-uri, setăm 'yes' dacă sunt bifate
-                if (in_array($key, $checkbox_fields)) {
-                    $sanitized[$key] = ($value === 'yes') ? 'yes' : 'no';
-                }
-                // Pentru câmpurile de tip <select>, salvăm valoarea selectată
-                elseif (in_array($key, $select_fields)) {
-                    $sanitized[$key] = sanitize_text_field($value);
-                }
-                // Pentru textarea, folosim o sanitizare specifică
-                elseif ($key === 'news_sources' || $key === 'parse_link_ai_instructions' || $key === 'ai_browsing_instructions' || $key === 'bulk_custom_source_urls') {
-                    $sanitized[$key] = esc_textarea($value);
-                }
-                elseif ($key === 'scanning_source_urls') {
+                // Actualizăm doar câmpurile din input
+                if (is_array($input)) {
+                    foreach ($input as $key => $value) {
+                        // Pentru checkbox-uri, setăm 'yes' dacă sunt bifate
+                        if (in_array($key, $checkbox_fields)) {
+                            $sanitized[$key] = ($value === 'yes') ? 'yes' : 'no';
+                        }
+                        // Pentru câmpurile de tip <select>, salvăm valoarea selectată
+                        elseif (in_array($key, $select_fields)) {
+                            $sanitized[$key] = sanitize_text_field($value);
+                        }
+                        // Tasks Configuration (Nested Array)
+                        elseif ($key === 'tasks_config') {
+                            if (is_array($value)) {
+                                foreach ($value as $t_key => $t_val) {
+                                    if ($t_key === 'ai_instructions') {
+                                        $sanitized[$key][$t_key] = esc_textarea($t_val);
+                                    } else {
+                                        $sanitized[$key][$t_key] = sanitize_text_field($t_val);
+                                    }
+                                }
+                            }
+                        }
+                        // Task Lists (Array of Items)
+                        elseif ($key === 'task_lists') {
+                            $sanitized[$key] = [];
+                            if (is_array($value)) {
+                                foreach ($value as $list_item) {
+                                    $sanitized[$key][] = [
+                                        'id'       => sanitize_text_field($list_item['id'] ?? ''),
+                                        'name'     => sanitize_text_field($list_item['name'] ?? ''),
+                                        'titles'   => esc_textarea($list_item['titles'] ?? ''),
+                                        'author'   => intval($list_item['author'] ?? 1),
+                                        'category' => intval($list_item['category'] ?? 0),
+                                    ];
+                                }
+                            }
+                        }
+                        // Pentru textarea, folosim o sanitizare specifică
+                        elseif ($key === 'news_sources' || $key === 'parse_link_ai_instructions' || $key === 'ai_browsing_instructions' || $key === 'bulk_custom_source_urls') {
+                            $sanitized[$key] = esc_textarea($value);
+                        }
+                        elseif ($key === 'scanning_source_urls') {
                     $sanitized[$key] = [];
                     if (is_array($value)) {
                         foreach ($value as $item) {

@@ -40,12 +40,14 @@ function generate_simple_text_prompt(string $system_message, string $user_messag
  * Provider selection wrapper for text generation
  * 
  * @param string $prompt The user prompt.
- * @param array $args Optional arguments: ['system_message' => ..., 'response_format' => ...]
+ * @param array $args Optional arguments: ['system_message' => ..., 'response_format' => ..., 'provider' => ..., 'api_key' => ..., 'model' => ..., 'api_url' => ...]
  */
 function call_ai_api($prompt, $args = [])
 {
-    $options = get_option('auto_ai_news_poster_settings');
-    $provider = $options['api_provider'] ?? 'openai';
+    $global_options = get_option('auto_ai_news_poster_settings');
+    
+    // Determine provider, key, and model (prefer args, fallback to global options)
+    $provider = $args['provider'] ?? $global_options['api_provider'] ?? 'openai';
     
     // Extract optional args for flexibility
     $system_message = $args['system_message'] ?? null;
@@ -54,28 +56,28 @@ function call_ai_api($prompt, $args = [])
     // Logging start request
     error_log('[AUTO_AI_NEWS_POSTER] AI request details START');
     error_log('Provider: ' . $provider);
-    error_log('Prompt Length: ' . strlen((string) $prompt));
-    error_log('Prompt Preview: ' . substr((string) $prompt, 0, 500) . '...');
 
     if ($provider === 'gemini') {
-        $api_key = $options['gemini_api_key'] ?? '';
-        $model = $options['gemini_model'] ?? 'gemini-1.5-pro';
+        $api_key = $args['api_key'] ?? $global_options['gemini_api_key'] ?? '';
+        $model = $args['model'] ?? $global_options['gemini_model'] ?? 'gemini-1.5-pro';
         error_log('Selected Model (Gemini): ' . $model);
         return call_gemini_api($api_key, $model, $prompt, $system_message);
     } 
     elseif ($provider === 'deepseek') {
-        $api_key = $options['deepseek_api_key'] ?? '';
-        $model = $options['deepseek_model'] ?? 'deepseek-chat';
+        $api_key = $args['api_key'] ?? $global_options['deepseek_api_key'] ?? '';
+        $model = $args['model'] ?? $global_options['deepseek_model'] ?? 'deepseek-chat';
+        $api_url = $args['api_url'] ?? URL_API_DEEPSEEK;
         error_log('Selected Model (DeepSeek): ' . $model);
         // DeepSeek uses OpenAI-compatible API
-        return call_openai_api($api_key, $prompt, $model, URL_API_DEEPSEEK, $system_message, $response_format);
+        return call_openai_api($api_key, $prompt, $model, $api_url, $system_message, $response_format);
     } 
     else {
         // Default OpenAI
-        $api_key = $options['chatgpt_api_key'] ?? '';
-        $model = $options['ai_model'] ?? DEFAULT_AI_MODEL;
+        $api_key = $args['api_key'] ?? $global_options['chatgpt_api_key'] ?? '';
+        $model = $args['model'] ?? $global_options['ai_model'] ?? DEFAULT_AI_MODEL;
+        $api_url = $args['api_url'] ?? URL_API_OPENAI;
         error_log('Selected Model (OpenAI): ' . $model);
-        return call_openai_api($api_key, $prompt, $model, URL_API_OPENAI, $system_message, $response_format);
+        return call_openai_api($api_key, $prompt, $model, $api_url, $system_message, $response_format);
     }
 }
 

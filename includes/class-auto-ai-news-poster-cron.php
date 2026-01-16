@@ -173,8 +173,7 @@ class Auto_Ai_News_Poster_Cron
     public static function tasks_worker()
     {
         $settings = get_option('auto_ai_news_poster_settings', []);
-        $generation_mode = $settings['generation_mode'] ?? 'parse_link';
-
+        
         // Verificăm dacă modul automat este pornit
         if (!isset($settings['mode']) || $settings['mode'] !== 'auto') {
             return;
@@ -188,13 +187,28 @@ class Auto_Ai_News_Poster_Cron
         set_transient($lock_key, time(), 600); // 10 minute lock
 
         try {
-            // Aici va veni logica de procesare a taskurilor
-            // Momentan este un placeholder pentru viitoarele funcționalități
-            error_log('AANP Tasks Worker: Rulare taskuri de fundal...');
-            
-            // Exemplu: Dacă generation_mode este 'tasks', aici s-ar putea face procesări specifice
-            if ($generation_mode === 'tasks') {
-                // Logica specifică pentru modul Taskuri
+            $task_lists = $settings['task_lists'] ?? [];
+            if (empty($task_lists)) {
+                return;
+            }
+
+            error_log('AANP Tasks Worker: Verificare ' . count($task_lists) . ' liste pentru procesare...');
+
+            // Process one title from EACH list that has titles (round-robin style would be better but this is fine)
+            foreach ($task_lists as $list) {
+                $list_id = $list['id'] ?? '';
+                $titles = array_filter(array_map('trim', explode("\n", $list['titles'] ?? '')));
+
+                if (!empty($titles)) {
+                    error_log('AANP Tasks Worker: Procesare titlu din lista "' . ($list['name'] ?? 'Neținută') . '"...');
+                    $result = Auto_Ai_News_Poster_Api::process_task_list_item($list_id);
+                    
+                    if (is_wp_error($result)) {
+                        error_log('AANP Tasks Worker ERROR: ' . $result->get_error_message());
+                    } else {
+                        error_log('AANP Tasks Worker: Articol generat cu succes! (Post ID: ' . $result . ')');
+                    }
+                }
             }
 
         } finally {
@@ -257,30 +271,25 @@ class Auto_Ai_News_Poster_Cron
     {
         $options = get_option('auto_ai_news_poster_settings');
 
-        // Validate hours and minutes
+        // 1. Regular Generation Interval
         $hours = isset($options['cron_interval_hours']) ? (int)$options['cron_interval_hours'] : 1;
         $minutes = isset($options['cron_interval_minutes']) ? (int)$options['cron_interval_minutes'] : 0;
+        $interval = max(60, ($hours * 3600) + ($minutes * 60));
 
-        // Ensure valid range for hours and minutes
-        if ($hours < 0 || $hours > 24) {
-            $hours = 1; // Default to 1 hour if invalid
-        }
-        if ($minutes < 0 || $minutes >= 60) {
-            $minutes = 0; // Default to 0 minutes if invalid
-        }
-
-        // Calculate interval in seconds
-        $interval = ($hours * 3600) + ($minutes * 60);
-
-        // Ensure the interval is at least 1 minute
-        if ($interval < 60) {
-            $interval = 60;
-        }
-
-        // Add custom interval
         $schedules['custom_interval'] = [
             'interval' => $interval,
             'display' => "Once every $hours hours and $minutes minutes",
+        ];
+
+        // 2. Tasks Specific Interval
+        $tc = $options['tasks_config'] ?? [];
+        $t_hours = isset($tc['cron_interval_hours']) ? (int)$tc['cron_interval_hours'] : 1;
+        $t_minutes = isset($tc['cron_interval_minutes']) ? (int)$tc['cron_interval_minutes'] : 0;
+        $t_interval = max(60, ($t_hours * 3600) + ($t_minutes * 60));
+
+        $schedules['tasks_custom_interval'] = [
+            'interval' => $t_interval,
+            'display' => "Tasks: Once every $t_hours hours and $t_minutes minutes",
         ];
 
         return $schedules;

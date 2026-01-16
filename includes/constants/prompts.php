@@ -288,6 +288,49 @@ class Auto_Ai_News_Poster_Prompts
         ";
     }
 
+    /**
+     * Generează promptul pentru transformarea unui TITLU în articol (Mod Taskuri).
+     */
+    public static function get_task_article_prompt($title, $category_name, $additional_instructions = '')
+    {
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $tasks_config = $options['tasks_config'] ?? [];
+        
+        // Obținem setările de lungime a articolului (reutilizăm setările globale sau putem adăuga specifice)
+        $article_length_option = $options['article_length_option'] ?? 'same_as_source';
+        $min_length = $options['min_length'] ?? 800;
+        $max_length = $options['max_length'] ?? 1200;
+
+        $length_instruction = ($article_length_option === 'set_limits' && $min_length && $max_length) 
+            ? "Articolul trebuie să aibă între {$min_length} și {$max_length} de cuvinte."
+            : "Articolul trebuie să fie detaliat și cuprinzător.";
+
+        $prompt = "Ești un jurnalist expert. Sarcina ta este să scrii un articol de știri complet bazat pe următorul titlu: \"{$title}\".\n\n";
+        
+        $prompt .= "**REGULI IMPORTANTE:**\n";
+        $prompt .= "1. **Cercetare (Optional):** Dacă titlul se referă la un eveniment recent sau specific care necesită informații actuale, AI-ul are LIBERTATEA de a folosi funcția de web browsing pentru a găsi detalii veridice. Dacă subiectul este general, poți scrie folosind cunoștințele tale interne.\n";
+        $prompt .= "2. **Calitate:** Scrie în limba ROMÂNĂ, cu un ton jurnalistic profesionist, obiectiv și informativ.\n";
+        $prompt .= "3. **Structură:** Folosește formatare HTML (<p>, <h2>, <h3>). NU folosi titluri genervice ca \"Introducere\" sau \"Concluzie\".\n";
+        $prompt .= "4. **Lungime:** {$length_instruction}\n";
+        $prompt .= "5. **Categorie:** Articolul va face parte din categoria \"{$category_name}\".\n";
+        $prompt .= "6. **SEO:** Generează 1-3 etichete relevante și o meta descriere de max 160 caractere.\n";
+        
+        if (!empty($additional_instructions)) {
+            $prompt .= "7. **Instrucțiuni suplimentare:** {$additional_instructions}\n";
+        }
+
+        $prompt .= "\n**Format de răspuns OBLIGATORIU (JSON):**\n";
+        $prompt .= "{\n";
+        $prompt .= "  \"title\": \"Titlul final al articolului (poate fi cel original sau unul optimizat)\",\n";
+        $prompt .= "  \"content\": \"Conținutul HTML al articolului\",\n";
+        $prompt .= "  \"summary\": \"Meta descrierea SEO\",\n";
+        $prompt .= "  \"tags\": [\"tag1\", \"tag2\"],\n";
+        $prompt .= "  \"category\": \"{$category_name}\"\n";
+        $prompt .= "}\n";
+
+        return $prompt;
+    }
+
     public static function get_retry_browsing_prompt($category_name)
     {
         return "Scrie un articol de știri ca un jurnalist profesionist. \r\n\r\nCategoria: {$category_name}\r\n\r\nCerințe:\r\n- Titlu atractiv și descriptiv\r\n- Conținut fluent și natural, fără secțiuni marcate explicit\r\n- NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"\r\n- Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly\r\n- Generează între 1 și 3 etichete relevante (cuvinte_cheie)\r\n- Limbă română\r\n- Stil jurnalistic obiectiv și informativ\r\n\r\nReturnează DOAR acest JSON:\r\n{\r\n  \"titlu\": \"Titlul articolului\",\r\n  \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",\r\n  \"meta_descriere\": \"Meta descriere SEO\",\r\n  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]\r\n}";

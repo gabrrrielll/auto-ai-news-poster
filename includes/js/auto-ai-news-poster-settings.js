@@ -42,7 +42,7 @@ jQuery(document).ready(function ($) {
     // Tab Click Handler
     modeTabs.on('click', function () {
         const mode = $(this).data('mode');
-        console.log("�️ AANP Settings JS: Tab clicked:", mode);
+        console.log("️ AANP Settings JS: Tab clicked:", mode);
 
         modeTabs.removeClass('active');
         $(this).addClass('active');
@@ -53,6 +53,7 @@ jQuery(document).ready(function ($) {
 
     setupConditionalFields();
     toggleSettingsVisibility();
+
     // Event listener for Scan button
     $('#btn_scan_site').on('click', function () {
         var context = $('#sa_context').val();
@@ -177,6 +178,101 @@ jQuery(document).ready(function ($) {
                 $('#sa_select_all').prop('checked', false);
             } else {
                 alert('Eroare la import: ' + response.data);
+            }
+        });
+    });
+
+    // === TASKS MANAGEMENT LOGIC ===
+
+    // Switch Tasks AI Provider wrappers
+    $(document).on('change', '#tasks_api_provider', function () {
+        const provider = $(this).val();
+        $('.tasks-provider-wrapper').hide();
+        $('#tasks-wrapper-' + provider).fadeIn();
+    });
+
+    // Add New Task List
+    $('#add-task-list-btn').on('click', function () {
+        const container = $('#task-lists-container');
+        const template = $('#task-list-template').html();
+        const index = container.find('.task-list-item').length;
+        const id = Math.random().toString(36).substr(2, 9);
+
+        const html = template
+            .replace(/{{INDEX}}/g, index)
+            .replace(/{{ID}}/g, id);
+
+        container.find('.no-task-lists').remove();
+        container.append(html);
+
+        // Visual feedback
+        container.find('.task-list-item').last().hide().fadeIn();
+    });
+
+    // Remove Task List
+    $(document).on('click', '.remove-task-list', function () {
+        if (confirm('Sigur vrei să ștergi această listă de taskuri?')) {
+            $(this).closest('.task-list-item').fadeOut(300, function () {
+                $(this).remove();
+                // Re-index lists
+                reindexTaskLists();
+            });
+        }
+    });
+
+    function reindexTaskLists() {
+        $('#task-lists-container .task-list-item').each(function (index) {
+            $(this).find('[name^="auto_ai_news_poster_settings[task_lists]"]').each(function () {
+                const name = $(this).attr('name');
+                const newName = name.replace(/task_lists\]\[\d+\]/, 'task_lists][' + index + ']');
+                $(this).attr('name', newName);
+            });
+        });
+
+        if ($('#task-lists-container .task-list-item').length === 0) {
+            $('#task-lists-container').html('<div class="no-task-lists alert alert-light" style="text-align: center; border: 1px dashed #ccc; padding: 40px;">Nu ai nicio listă de taskuri creată. Apasă butonul de mai sus pentru a începe.</div>');
+        }
+    }
+
+    // Run Task List Now (AJAX)
+    $(document).on('click', '.run-task-list-now', function () {
+        const btn = $(this);
+        const listItem = btn.closest('.task-list-item');
+        const listId = listItem.data('id');
+        const textarea = listItem.find('textarea[name*="[titles]"]');
+        const titles = textarea.val().trim();
+
+        if (!titles) {
+            alert('Te rugăm să adaugi cel puțin un titlu în listă.');
+            return;
+        }
+
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Se generează...');
+        listItem.css('opacity', '0.7');
+
+        $.post(auto_ai_news_poster_ajax.ajax_url, {
+            action: 'auto_ai_run_task_list_item',
+            list_id: listId,
+            nonce: auto_ai_news_poster_ajax.check_settings_nonce
+        }, function (response) {
+            btn.prop('disabled', false).html('<i class="fas fa-magic"></i> Generează acum');
+            listItem.css('opacity', '1');
+
+            if (response.success) {
+                // Success feedback
+                alert('Succes: ' + response.data.message);
+
+                // Update titles in textarea (remove first one)
+                const lines = titles.split('\n');
+                lines.shift();
+                textarea.val(lines.join('\n'));
+
+                // If it was the last title, maybe visual feedback
+                if (lines.length === 0) {
+                    textarea.css('border-color', '#28a745');
+                }
+            } else {
+                alert('Eroare: ' + response.data.message);
             }
         });
     });
