@@ -100,10 +100,10 @@ class Auto_Ai_News_Poster_Settings
         wp_enqueue_script('select2-js', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', ['jquery'], null, true);
 
         // Stilurile personalizate ale plugin-ului
-        wp_enqueue_style('auto-ai-news-poster-admin-style', plugin_dir_url(__FILE__) . 'css/auto-ai-news-poster.css', [], '1.2.0');
+        wp_enqueue_style('auto-ai-news-poster-admin-style', plugin_dir_url(__FILE__) . 'css/auto-ai-news-poster.css', [], '1.16.0');
 
         // Scripturile personalizate ale plugin-ului
-        wp_enqueue_script('auto-ai-news-poster-admin-script', plugin_dir_url(__FILE__) . 'js/auto-ai-news-poster-settings.js', ['jquery', 'select2-js'], '1.2.0', true);
+        wp_enqueue_script('auto-ai-news-poster-admin-script', plugin_dir_url(__FILE__) . 'js/auto-ai-news-poster-settings.js', ['jquery', 'select2-js'], '1.16.0', true);
 
         // Localizare script pentru AJAX
         wp_localize_script('auto-ai-news-poster-admin-script', 'auto_ai_news_poster_ajax', [
