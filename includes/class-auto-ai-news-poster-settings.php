@@ -1723,7 +1723,6 @@ public static function tasks_management_placeholder_callback()
 
         $options['bulk_custom_source_urls'] = implode("\n", $existing_urls);
         update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
-        update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
 
         wp_send_json_success('Imported ' . count($items) . ' links to the queue.');
     }
