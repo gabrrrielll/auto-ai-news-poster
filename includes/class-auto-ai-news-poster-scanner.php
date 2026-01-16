@@ -121,14 +121,14 @@ class Auto_Ai_News_Poster_Scanner
      * @param string $context The category or keyword context to look for (e.g. "Technology", "Politics").
      * @return array|WP_Error Filtered array of candidates or WP_Error.
      */
-    public static function filter_candidates_with_ai($candidates, $context = 'General News')
+    public static function filter_candidates_with_ai($candidates, $context = 'General News', $limit = 10)
     {
         if (empty($candidates)) {
             return [];
         }
 
-        // Limit candidates to avoid token overflow (e.g., analyze top 50 matches only)
-        $candidates_slice = array_slice($candidates, 0, 50);
+        // Limit candidates to avoid token overflow (analyze top 120 matches from all aggregate sites)
+        $candidates_slice = array_slice($candidates, 0, 120);
         
         // Prepare list for AI
         $list_text = "";
@@ -145,7 +145,8 @@ class Auto_Ai_News_Poster_Scanner
         $prompt .= "CRITERIA:\n";
         $prompt .= "1. Exclude ads, homepage links, navigation items, subscriptions, or unrelated content.\n";
         $prompt .= "2. Exclude old archives or generic pages.\n";
-        $prompt .= "3. Include ONLY specific news stories or articles relevant to the topic.\n\n";
+        $prompt .= "3. Include ONLY specific news stories or articles relevant to the topic.\n";
+        $prompt .= "4. RETURN NO MORE THAN $limit links. Pick the most relevant ones.\n\n";
         $prompt .= "LIST TO ANALYZE:\n";
         $prompt .= $list_text;
         $prompt .= "\n\n";

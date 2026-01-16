@@ -204,20 +204,20 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_main_section'
         );
 
-        // Site Analyzer (New Tab/Card above Source Links)
-        add_settings_field(
-            'site_analyzer_ui',
-            'Site Analyzer & Cleaner',
-            [self::class, 'site_analyzer_ui_callback'],
-            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
-            'auto_ai_news_poster_main_section'
-        );
-
         // Camp pentru lista de linkuri bulk
         add_settings_field(
             'bulk_custom_source_urls',
             'Lista de Linkuri Sursă',
             [self::class, 'bulk_custom_source_urls_callback'],
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
+            'auto_ai_news_poster_main_section'
+        );
+
+        // Site Analyzer (New Tab/Card below Source Links)
+        add_settings_field(
+            'site_analyzer_ui',
+            'Site Analyzer & Cleaner',
+            [self::class, 'site_analyzer_ui_callback'],
             AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'auto_ai_news_poster_main_section'
         );
@@ -1752,9 +1752,13 @@ class Auto_Ai_News_Poster_Settings
             </div>
             <div class="settings-card-content">
                 <div class="form-row" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
-                    <div class="form-group" style="flex: 1; min-width: 150px;">
+                    <div class="form-group" style="flex: 2; min-width: 150px;">
                         <label for="sa_context">Context / Category</label>
                         <input type="text" id="sa_context" class="form-control" placeholder="ex: Technology, Politics">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 100px;">
+                        <label for="sa_max_links">Max Links to Extract</label>
+                        <input type="number" id="sa_max_links" class="form-control" value="10" min="1" max="50">
                     </div>
                     <div class="form-group">
                         <button type="button" id="btn_scan_site" class="button button-primary button-large">
@@ -1804,10 +1808,14 @@ class Auto_Ai_News_Poster_Settings
 
         $urls = isset($_POST['urls']) ? $_POST['urls'] : [];
         $context = isset($_POST['context']) ? sanitize_text_field($_POST['context']) : '';
+        $max_links = isset($_POST['max_links']) ? intval($_POST['max_links']) : 10;
 
         if (empty($urls) || !is_array($urls)) {
             wp_send_json_error('No URLs provided for scanning.');
         }
+
+        // Increase timeout for multi-site scans
+        set_time_limit(180); 
 
         $all_candidates = [];
         include_once plugin_dir_path(__FILE__) . 'class-auto-ai-news-poster-scanner.php';
@@ -1818,7 +1826,8 @@ class Auto_Ai_News_Poster_Settings
             
             $site_candidates = Auto_Ai_News_Poster_Scanner::scan_url($url);
             if (!is_wp_error($site_candidates)) {
-                $all_candidates = array_merge($all_candidates, $site_candidates);
+                // Limit candidates per site to avoid massive aggregate lists (e.g. 30 per site)
+                $all_candidates = array_merge($all_candidates, array_slice($site_candidates, 0, 30));
             }
         }
 
@@ -1826,8 +1835,8 @@ class Auto_Ai_News_Poster_Settings
             wp_send_json_error('No links found on the provided sites.');
         }
 
-        // Filter all collected candidates at once
-        $filtered = Auto_Ai_News_Poster_Scanner::filter_candidates_with_ai($all_candidates, $context);
+        // Filter all collected candidates at once, passing the user-defined limit
+        $filtered = Auto_Ai_News_Poster_Scanner::filter_candidates_with_ai($all_candidates, $context, $max_links);
 
         if (is_wp_error($filtered)) {
             wp_send_json_error('AI Filter Error: ' . $filtered->get_error_message());

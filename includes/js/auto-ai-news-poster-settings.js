@@ -53,6 +53,7 @@ jQuery(document).ready(function ($) {
     // Event listener for Scan button
     $('#btn_scan_site').on('click', function () {
         var context = $('#sa_context').val();
+        var maxLinks = $('#sa_max_links').val() || 10;
 
         // Collect all ACTIVE URLs from our new dynamic list
         var activeUrls = [];
@@ -79,6 +80,7 @@ jQuery(document).ready(function ($) {
             action: 'auto_ai_scan_site',
             urls: activeUrls, // Send array of URLs instead of single URL
             context: context,
+            max_links: maxLinks,
             nonce: auto_ai_news_poster_ajax.check_settings_nonce
         }, function (response) {
             $('#sa_loading_spinner').hide();
