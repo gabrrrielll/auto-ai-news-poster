@@ -277,4 +277,60 @@ jQuery(document).ready(function ($) {
         });
     });
 
+    // --- Unified AI Config Card Handles ---
+
+    // Toggle Provider Wrappers
+    $(document).on('change', '.api-provider-select', function () {
+        const card = $(this).closest('.ai-config-card');
+        const provider = $(this).val();
+        card.find('.provider-wrapper').hide();
+        card.find('.wrapper-' + provider).fadeIn();
+    });
+
+    // Refresh Models
+    $(document).on('click', '.refresh-models-btn', function () {
+        const btn = $(this);
+        const provider = btn.data('provider');
+        const card = btn.closest('.ai-config-card');
+        const context = card.data('context');
+        const apiKey = card.find('.wrapper-' + provider + ' .api-key-input').val();
+
+        if (!apiKey) {
+            alert('Te rugăm să introduci cheia API pentru ' + provider);
+            return;
+        }
+
+        const originalText = btn.html();
+        btn.prop('disabled', true).html('⏳ ...');
+
+        let action = 'refresh_openai_models';
+        let nonce = auto_ai_news_poster_ajax.refresh_models_nonce;
+
+        if (provider === 'gemini') {
+            action = 'refresh_gemini_models';
+            nonce = auto_ai_news_poster_ajax.refresh_gemini_nonce;
+        } else if (provider === 'deepseek') {
+            action = 'refresh_deepseek_models';
+            nonce = auto_ai_news_poster_ajax.refresh_deepseek_nonce;
+        }
+
+        $.post(auto_ai_news_poster_ajax.ajax_url, {
+            action: action,
+            api_key: apiKey,
+            nonce: nonce,
+            context: context
+        }, function (response) {
+            if (response.success) {
+                alert('Success: Lista de modele a fost actualizată.');
+                location.reload();
+            } else {
+                alert('Eroare: ' + (response.data || response.statusText || 'Necunoscută'));
+            }
+        }).fail(function (err) {
+            alert('Request Failed: ' + err.statusText);
+        }).always(() => {
+            btn.prop('disabled', false).html(originalText);
+        });
+    });
+
 });

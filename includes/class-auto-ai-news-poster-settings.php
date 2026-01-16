@@ -110,7 +110,10 @@ class Auto_Ai_News_Poster_Settings
             'ajax_url' => admin_url('admin-ajax.php'),
             'force_refresh_now_nonce' => wp_create_nonce('force_refresh_now_nonce'),
             'check_settings_nonce' => wp_create_nonce('auto_ai_news_poster_check_settings'),
-            'clear_transient_nonce' => wp_create_nonce('clear_transient_nonce')
+            'clear_transient_nonce' => wp_create_nonce('clear_transient_nonce'),
+            'refresh_models_nonce' => wp_create_nonce('refresh_models_nonce'),
+            'refresh_gemini_nonce' => wp_create_nonce('refresh_gemini_models_nonce'),
+            'refresh_deepseek_nonce' => wp_create_nonce('refresh_deepseek_models_nonce'),
         ]);
     }
 
@@ -403,112 +406,11 @@ public static function tasks_management_placeholder_callback()
     <div class="settings-group settings-group-tasks <?php echo ($generation_mode === 'tasks') ? 'active' : ''; ?>">
         
         <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-            <!-- 1. Configurare API AI (Tasks Instance) -->
-            <div class="settings-card">
-                <div class="settings-card-header">
-                    <div class="settings-card-icon">🔑</div>
-                    <h3 class="settings-card-title">Configurare API AI (Tasks)</h3>
-                </div>
-                <div class="settings-card-content">
-                    <div class="form-group" style="margin-bottom: 15px;">
-                        <label class="control-label">Furnizor AI Principal</label>
-                        <select name="auto_ai_news_poster_settings[tasks_config][api_provider]" class="form-control" id="tasks_api_provider">
-                            <option value="openai" <?php selected($current_provider, 'openai'); ?>>OpenAI (GPT)</option>
-                            <option value="gemini" <?php selected($current_provider, 'gemini'); ?>>Google Gemini</option>
-                            <option value="deepseek" <?php selected($current_provider, 'deepseek'); ?>>DeepSeek V3</option>
-                        </select>
-                    </div>
-
-                    <!-- OpenAI Tasks -->
-                    <div id="tasks-wrapper-openai" class="tasks-provider-wrapper" style="display: <?php echo ($current_provider === 'openai' ? 'block' : 'none'); ?>;">
-                        <div class="form-group">
-                            <label class="control-label">Cheia API OpenAI</label>
-                            <input type="password" name="auto_ai_news_poster_settings[tasks_config][chatgpt_api_key]" value="<?php echo esc_attr($openai_key); ?>" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label class="control-label">Model OpenAI</label>
-                            <select name="auto_ai_news_poster_settings[tasks_config][ai_model]" class="form-control">
-                                <option value="gpt-4o" <?php selected($openai_model, 'gpt-4o'); ?>>GPT-4o (Cel mai capabil)</option>
-                                <option value="gpt-4o-mini" <?php selected($openai_model, 'gpt-4o-mini'); ?>>GPT-4o Mini (Rapid și economic)</option>
-                                <option value="o1-preview" <?php selected($openai_model, 'o1-preview'); ?>>o1-preview</option>
-                                <option value="gpt-3.5-turbo" <?php selected($openai_model, 'gpt-3.5-turbo'); ?>>GPT-3.5 Turbo</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Gemini Tasks -->
-                    <div id="tasks-wrapper-gemini" class="tasks-provider-wrapper" style="display: <?php echo ($current_provider === 'gemini' ? 'block' : 'none'); ?>;">
-                        <div class="form-group">
-                            <label class="control-label">Cheia API Google Gemini</label>
-                            <input type="password" name="auto_ai_news_poster_settings[tasks_config][gemini_api_key]" value="<?php echo esc_attr($gemini_key); ?>" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label class="control-label">Model Gemini</label>
-                            <select name="auto_ai_news_poster_settings[tasks_config][gemini_model]" class="form-control">
-                                <option value="gemini-1.5-pro" <?php selected($gemini_model, 'gemini-1.5-pro'); ?>>Gemini 1.5 Pro</option>
-                                <option value="gemini-1.5-flash" <?php selected($gemini_model, 'gemini-1.5-flash'); ?>>Gemini 1.5 Flash</option>
-                                <option value="gemini-1.0-pro" <?php selected($gemini_model, 'gemini-1.0-pro'); ?>>Gemini 1.0 Pro</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- DeepSeek Tasks -->
-                    <div id="tasks-wrapper-deepseek" class="tasks-provider-wrapper" style="display: <?php echo ($current_provider === 'deepseek' ? 'block' : 'none'); ?>;">
-                        <div class="form-group">
-                            <label class="control-label">Cheia API DeepSeek</label>
-                            <input type="password" name="auto_ai_news_poster_settings[tasks_config][deepseek_api_key]" value="<?php echo esc_attr($deepseek_key); ?>" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label class="control-label">Model DeepSeek</label>
-                            <select name="auto_ai_news_poster_settings[tasks_config][deepseek_model]" class="form-control">
-                                <option value="deepseek-chat" <?php selected($deepseek_model, 'deepseek-chat'); ?>>DeepSeek V3 (Chat)</option>
-                                <option value="deepseek-reasoner" <?php selected($deepseek_model, 'deepseek-reasoner'); ?>>DeepSeek R1 (Reasoner)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 2. Configurare Cron & Control (Tasks Instance) -->
-            <div class="settings-card">
-                <div class="settings-card-header">
-                    <div class="settings-card-icon">⏰</div>
-                    <h3 class="settings-card-title">Configurare Execuție Tasks</h3>
-                </div>
-                <div class="settings-card-content">
-                    <div class="form-group" style="margin-bottom: 15px;">
-                        <label class="control-label">Interval între task-uri (Cron)</label>
-                        <div style="display: flex; gap: 10px;">
-                            <select name="auto_ai_news_poster_settings[tasks_config][cron_interval_hours]" class="form-control">
-                                <?php for($i=0; $i<=23; $i++) : ?>
-                                    <option value="<?php echo $i; ?>" <?php selected($cron_hours, $i); ?>><?php echo $i; ?> ore</option>
-                                <?php endfor; ?>
-                            </select>
-                            <select name="auto_ai_news_poster_settings[tasks_config][cron_interval_minutes]" class="form-control">
-                                <?php foreach([0,1,2,5,10,15,20,30,45] as $m) : ?>
-                                    <option value="<?php echo $m; ?>" <?php selected($cron_minutes, $m); ?>><?php echo $m; ?> minute</option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <div class="checkbox-modern" style="margin-bottom: 10px;">
-                            <input type="checkbox" name="auto_ai_news_poster_settings[tasks_config][generate_image]" value="yes" <?php checked($gen_image, 'yes'); ?> />
-                            <label>Generează imagini AI pentru task-uri</label>
-                        </div>
-                        <div class="checkbox-modern">
-                            <input type="checkbox" name="auto_ai_news_poster_settings[tasks_config][generate_tags]" value="yes" <?php checked($gen_tags, 'yes'); ?> />
-                            <label>Generează etichete automate</label>
-                        </div>
-                    </div>
-
-                    <div class="form-group" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
-                        <label class="control-label">Instrucțiuni AI specifice pentru Tasks</label>
-                        <textarea name="auto_ai_news_poster_settings[tasks_config][ai_instructions]" class="form-control" rows="3"><?php echo esc_textarea($tasks_config['ai_instructions'] ?? ''); ?></textarea>
-                    </div>
-                </div>
-            </div>
+            <?php 
+                // Render the reusable components with 'tasks' context
+                self::render_ai_config_component('tasks');
+                self::render_cron_config_component('tasks');
+            ?>
         </div>
 
         <!-- 3. Dynamic Task Lists -->
@@ -736,397 +638,19 @@ public static function tasks_management_placeholder_callback()
     // Callback pentru cheia API
     public static function chatgpt_api_key_callback()
     {
-        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
-        $api_key = $options['chatgpt_api_key'] ?? '';
-        $selected_model = $options['ai_model'] ?? DEFAULT_AI_MODEL;
-
-        // Obținem lista de modele disponibile pentru OpenAI
-        $available_models = self::get_cached_openai_models($api_key);
-        $has_error = isset($available_models['error']);
-        $error_message = $has_error ? $available_models['error'] : '';
-        $error_type = $has_error ? $available_models['error_type'] : '';
         ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">🔑</div>
-                <h3 class="settings-card-title">Configurare API AI</h3>
-            </div>
-            <div class="settings-card-content">
-                <div class="form-grid">
-                    <div>
-                        <!-- Selector Provider -->
-                        <div class="form-group" style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
-                            <?php $current_provider = $options['api_provider'] ?? 'openai'; ?>
-                            <label for="api_provider" class="control-label">Furnizor AI Principal</label>
-                            <select name="auto_ai_news_poster_settings[api_provider]" class="form-control" id="api_provider">
-                                <option value="openai" <?php selected($current_provider, 'openai'); ?>>OpenAI (GPT)</option>
-                                <option value="gemini" <?php selected($current_provider, 'gemini'); ?>>Google Gemini</option>
-                                <option value="deepseek" <?php selected($current_provider, 'deepseek'); ?>>DeepSeek V3</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Wrapper OpenAI -->
-                        <div id="wrapper-openai" style="display: <?php echo ($current_provider === 'openai' ? 'block' : 'none'); ?>;">
-                            <div class="form-group">
-                                <label for="chatgpt_api_key" class="control-label">Cheia API OpenAI</label>
-                                <input type="password" name="auto_ai_news_poster_settings[chatgpt_api_key]"
-                                       value="<?php echo esc_attr($api_key); ?>" class="form-control"
-                                       id="chatgpt_api_key" placeholder="sk-..." onchange="refreshModelsList()">
-                                <span class="info-icon tooltip">
-                                    i
-                                    <span class="tooltiptext">Platform: platform.openai.com</span>
-                                </span>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="ai_model" class="control-label">Model OpenAI</label>
-                                <select name="auto_ai_news_poster_settings[ai_model]" class="form-control" id="ai_model">
-                                    <?php if (!$has_error && !empty($available_models)): ?>
-                                        <optgroup label="🌟 Recomandate">
-                                            <?php
-                                            $recommended_models = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'];
-                                            foreach ($recommended_models as $model_id) {
-                                                if (isset($available_models[$model_id])) {
-                                                    $model = $available_models[$model_id];
-                                                    $description = self::get_model_description($model_id);
-                                                    $selected = selected($selected_model, $model_id, false);
-                                                    echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
-                                                }
-                                            }
-                                            ?>
-                                        </optgroup>
-                                        <optgroup label="📊 Toate modelele disponibile">
-                                            <?php
-                                            foreach ($available_models as $model_id => $model) {
-                                                if (!in_array($model_id, $recommended_models)) {
-                                                    $description = self::get_model_description($model_id);
-                                                    $selected = selected($selected_model, $model_id, false);
-                                                    echo "<option value=\"{$model_id}\" {$selected}>{$description}</option>";
-                                                }
-                                            }
-                                            ?>
-                                        </optgroup>
-                                    <?php else: ?>
-                                        <option value="" disabled>
-                                            <?php if ($has_error): ?>
-                                                ❌ Eroare la încărcarea modelelor
-                                            <?php else: ?>
-                                                ⏳ Se încarcă modelele...
-                                            <?php endif; ?>
-                                        </option>
-                                    <?php endif; ?>
-                                </select>
-                                
-                                <?php if ($has_error): ?>
-                                    <div class="alert alert-danger" style="margin-top: 10px; padding: 10px; background: #fee; border: 1px solid #fcc; border-radius: 4px;">
-                                        <strong>❌ Eroare la încărcarea modelelor OpenAI:</strong> <?php echo esc_html($error_message); ?>
-                                    </div>
-                                <?php endif; ?>
-
-                                <div class="form-description">
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshModelsList()" style="margin-top: 5px;">
-                                        🔄 Actualizează lista OpenAI
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Wrapper Gemini -->
-                        <div id="wrapper-gemini" style="display: <?php echo ($current_provider === 'gemini' ? 'block' : 'none'); ?>;">
-                            <div class="form-group">
-                                <label for="gemini_api_key" class="control-label">Cheia API Google Gemini</label>
-                                <input type="password" name="auto_ai_news_poster_settings[gemini_api_key]"
-                                       value="<?php echo esc_attr($options['gemini_api_key'] ?? ''); ?>" class="form-control"
-                                       id="gemini_api_key" placeholder="AIza...">
-                                <span class="info-icon tooltip">
-                                    i
-                                    <span class="tooltiptext">Platform: aistudio.google.com</span>
-                                </span>
-                            </div>
-                            <div class="form-group">
-                                <label for="gemini_model" class="control-label">Model Gemini</label>
-                                <select name="auto_ai_news_poster_settings[gemini_model]" class="form-control" id="gemini_model">
-                                    <?php 
-                                    $gemini_models = get_option('auto_ai_news_poster_gemini_models', [
-                                        'gemini-2.0-flash-exp' => 'Gemini 2.0 Flash (Experimental)',
-                                        'gemini-1.5-pro' => 'Gemini 1.5 Pro',
-                                        'gemini-1.5-flash' => 'Gemini 1.5 Flash',
-                                        'gemini-pro' => 'Gemini 1.0 Pro',
-                                    ]);
-                                    // If for some reason options saved badly, revert to defaults
-                                    if (!is_array($gemini_models) || empty($gemini_models)) {
-                                          $gemini_models = [
-                                            'gemini-1.5-pro' => 'Gemini 1.5 Pro (Fallback)',
-                                            'gemini-1.5-flash' => 'Gemini 1.5 Flash (Fallback)'
-                                          ];
-                                    }
-
-                                    $current_gemini_model = $options['gemini_model'] ?? 'gemini-1.5-pro';
-                                    
-                                    // Group if possible, or just list
-                                    foreach ($gemini_models as $gid => $gname) {
-                                        echo '<option value="' . esc_attr($gid) . '" ' . selected($current_gemini_model, $gid, false) . '>' . esc_html($gname) . '</option>';
-                                    }
-                                    ?>
-                                </select>
-                                <div class="form-description">
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshGeminiModels()" style="margin-top: 5px;">
-                                        🔄 Actualizează lista Gemini
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Wrapper DeepSeek -->
-                        <div id="wrapper-deepseek" style="display: <?php echo ($current_provider === 'deepseek' ? 'block' : 'none'); ?>;">
-                            <div class="form-group">
-                                <label for="deepseek_api_key" class="control-label">Cheia API DeepSeek</label>
-                                <input type="password" name="auto_ai_news_poster_settings[deepseek_api_key]"
-                                       value="<?php echo esc_attr($options['deepseek_api_key'] ?? ''); ?>" class="form-control"
-                                       id="deepseek_api_key" placeholder="sk-...">
-                                <span class="info-icon tooltip">
-                                    i
-                                    <span class="tooltiptext">Platform: deepseek.com</span>
-                                </span>
-                            </div>
-                            <div class="form-group">
-                                <label for="deepseek_model" class="control-label">Model DeepSeek</label>
-                                <select name="auto_ai_news_poster_settings[deepseek_model]" class="form-control" id="deepseek_model">
-                                    <?php 
-                                    $ds_models = get_option('auto_ai_news_poster_deepseek_models', [
-                                        'deepseek-chat' => 'DeepSeek V3 (Chat)',
-                                        'deepseek-coder' => 'DeepSeek Coder V2',
-                                    ]);
-                                     // Fallback
-                                    if (!is_array($ds_models) || empty($ds_models)) {
-                                          $ds_models = [
-                                            'deepseek-chat' => 'DeepSeek V3 (Fallback)',
-                                            'deepseek-coder' => 'DeepSeek Coder (Fallback)'
-                                          ];
-                                    }
-                                    $current_ds_model = $options['deepseek_model'] ?? 'deepseek-chat';
-                                    foreach ($ds_models as $did => $dname) {
-                                        echo '<option value="' . esc_attr($did) . '" ' . selected($current_ds_model, $did, false) . '>' . esc_html($dname) . '</option>';
-                                    }
-                                    ?>
-                                </select>
-                                <div class="form-description">
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshDeepSeekModels()" style="margin-top: 5px;">
-                                        🔄 Actualizează lista DeepSeek
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <div class="api-instructions-container" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                    <!-- OpenAI Instructions -->
-                    <div class="api-instructions">
-                        <h4 class="api-instructions-toggle" onclick="toggleInstructions('openai-instructions')">
-                            📋 Cum să obțineți cheia API OpenAI <span class="toggle-icon">▼</span>
-                        </h4>
-                        <div class="api-instructions-content" id="openai-instructions" style="display: none;">
-                            <ol>
-                                <li><strong>Accesați</strong> <a href="https://platform.openai.com" target="_blank">https://platform.openai.com</a></li>
-                                <li><strong>Vă înregistrați</strong> sau vă autentificați în contul OpenAI</li>
-                                <li><strong>Navigați</strong> la <a href="https://platform.openai.com/api-keys" target="_blank">API Keys</a></li>
-                                <li><strong>Faceți click</strong> pe "Create new secret key"</li>
-                                <li><strong>Copiați</strong> cheia generată (începe cu "sk-")</li>
-                                <li><strong>Lipiți</strong> cheia în câmpul OpenAI de mai sus</li>
-                            </ol>
-                            <div class="api-warning">
-                                <strong>⚠️ Important:</strong> Asigurați-vă că aveți credit disponibil în contul OpenAI.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="settings-group settings-group-parse_link settings-group-ai_browsing active">
+            <?php self::render_ai_config_component('main'); ?>
         </div>
-        
-        <script>
-        function toggleInstructions(id) {
-            const content = document.getElementById(id);
-            // Găsim iconița din interiorul header-ului care a declanșat evenimentul (părintele lui content nu e header-ul, ci sibling anterior)
-            // Dar mai simplu, luăm elementul clicat din event sau căutăm sibling-ul anterior al content-ului
-            const header = content.previousElementSibling;
-            const icon = header.querySelector('.toggle-icon');
-            
-            if (content.style.display === 'none') {
-                content.style.display = 'block';
-                icon.textContent = '▲';
-            } else {
-                content.style.display = 'none';
-                icon.textContent = '▼';
-            }
-        }
-
-        
-        function refreshModelsList() {
-            const apiKey = document.getElementById('chatgpt_api_key').value;
-            const modelSelect = document.getElementById('ai_model');
-            
-            if (!apiKey) {
-                alert('Vă rugăm să introduceți mai întâi cheia API OpenAI.');
-                return;
-            }
-            
-            // Afișăm indicator de încărcare
-            const refreshBtn = document.querySelector('button[onclick="refreshModelsList()"]');
-            const originalText = refreshBtn.innerHTML;
-            refreshBtn.innerHTML = '⏳ Se încarcă...';
-            refreshBtn.disabled = true;
-            
-            // Facem apel AJAX pentru a actualiza lista
-            fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    action: 'refresh_openai_models',
-                    api_key: apiKey,
-                    nonce: '<?php echo wp_create_nonce('refresh_models_nonce'); ?>'
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Reîncărcăm pagina pentru a afișa noile modele
-                    location.reload();
-                } else {
-                    alert('Eroare la actualizarea listei de modele: ' + (data.data || 'Eroare necunoscută'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Eroare la actualizarea listei de modele.');
-            })
-            .finally(() => {
-                refreshBtn.innerHTML = originalText;
-                refreshBtn.disabled = false;
-            });
-        }
-
-
-
-        function refreshGeminiModels() {
-            const apiKey = document.getElementById('gemini_api_key').value;
-            if (!apiKey) { alert('Introduceți cheia API Gemini.'); return; }
-            
-            const btn = document.querySelector('button[onclick="refreshGeminiModels()"]');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ ...'; btn.disabled = true;
-
-            fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({
-                    action: 'refresh_gemini_models',
-                    api_key: apiKey,
-                    nonce: '<?php echo wp_create_nonce('refresh_gemini_models_nonce'); ?>'
-                })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if(data.success) { location.reload(); }
-                else { alert('Eroare Gemini: ' + data.data); }
-            })
-            .finally(() => { btn.innerHTML = originalText; btn.disabled = false; });
-        }
-
-        function refreshDeepSeekModels() {
-            const apiKey = document.getElementById('deepseek_api_key').value;
-            if (!apiKey) { alert('Introduceți cheia API DeepSeek.'); return; }
-
-            const btn = document.querySelector('button[onclick="refreshDeepSeekModels()"]');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ ...'; btn.disabled = true;
-
-            fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({
-                    action: 'refresh_deepseek_models',
-                    api_key: apiKey,
-                    nonce: '<?php echo wp_create_nonce('refresh_deepseek_models_nonce'); ?>'
-                })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if(data.success) { location.reload(); }
-                else { alert('Eroare DeepSeek: ' + data.data); }
-            })
-            .finally(() => { btn.innerHTML = originalText; btn.disabled = false; });
-        }
-
-        // Logică pentru schimbarea providerului și afișarea câmpurilor relevante
-        document.addEventListener('DOMContentLoaded', function() {
-            const providerSelect = document.getElementById('api_provider');
-            const openAIGroup = document.getElementById('wrapper-openai');
-            const geminiGroup = document.getElementById('wrapper-gemini');
-            const deepseekGroup = document.getElementById('wrapper-deepseek');
-            
-            function updateVisibility() {
-                const provider = providerSelect.value;
-                
-                // Hide all first
-                if(openAIGroup) openAIGroup.style.display = 'none';
-                if(geminiGroup) geminiGroup.style.display = 'none';
-                if(deepseekGroup) deepseekGroup.style.display = 'none';
-                
-                // Show selected
-                if (provider === 'openai' && openAIGroup) openAIGroup.style.display = 'block';
-                if (provider === 'gemini' && geminiGroup) geminiGroup.style.display = 'block';
-                if (provider === 'deepseek' && deepseekGroup) deepseekGroup.style.display = 'block';
-            }
-            
-            if(providerSelect) {
-                providerSelect.addEventListener('change', updateVisibility);
-                updateVisibility(); // Run on load
-            }
-        });
-        </script>
         <?php
     }
 
     // Callback pentru setarea intervalului cron
     public static function cron_interval_callback()
     {
-        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
-        $hours = $options['cron_interval_hours'] ?? 1;
-        $minutes = $options['cron_interval_minutes'] ?? 0;
         ?>
-        <div class="settings-card">
-            <div class="settings-card-header">
-                <div class="settings-card-icon">⏰</div>
-                <h3 class="settings-card-title">Configurare Cron Job</h3>
-            </div>
-            <div class="settings-card-content">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="cron_interval_hours" class="control-label">Ore</label>
-                        <select name="auto_ai_news_poster_settings[cron_interval_hours]" class="form-control">
-                            <?php for ($i = 0; $i <= 23; $i++) : ?>
-                                <option value="<?php echo $i; ?>" <?php selected($hours, $i); ?>>
-                                    <?php echo $i; ?> ore
-                                </option>
-                            <?php endfor; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="cron_interval_minutes" class="control-label">Minute</label>
-                        <select name="auto_ai_news_poster_settings[cron_interval_minutes]" class="form-control">
-                            <?php for ($i = 0; $i <= 59; $i++) : ?>
-                                <option value="<?php echo $i; ?>" <?php selected($minutes, $i); ?>>
-                                    <?php echo $i; ?> minute
-                                </option>
-                            <?php endfor; ?>
-                        </select>
-                    </div>
-                </div>
-            </div>
+        <div class="settings-group settings-group-parse_link settings-group-ai_browsing active">
+            <?php self::render_cron_config_component('main'); ?>
         </div>
         <?php
     }
@@ -2202,6 +1726,237 @@ public static function tasks_management_placeholder_callback()
         update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
 
         wp_send_json_success('Imported ' . count($items) . ' links to the queue.');
+    }
+
+    /**
+     * REUSABLE COMPONENT: AI Configuration Card
+     */
+    public static function render_ai_config_component($context = 'main')
+    {
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $is_tasks = ($context === 'tasks');
+        $data = $is_tasks ? ($options['tasks_config'] ?? []) : $options;
+        $name_key = $is_tasks ? 'tasks_config' : '';
+        $id_pfx = $is_tasks ? 'tasks_' : '';
+        $title = $is_tasks ? 'Configurare API AI (Tasks)' : 'Configurare API AI';
+
+        // Helper for field names
+        $fn = function ($key) use ($name_key) {
+            return $name_key ? "auto_ai_news_poster_settings[{$name_key}][{$key}]" : "auto_ai_news_poster_settings[{$key}]";
+        };
+
+        $current_provider = $data['api_provider'] ?? ($is_tasks ? 'openai' : ($options['api_provider'] ?? 'openai'));
+        $openai_key = $data['chatgpt_api_key'] ?? '';
+        $selected_model = $data['ai_model'] ?? ($is_tasks ? 'gpt-4o-mini' : DEFAULT_AI_MODEL);
+
+        // Fetch models
+        $available_models = self::get_cached_openai_models($openai_key);
+        $has_error = isset($available_models['error']);
+        $error_message = $has_error ? $available_models['error'] : '';
+        ?>
+        <div class="settings-card ai-config-card" data-context="<?php echo $context; ?>">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">🔑</div>
+                <h3 class="settings-card-title"><?php echo esc_html($title); ?></h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-grid">
+                    <div>
+                        <!-- Selector Provider -->
+                        <div class="form-group" style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
+                            <label class="control-label">Furnizor AI Principal</label>
+                            <select name="<?php echo $fn('api_provider'); ?>" class="form-control api-provider-select" id="<?php echo $id_pfx; ?>api_provider">
+                                <option value="openai" <?php selected($current_provider, 'openai'); ?>>OpenAI (GPT)</option>
+                                <option value="gemini" <?php selected($current_provider, 'gemini'); ?>>Google Gemini</option>
+                                <option value="deepseek" <?php selected($current_provider, 'deepseek'); ?>>DeepSeek V3</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Wrapper OpenAI -->
+                        <div class="provider-wrapper wrapper-openai" id="<?php echo $id_pfx; ?>wrapper-openai" style="display: <?php echo ($current_provider === 'openai' ? 'block' : 'none'); ?>;">
+                            <div class="form-group">
+                                <label class="control-label">Cheia API OpenAI</label>
+                                <input type="password" name="<?php echo $fn('chatgpt_api_key'); ?>"
+                                       value="<?php echo esc_attr($openai_key); ?>" class="form-control api-key-input"
+                                       id="<?php echo $id_pfx; ?>chatgpt_api_key" placeholder="sk-...">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="control-label">Model OpenAI</label>
+                                <select name="<?php echo $fn('ai_model'); ?>" class="form-control model-select" id="<?php echo $id_pfx; ?>ai_model">
+                                    <?php if (!$has_error && !empty($available_models)): ?>
+                                        <optgroup label="🌟 Recomandate">
+                                            <?php
+                                            $recommended_models = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'];
+                                            foreach ($recommended_models as $model_id) {
+                                                if (isset($available_models[$model_id])) {
+                                                    $description = self::get_model_description($model_id);
+                                                    echo "<option value=\"{$model_id}\" " . selected($selected_model, $model_id, false) . ">{$description}</option>";
+                                                }
+                                            }
+                                            ?>
+                                        </optgroup>
+                                        <optgroup label="📊 Toate modelele">
+                                            <?php
+                                            foreach ($available_models as $model_id => $model) {
+                                                if (!in_array($model_id, $recommended_models)) {
+                                                    $description = self::get_model_description($model_id);
+                                                    echo "<option value=\"{$model_id}\" " . selected($selected_model, $model_id, false) . ">{$description}</option>";
+                                                }
+                                            }
+                                            ?>
+                                        </optgroup>
+                                    <?php else: ?>
+                                        <option value="gpt-4o-mini">GPT-4o Mini (Default)</option>
+                                    <?php endif; ?>
+                                </select>
+                                <div class="form-description">
+                                    <button type="button" class="btn btn-sm btn-outline-primary refresh-models-btn" data-provider="openai">
+                                        🔄 Actualizează lista OpenAI
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Wrapper Gemini -->
+                        <div class="provider-wrapper wrapper-gemini" id="<?php echo $id_pfx; ?>wrapper-gemini" style="display: <?php echo ($current_provider === 'gemini' ? 'block' : 'none'); ?>;">
+                            <div class="form-group">
+                                <label class="control-label">Cheia API Google Gemini</label>
+                                <input type="password" name="<?php echo $fn('gemini_api_key'); ?>"
+                                       value="<?php echo esc_attr($data['gemini_api_key'] ?? ''); ?>" class="form-control api-key-input"
+                                       id="<?php echo $id_pfx; ?>gemini_api_key" placeholder="AIza...">
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">Model Gemini</label>
+                                <select name="<?php echo $fn('gemini_model'); ?>" class="form-control model-select" id="<?php echo $id_pfx; ?>gemini_model">
+                                    <?php 
+                                    $gemini_models = get_option('auto_ai_news_poster_gemini_models', ['gemini-1.5-pro' => 'Gemini 1.5 Pro', 'gemini-1.5-flash' => 'Gemini 1.5 Flash']);
+                                    $current_gemini_model = $data['gemini_model'] ?? 'gemini-1.5-pro';
+                                    foreach ($gemini_models as $gid => $gname) {
+                                        echo '<option value="' . esc_attr($gid) . '" ' . selected($current_gemini_model, $gid, false) . '>' . esc_html($gname) . '</option>';
+                                    }
+                                    ?>
+                                </select>
+                                <div class="form-description">
+                                    <button type="button" class="btn btn-sm btn-outline-primary refresh-models-btn" data-provider="gemini">
+                                        🔄 Actualizează lista Gemini
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Wrapper DeepSeek -->
+                        <div class="provider-wrapper wrapper-deepseek" id="<?php echo $id_pfx; ?>wrapper-deepseek" style="display: <?php echo ($current_provider === 'deepseek' ? 'block' : 'none'); ?>;">
+                            <div class="form-group">
+                                <label class="control-label">Cheia API DeepSeek</label>
+                                <input type="password" name="<?php echo $fn('deepseek_api_key'); ?>"
+                                       value="<?php echo esc_attr($data['deepseek_api_key'] ?? ''); ?>" class="form-control api-key-input"
+                                       id="<?php echo $id_pfx; ?>deepseek_api_key" placeholder="sk-...">
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">Model DeepSeek</label>
+                                <select name="<?php echo $fn('deepseek_model'); ?>" class="form-control model-select" id="<?php echo $id_pfx; ?>deepseek_model">
+                                    <?php 
+                                    $ds_models = get_option('auto_ai_news_poster_deepseek_models', ['deepseek-chat' => 'DeepSeek V3', 'deepseek-reasoner' => 'DeepSeek R1']);
+                                    $current_ds_model = $data['deepseek_model'] ?? 'deepseek-chat';
+                                    foreach ($ds_models as $did => $dname) {
+                                        echo '<option value="' . esc_attr($did) . '" ' . selected($current_ds_model, $did, false) . '>' . esc_html($dname) . '</option>';
+                                    }
+                                    ?>
+                                </select>
+                                <div class="form-description">
+                                    <button type="button" class="btn btn-sm btn-outline-primary refresh-models-btn" data-provider="deepseek">
+                                        🔄 Actualizează lista DeepSeek
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="api-instructions-container" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                    <div class="api-instructions">
+                        <h4 class="api-instructions-toggle" onclick="this.nextElementSibling.style.display = (this.nextElementSibling.style.display === 'none' ? 'block' : 'none')">
+                            📋 Cum să obțineți cheia API OpenAI <span class="toggle-icon">▼</span>
+                        </h4>
+                        <div class="api-instructions-content" style="display: none;">
+                            <ol>
+                                <li>Accesați <a href="https://platform.openai.com" target="_blank">platform.openai.com</a></li>
+                                <li>Creați un "Secret Key" în secțiunea API Keys.</li>
+                                <li>Copiați cheia și lipiți-o mai sus.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * REUSABLE COMPONENT: Cron Configuration Card
+     */
+    public static function render_cron_config_component($context = 'main')
+    {
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $is_tasks = ($context === 'tasks');
+        $data = $is_tasks ? ($options['tasks_config'] ?? []) : $options;
+        $name_key = $is_tasks ? 'tasks_config' : '';
+        $id_pfx = $is_tasks ? 'tasks_' : '';
+        $title = $is_tasks ? 'Configurare Execuție Tasks' : 'Configurare Cron Job';
+
+        $hours = $data['cron_interval_hours'] ?? ($is_tasks ? 0 : 1);
+        $minutes = $data['cron_interval_minutes'] ?? ($is_tasks ? 30 : 0);
+
+        $fn = function ($key) use ($name_key) {
+            return $name_key ? "auto_ai_news_poster_settings[{$name_key}][{$key}]" : "auto_ai_news_poster_settings[{$key}]";
+        };
+
+        ?>
+        <div class="settings-card cron-config-card">
+            <div class="settings-card-header">
+                <div class="settings-card-icon">⏰</div>
+                <h3 class="settings-card-title"><?php echo esc_html($title); ?></h3>
+            </div>
+            <div class="settings-card-content">
+                <div class="form-grid" style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="control-label">Ore</label>
+                        <select name="<?php echo $fn('cron_interval_hours'); ?>" class="form-control">
+                            <?php for ($i = 0; $i <= 23; $i++) : ?>
+                                <option value="<?php echo $i; ?>" <?php selected($hours, $i); ?>><?php echo $i; ?> ore</option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="control-label">Minute</label>
+                        <select name="<?php echo $fn('cron_interval_minutes'); ?>" class="form-control">
+                            <?php foreach ([0, 1, 2, 5, 10, 15, 20, 30, 45] as $m) : ?>
+                                <option value="<?php echo $m; ?>" <?php selected($minutes, $m); ?>><?php echo $m; ?> minute</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <?php if ($is_tasks) : ?>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <div class="checkbox-modern" style="margin-bottom: 10px;">
+                            <input type="checkbox" name="<?php echo $fn('generate_image'); ?>" value="yes" <?php checked($data['generate_image'] ?? 'no', 'yes'); ?> />
+                            <label>Generează imagini AI pentru task-uri</label>
+                        </div>
+                        <div class="checkbox-modern">
+                            <input type="checkbox" name="<?php echo $fn('generate_tags'); ?>" value="yes" <?php checked($data['generate_tags'] ?? 'yes', 'yes'); ?> />
+                            <label>Generează etichete automate</label>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+                        <label class="control-label">Instrucțiuni AI specifice pentru Tasks</label>
+                        <textarea name="<?php echo $fn('ai_instructions'); ?>" class="form-control" rows="3"><?php echo esc_textarea($data['ai_instructions'] ?? ''); ?></textarea>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
     }
 }
 
