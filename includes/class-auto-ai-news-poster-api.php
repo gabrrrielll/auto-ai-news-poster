@@ -174,19 +174,23 @@ class Auto_Ai_News_Poster_Api
         }
 
         // Setăm imaginea extrasă din sursă (dacă există)
+        // Folosim setarea specifică pentru task sau setarea globală
+        $task_use_external_images = $list['use_external_images'] ?? $options['use_external_images'] ?? 'external';
+        
         if (!empty($extracted_image_url) && !has_post_thumbnail($post_id)) {
             error_log('[TASKS] Setting extracted image from source: ' . $extracted_image_url);
             $image_result = Post_Manager::set_featured_image(
                 $post_id,
                 $extracted_image_url,
                 $article_data['title'] ?? $target_title,
-                $article_data['summary'] ?? ''
+                $article_data['summary'] ?? '',
+                $source_url ?? '', // URL-ul sursă pentru extragerea numelui site-ului
+                $task_use_external_images // Override pentru use_external_images
             );
 
             if (is_wp_error($image_result)) {
                 error_log('[TASKS] Failed to set extracted image: ' . $image_result->get_error_message());
             } else {
-                update_post_meta($post_id, '_external_image_source', 'Sursă externă');
                 error_log('[TASKS] Extracted image set successfully');
             }
         }
@@ -646,14 +650,14 @@ class Auto_Ai_News_Poster_Api
                 $new_post_id, 
                 $extracted_image_url, 
                 $article_data['title'], 
-                $article_data['summary'] ?? ''
+                $article_data['summary'] ?? '',
+                $source_link // URL-ul sursă pentru extragerea numelui site-ului
             );
             
             if (is_wp_error($image_result)) {
                 error_log($log_prefix . ' Failed to set extracted image: ' . $image_result->get_error_message());
             } else {
-                // Setăm sursa imaginii ca fiind sursa externă
-                update_post_meta($new_post_id, '_external_image_source', 'Sursă externă');
+                // Numele site-ului este setat automat în set_featured_image
                 error_log($log_prefix . ' Extracted image set successfully');
             }
         } elseif ($extract_image_from_source !== 'yes') {
@@ -824,17 +828,22 @@ class Auto_Ai_News_Poster_Api
         // Setăm imaginea extrasă din sursă (prioritate)
         if (!empty($extracted_image_url) && !has_post_thumbnail($new_post_id)) {
             error_log('[AI_BROWSING] Setting extracted image from source: ' . $extracted_image_url);
+            // Extragem primul URL pentru numele site-ului
+            $urls = array_filter(array_map('trim', explode("\n", $news_sources)));
+            $first_url = !empty($urls) ? $urls[0] : '';
+            
             $image_result = Post_Manager::set_featured_image(
                 $new_post_id,
                 $extracted_image_url,
                 $article_data['titlu'],
-                $article_data['meta_descriere'] ?? ''
+                $article_data['meta_descriere'] ?? '',
+                $first_url // URL-ul sursă pentru extragerea numelui site-ului
             );
 
             if (is_wp_error($image_result)) {
                 error_log('[AI_BROWSING] Failed to set extracted image: ' . $image_result->get_error_message());
             } else {
-                update_post_meta($new_post_id, '_external_image_source', 'Sursă externă');
+                // Numele site-ului este setat automat în set_featured_image
                 error_log('[AI_BROWSING] Extracted image set successfully');
             }
         }

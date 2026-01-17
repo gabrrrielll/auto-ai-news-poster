@@ -65,12 +65,19 @@ class Post_Manager
 
 
 
-    public static function set_featured_image($post_id, $image_url, $title = '', $summary = '')
+    public static function set_featured_image($post_id, $image_url, $title = '', $summary = '', $source_url = '', $use_external_images_override = null)
     {
         $options = get_option('auto_ai_news_poster_settings');
-        $image_handling_mode = $options['use_external_images'] ?? 'import';
+        // Folosim override dacă este furnizat, altfel folosim setarea globală
+        $image_handling_mode = $use_external_images_override ?? ($options['use_external_images'] ?? 'import');
         $title_slug = sanitize_title($title); // Transformăm titlul într-un slug URL-friendly
         $author_id = $options['author_name'] ?? get_current_user_id();
+        
+        // Extragem numele site-ului din URL-ul sursă pentru "Sursa foto"
+        $site_name = 'Sursă externă'; // Default
+        if (!empty($source_url) && class_exists('Auto_AI_News_Poster_Image_Extractor')) {
+            $site_name = Auto_AI_News_Poster_Image_Extractor::get_site_name_from_url($source_url);
+        }
 
         // Verificăm și includem fișierul necesar pentru media_sideload_image
         if (!function_exists('media_sideload_image')) {
@@ -141,6 +148,7 @@ class Post_Manager
             update_post_meta($post_id, '_external_image_url', esc_url_raw($image_url));
             update_post_meta($post_id, '_external_image_alt', $title); // Atribuim "alt" extern cu titlul articolului
             update_post_meta($post_id, '_external_image_description', $summary); // Atribuim "description" extern cu rezumatul
+            update_post_meta($post_id, '_external_image_source', $site_name); // Setăm numele site-ului ca sursă
 
         }
     }

@@ -13,6 +13,81 @@ if (!defined('ABSPATH')) {
 class Auto_AI_News_Poster_Image_Extractor
 {
     /**
+     * Extrage numele site-ului dintr-un URL pentru afișare ca "Sursa foto".
+     * 
+     * @param string $url URL-ul sursă
+     * @return string Numele site-ului (ex: "CNN", "Digi24", "Antena3")
+     */
+    public static function get_site_name_from_url($url)
+    {
+        if (empty($url)) {
+            return 'Sursă externă';
+        }
+
+        // Parsează URL-ul
+        $parsed = parse_url($url);
+        if (!$parsed || empty($parsed['host'])) {
+            return 'Sursă externă';
+        }
+
+        $host = strtolower($parsed['host']);
+        
+        // Eliminăm www. dacă există
+        $host = preg_replace('/^www\./', '', $host);
+        
+        // Mapare cunoscută pentru site-uri populare
+        $site_mapping = [
+            'cnn.com' => 'CNN',
+            'cnn.ro' => 'CNN',
+            'digi24.ro' => 'Digi24',
+            'digi24.com' => 'Digi24',
+            'antena3.ro' => 'Antena3',
+            'antena3.net' => 'Antena3',
+            'libertatea.ro' => 'Libertatea',
+            'libertatea.com' => 'Libertatea',
+            'mediafax.ro' => 'Mediafax',
+            'mediafax.com' => 'Mediafax',
+            'hotnews.ro' => 'HotNews',
+            'hotnews.com' => 'HotNews',
+            'agerpres.ro' => 'Agerpres',
+            'agerpres.com' => 'Agerpres',
+            'stirileprotv.ro' => 'Știrile Pro TV',
+            'protv.ro' => 'Pro TV',
+            'realitatea.net' => 'Realitatea',
+            'realitatea.ro' => 'Realitatea',
+            'gandul.info' => 'Gândul',
+            'gandul.ro' => 'Gândul',
+            'adevarul.ro' => 'Adevărul',
+            'adevarul.com' => 'Adevărul',
+            'romania-actualitati.ro' => 'România Actualități',
+            'romania-actualitati.com' => 'România Actualități',
+        ];
+
+        // Verificăm dacă avem o mapare cunoscută
+        if (isset($site_mapping[$host])) {
+            return $site_mapping[$host];
+        }
+
+        // Dacă nu avem mapare, extragem numele din domeniu
+        // Eliminăm TLD-ul (.ro, .com, etc.)
+        $domain_parts = explode('.', $host);
+        
+        // Dacă avem cel puțin 2 părți (ex: digi24.ro -> digi24)
+        if (count($domain_parts) >= 2) {
+            $domain_name = $domain_parts[count($domain_parts) - 2]; // Penultima parte
+            
+            // Capitalizăm prima literă
+            $domain_name = ucfirst($domain_name);
+            
+            // Dacă conține cifre, le păstrăm (ex: digi24 -> Digi24)
+            return $domain_name;
+        }
+
+        // Fallback: folosim host-ul capitalizat
+        return ucfirst($host);
+    }
+
+    /**
      * Extrage imaginea principală dintr-un URL sau din conținut HTML.
      *
      * @param string $url URL-ul sursă
