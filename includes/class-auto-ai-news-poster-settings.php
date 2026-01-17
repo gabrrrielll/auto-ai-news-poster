@@ -299,6 +299,7 @@ class Auto_Ai_News_Poster_Settings
         $generate_image = $options['generate_image'] ?? 'no';
         $position = $options['source_photo_position'] ?? 'before';
         ?>
+        <div class="settings-group settings-group-parse_link settings-group-ai_browsing">
         <div class="settings-card">
             <div class="settings-card-header">
                 <div class="settings-card-icon">🖼️</div>
@@ -334,6 +335,7 @@ class Auto_Ai_News_Poster_Settings
                     </div>
                 </div>
             </div>
+        </div>
         </div>
         <?php
     }
@@ -674,6 +676,7 @@ public static function tasks_management_placeholder_callback()
     {
         $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         ?>
+        <div class="settings-group settings-group-parse_link settings-group-ai_browsing">
         <div class="settings-card">
             <div class="settings-card-header">
                 <div class="settings-card-icon">⚙️</div>
@@ -696,6 +699,7 @@ public static function tasks_management_placeholder_callback()
                     </select>
                 </div>
             </div>
+        </div>
         </div>
         <?php
     }
@@ -812,6 +816,7 @@ public static function tasks_management_placeholder_callback()
             'orderby' => 'display_name'
         ]);
         ?>
+        <div class="settings-group settings-group-parse_link settings-group-ai_browsing">
         <div class="settings-card">
             <div class="settings-card-header">
                 <div class="settings-card-icon">👤</div>
@@ -829,6 +834,7 @@ public static function tasks_management_placeholder_callback()
                     </select>
                 </div>
             </div>
+        </div>
         </div>
         <?php
     }
@@ -890,6 +896,7 @@ public static function tasks_management_placeholder_callback()
         $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $generate_tags = $options['generate_tags'] ?? 'yes';
         ?>
+        <div class="settings-group settings-group-parse_link settings-group-ai_browsing">
         <div class="settings-card">
             <div class="settings-card-header">
                 <div class="settings-card-icon">🏷️</div>
@@ -911,6 +918,7 @@ public static function tasks_management_placeholder_callback()
                     </div>
                 </div>
             </div>
+        </div>
         </div>
         <?php
     }
