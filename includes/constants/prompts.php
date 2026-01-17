@@ -292,15 +292,12 @@ class Auto_Ai_News_Poster_Prompts
      * Generează promptul pentru transformarea unui TITLU în articol EVERGREEN (Mod Taskuri).
      * Articolele generate trebuie să fie detaliate, bine documentate și rezistente în timp.
      */
-    public static function get_task_article_prompt($title, $category_name, $additional_instructions = '')
+    public static function get_task_article_prompt($title, $category_name, $additional_instructions = '', $article_length_settings = [])
     {
-        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
-        $tasks_config = $options['tasks_config'] ?? [];
-        
-        // Obținem setările de lungime a articolului specifice pentru Tasks
-        $article_length_option = $tasks_config['article_length_option'] ?? 'same_as_source';
-        $min_length = $tasks_config['min_length'] ?? 800;
-        $max_length = $tasks_config['max_length'] ?? 1200;
+        // Use provided article length settings or defaults
+        $article_length_option = $article_length_settings['article_length_option'] ?? 'same_as_source';
+        $min_length = $article_length_settings['min_length'] ?? 800;
+        $max_length = $article_length_settings['max_length'] ?? 1200;
 
         $length_instruction = ($article_length_option === 'set_limits' && $min_length && $max_length) 
             ? "Articolul trebuie să aibă între {$min_length} și {$max_length} de cuvinte."

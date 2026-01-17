@@ -78,7 +78,7 @@ class Auto_Ai_News_Poster_Api
         $category_name = ($category_id) ? get_cat_name($category_id) : 'General';
         $author_id = $list['author'] ?? 1;
 
-        // 2. Determine AI Config (Task specific)
+        // 2. Determine AI Config (GLOBAL - from tasks_config)
         $provider = $tasks_config['api_provider'] ?? 'openai';
         $ai_args = [
             'provider' => $provider,
@@ -86,8 +86,16 @@ class Auto_Ai_News_Poster_Api
             'model'    => ($provider === 'openai') ? ($tasks_config['ai_model'] ?? 'gpt-4o-mini') : (($provider === 'gemini') ? ($tasks_config['gemini_model'] ?? 'gemini-1.5-flash') : ($tasks_config['deepseek_model'] ?? 'deepseek-chat')),
         ];
 
-        // 3. Call AI
-        $prompt = Auto_Ai_News_Poster_Prompts::get_task_article_prompt($target_title, $category_name, $tasks_config['ai_instructions'] ?? '');
+        // 3. Prepare task-specific article length settings for AI prompt
+        $article_length_settings = [
+            'article_length_option' => $list['article_length_option'] ?? 'same_as_source',
+            'min_length'            => $list['min_length'] ?? '',
+            'max_length'            => $list['max_length'] ?? ''
+        ];
+
+        // 4. Call AI with task-specific AI instructions and article length
+        $ai_instructions = $list['ai_instructions'] ?? '';
+        $prompt = Auto_Ai_News_Poster_Prompts::get_task_article_prompt($target_title, $category_name, $ai_instructions, $article_length_settings);
         $response = call_ai_api($prompt, $ai_args);
 
         if (is_wp_error($response)) {
@@ -114,11 +122,12 @@ class Auto_Ai_News_Poster_Api
             return new WP_Error('json_error', 'Nu am putut decoda datele articolului din JSON-ul AI.');
         }
 
-        // 4. Save Article
+        // 5. Save Article - use task-specific publication status
+        $post_status = $list['post_status'] ?? 'draft';
         $post_data = [
             'post_title'   => $article_data['title'] ?? $target_title,
             'post_content' => wp_kses_post($article_data['content']),
-            'post_status'  => $options['status'] ?? 'draft',
+            'post_status'  => $post_status,
             'post_author'  => $author_id,
             'post_excerpt' => $article_data['summary'] ?? '',
         ];
@@ -129,12 +138,12 @@ class Auto_Ai_News_Poster_Api
             return $post_id;
         }
 
-        // Set Category and Tags
+        // Set Category and Tags - use task-specific settings
         if ($category_id) {
             wp_set_post_categories($post_id, [$category_id]);
         }
         
-        $gen_tags = $tasks_config['generate_tags'] ?? 'yes';
+        $gen_tags = $list['generate_tags'] ?? 'yes';
         if ($gen_tags === 'yes') {
             Post_Manager::set_post_tags($post_id, $article_data['tags'] ?? []);
         }
@@ -142,13 +151,13 @@ class Auto_Ai_News_Poster_Api
         update_post_meta($post_id, '_generation_mode', 'tasks');
         update_post_meta($post_id, '_task_list_id', $list_id);
 
-        // 5. Update List (Remove processed title)
+        // 6. Update List (Remove processed title)
         $task_lists[$list_index]['titles'] = implode("\n", $titles);
         $options['task_lists'] = $task_lists;
         update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
 
-        // 6. Generate Image if enabled
-        $gen_image = $tasks_config['generate_image'] ?? 'no';
+        // 7. Generate Image if enabled - use task-specific setting
+        $gen_image = $list['generate_image'] ?? 'no';
         if ($gen_image === 'yes') {
             $image_prompt = $article_data['summary'] ?? $article_data['title'];
             self::generate_image_for_article($post_id, $image_prompt);

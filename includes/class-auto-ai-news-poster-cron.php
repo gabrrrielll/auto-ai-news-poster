@@ -168,7 +168,7 @@ class Auto_Ai_News_Poster_Cron
     }
 
     /**
-     * Cron Job separat pentru Taskuri
+     * Cron Job separat pentru Taskuri - cu scheduling individual per listă
      */
     public static function tasks_worker()
     {
@@ -192,22 +192,42 @@ class Auto_Ai_News_Poster_Cron
                 return;
             }
 
+            $current_time = time();
             error_log('AANP Tasks Worker: Verificare ' . count($task_lists) . ' liste pentru procesare...');
 
-            // Process one title from EACH list that has titles (round-robin style would be better but this is fine)
+            // Process each list based on its individual Cron interval
             foreach ($task_lists as $list) {
                 $list_id = $list['id'] ?? '';
                 $titles = array_filter(array_map('trim', explode("\n", $list['titles'] ?? '')));
 
-                if (!empty($titles)) {
-                    error_log('AANP Tasks Worker: Procesare titlu din lista "' . ($list['name'] ?? 'Neținută') . '"...');
+                if (empty($titles) || empty($list_id)) {
+                    continue;
+                }
+
+                // Get individual Cron settings for this list
+                $cron_hours = $list['cron_interval_hours'] ?? 0;
+                $cron_minutes = $list['cron_interval_minutes'] ?? 30;
+                $cron_interval_seconds = ($cron_hours * 3600) + ($cron_minutes * 60);
+
+                // Check last run time for this specific list
+                $last_run_key = 'task_list_last_run_' . $list_id;
+                $last_run = get_option($last_run_key, 0);
+
+                // Should this list run now?
+                if (($current_time - $last_run) >= $cron_interval_seconds) {
+                    error_log('AANP Tasks Worker: Procesare titlu din lista "' . ($list['name'] ?? 'Neținută') . '" (ID: ' . $list_id . ', Interval: ' . $cron_hours . 'h ' . $cron_minutes . 'm)');
                     $result = Auto_Ai_News_Poster_Api::process_task_list_item($list_id);
-                    
+
                     if (is_wp_error($result)) {
                         error_log('AANP Tasks Worker ERROR: ' . $result->get_error_message());
                     } else {
                         error_log('AANP Tasks Worker: Articol generat cu succes! (Post ID: ' . $result . ')');
+                        // Update last run time for this list ONLY on success
+                        update_option($last_run_key, $current_time);
                     }
+                } else {
+                    $time_until_next = $cron_interval_seconds - ($current_time - $last_run);
+                    error_log('AANP Tasks Worker: Lista "' . ($list['name'] ?? 'Neținută') . '" nu este gata încă. Timp rămas: ' . round($time_until_next / 60) . ' minute');
                 }
             }
 

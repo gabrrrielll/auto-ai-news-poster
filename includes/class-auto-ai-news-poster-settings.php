@@ -405,12 +405,10 @@ public static function tasks_management_placeholder_callback()
     ?>
     <div class="settings-group settings-group-tasks <?php echo ($generation_mode === 'tasks') ? 'active' : ''; ?>">
         
-        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px;">
             <?php 
-                // Render the reusable components with 'tasks' context
+                // Only global AI API configuration - all other settings are now per-task-list
                 self::render_ai_config_component('tasks');
-                self::render_cron_config_component('tasks');
-                self::render_article_length_component('tasks');
             ?>
         </div>
 
@@ -461,6 +459,79 @@ public static function tasks_management_placeholder_callback()
                                                     <?php endforeach; ?>
                                                 </select>
                                             </div>
+                                            
+                                            <!-- Individual Task List Settings -->
+                                            <div class="form-group" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
+                                                <h4 style="margin-bottom: 15px; font-size: 13px; font-weight: 600; color: #555;">⚙️ Setări Individuale</h4>
+                                                
+                                                <!-- Cron Interval -->
+                                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                                                    <div class="form-group" style="margin-bottom: 0;">
+                                                        <label class="control-label" style="font-size: 12px;">Ore Cron</label>
+                                                        <select name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][cron_interval_hours]" class="form-control form-control-sm">
+                                                            <?php for ($i = 0; $i <= 23; $i++) : ?>
+                                                                <option value="<?php echo $i; ?>" <?php selected($list['cron_interval_hours'] ?? 0, $i); ?>><?php echo $i; ?> ore</option>
+                                                            <?php endfor; ?>
+                                                        </select>
+                                                    </div>
+                                                    <div class="form-group" style="margin-bottom: 0;">
+                                                        <label class="control-label" style="font-size: 12px;">Minute Cron</label>
+                                                        <select name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][cron_interval_minutes]" class="form-control form-control-sm">
+                                                            <?php foreach ([0, 1, 2, 5, 10, 15, 20, 30, 45] as $m) : ?>
+                                                                <option value="<?php echo $m; ?>" <?php selected($list['cron_interval_minutes'] ?? 30, $m); ?>><?php echo $m; ?> min</option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Article Length -->
+                                                <div class="form-group" style="margin-bottom: 12px;">
+                                                    <label class="control-label" style="font-size: 12px;">Dimensiune Articol</label>
+                                                    <select name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][article_length_option]" class="form-control form-control-sm">
+                                                        <option value="same_as_source" <?php selected($list['article_length_option'] ?? 'same_as_source', 'same_as_source'); ?>>Dimensiune variabilă (AI)</option>
+                                                        <option value="set_limits" <?php selected($list['article_length_option'] ?? 'same_as_source', 'set_limits'); ?>>Setează limite (cuvinte)</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                                                    <div class="form-group" style="margin-bottom: 0;">
+                                                        <label class="control-label" style="font-size: 12px;">Min Cuvinte</label>
+                                                        <input type="number" name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][min_length]" class="form-control form-control-sm" value="<?php echo esc_attr($list['min_length'] ?? ''); ?>" placeholder="ex: 500">
+                                                    </div>
+                                                    <div class="form-group" style="margin-bottom: 0;">
+                                                        <label class="control-label" style="font-size: 12px;">Max Cuvinte</label>
+                                                        <input type="number" name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][max_length]" class="form-control form-control-sm" value="<?php echo esc_attr($list['max_length'] ?? ''); ?>" placeholder="ex: 1000">
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Tags & Images -->
+                                                <div class="form-group" style="margin-bottom: 12px;">
+                                                    <div class="checkbox-modern" style="margin-bottom: 8px;">
+                                                        <input type="checkbox" id="task_<?php echo $index; ?>_tags" name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][generate_tags]" value="yes" <?php checked($list['generate_tags'] ?? 'yes', 'yes'); ?> />
+                                                        <label for="task_<?php echo $index; ?>_tags" style="font-size: 12px;">Generează etichete automate</label>
+                                                    </div>
+                                                    <div class="checkbox-modern">
+                                                        <input type="checkbox" id="task_<?php echo $index; ?>_images" name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][generate_image]" value="yes" <?php checked($list['generate_image'] ?? 'no', 'yes'); ?> />
+                                                        <label for="task_<?php echo $index; ?>_images" style="font-size: 12px;">Generează imagini AI</label>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Publication Status -->
+                                                <div class="form-group" style="margin-bottom: 12px;">
+                                                    <label class="control-label" style="font-size: 12px;">Status Publicare</label>
+                                                    <select name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][post_status]" class="form-control form-control-sm">
+                                                        <option value="draft" <?php selected($list['post_status'] ?? 'draft', 'draft'); ?>>Draft</option>
+                                                        <option value="publish" <?php selected($list['post_status'] ?? 'draft', 'publish'); ?>>Publicat</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                <!-- AI Instructions -->
+                                                <div class="form-group" style="margin-bottom: 0;">
+                                                    <label class="control-label" style="font-size: 12px;">Instrucțiuni AI specifice</label>
+                                                    <textarea name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][ai_instructions]" class="form-control form-control-sm" rows="2" placeholder="Instrucțiuni opționale pentru AI..."><?php echo esc_textarea($list['ai_instructions'] ?? ''); ?></textarea>
+                                                </div>
+                                            </div>
+                                            
                                             <div style="margin-top: 20px;">
                                                 <button type="button" class="btn btn-primary btn-block run-task-list-now" data-id="<?php echo esc_attr($list_id); ?>">
                                                     <i class="fas fa-magic"></i> Generează acum
@@ -512,6 +583,79 @@ public static function tasks_management_placeholder_callback()
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                        
+                        <!-- Individual Task List Settings -->
+                        <div class="form-group" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
+                            <h4 style="margin-bottom: 15px; font-size: 13px; font-weight: 600; color: #555;">⚙️ Setări Individuale</h4>
+                            
+                            <!-- Cron Interval -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="control-label" style="font-size: 12px;">Ore Cron</label>
+                                    <select name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][cron_interval_hours]" class="form-control form-control-sm">
+                                        <?php for ($i = 0; $i <= 23; $i++) : ?>
+                                            <option value="<?php echo $i; ?>" <?php echo ($i === 0) ? 'selected' : ''; ?>><?php echo $i; ?> ore</option>
+                                        <?php endfor; ?>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="control-label" style="font-size: 12px;">Minute Cron</label>
+                                    <select name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][cron_interval_minutes]" class="form-control form-control-sm">
+                                        <?php foreach ([0, 1, 2, 5, 10, 15, 20, 30, 45] as $m) : ?>
+                                            <option value="<?php echo $m; ?>" <?php echo ($m === 30) ? 'selected' : ''; ?>><?php echo $m; ?> min</option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Article Length -->
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label class="control-label" style="font-size: 12px;">Dimensiune Articol</label>
+                                <select name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][article_length_option]" class="form-control form-control-sm">
+                                    <option value="same_as_source" selected>Dimensiune variabilă (AI)</option>
+                                    <option value="set_limits">Setează limite (cuvinte)</option>
+                                </select>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="control-label" style="font-size: 12px;">Min Cuvinte</label>
+                                    <input type="number" name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][min_length]" class="form-control form-control-sm" value="" placeholder="ex: 500">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="control-label" style="font-size: 12px;">Max Cuvinte</label>
+                                    <input type="number" name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][max_length]" class="form-control form-control-sm" value="" placeholder="ex: 1000">
+                                </div>
+                            </div>
+                            
+                            <!-- Tags & Images -->
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <div class="checkbox-modern" style="margin-bottom: 8px;">
+                                    <input type="checkbox" id="task_{{INDEX}}_tags" name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][generate_tags]" value="yes" checked />
+                                    <label for="task_{{INDEX}}_tags" style="font-size: 12px;">Generează etichete automate</label>
+                                </div>
+                                <div class="checkbox-modern">
+                                    <input type="checkbox" id="task_{{INDEX}}_images" name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][generate_image]" value="yes" />
+                                    <label for="task_{{INDEX}}_images" style="font-size: 12px;">Generează imagini AI</label>
+                                </div>
+                            </div>
+                            
+                            <!-- Publication Status -->
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label class="control-label" style="font-size: 12px;">Status Publicare</label>
+                                <select name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][post_status]" class="form-control form-control-sm">
+                                    <option value="draft" selected>Draft</option>
+                                    <option value="publish">Publicat</option>
+                                </select>
+                            </div>
+                            
+                            <!-- AI Instructions -->
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="control-label" style="font-size: 12px;">Instrucțiuni AI specifice</label>
+                                <textarea name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][ai_instructions]" class="form-control form-control-sm" rows="2" placeholder="Instrucțiuni opționale pentru AI..."></textarea>
+                            </div>
+                        </div>
+                        
                         <div style="margin-top: 20px;">
                             <button type="button" class="btn btn-primary btn-block run-task-list-now" data-id="{{ID}}">
                                 <i class="fas fa-magic"></i> Generează acum
@@ -1486,17 +1630,29 @@ public static function tasks_management_placeholder_callback()
                                 }
                             }
                         }
-                        // Task Lists (Array of Items)
+                        // Task Lists (Array of Items) - with individual settings
                         elseif ($key === 'task_lists') {
                             $sanitized[$key] = [];
                             if (is_array($value)) {
                                 foreach ($value as $list_item) {
                                     $sanitized[$key][] = [
+                                        // Existing fields
                                         'id'       => sanitize_text_field($list_item['id'] ?? ''),
                                         'name'     => sanitize_text_field($list_item['name'] ?? ''),
                                         'titles'   => esc_textarea($list_item['titles'] ?? ''),
                                         'author'   => intval($list_item['author'] ?? 1),
                                         'category' => intval($list_item['category'] ?? 0),
+                                        
+                                        // NEW INDIVIDUAL SETTINGS
+                                        'cron_interval_hours'   => intval($list_item['cron_interval_hours'] ?? 0),
+                                        'cron_interval_minutes' => intval($list_item['cron_interval_minutes'] ?? 30),
+                                        'generate_tags'         => ($list_item['generate_tags'] ?? 'yes') === 'yes' ? 'yes' : 'no',
+                                        'generate_image'        => ($list_item['generate_image'] ?? 'no') === 'yes' ? 'yes' : 'no',
+                                        'article_length_option' => sanitize_text_field($list_item['article_length_option'] ?? 'same_as_source'),
+                                        'min_length'            => intval($list_item['min_length'] ?? 0),
+                                        'max_length'            => intval($list_item['max_length'] ?? 0),
+                                        'post_status'           => in_array($list_item['post_status'] ?? 'draft', ['draft', 'publish']) ? $list_item['post_status'] : 'draft',
+                                        'ai_instructions'       => esc_textarea($list_item['ai_instructions'] ?? '')
                                     ];
                                 }
                             }
