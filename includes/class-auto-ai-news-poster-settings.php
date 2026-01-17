@@ -1907,16 +1907,6 @@ public static function tasks_management_placeholder_callback()
                 </div>
 
                 <?php if ($is_tasks) : ?>
-                    <div class="form-group" style="margin-top: 15px;">
-                        <div class="checkbox-modern" style="margin-bottom: 10px;">
-                            <input type="checkbox" name="<?php echo $fn('generate_image'); ?>" value="yes" <?php checked($data['generate_image'] ?? 'no', 'yes'); ?> />
-                            <label>Generează imagini AI pentru task-uri</label>
-                        </div>
-                        <div class="checkbox-modern">
-                            <input type="checkbox" name="<?php echo $fn('generate_tags'); ?>" value="yes" <?php checked($data['generate_tags'] ?? 'yes', 'yes'); ?> />
-                            <label>Generează etichete automate</label>
-                        </div>
-                    </div>
                     <div class="form-group" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
                         <label class="control-label">Instrucțiuni AI specifice pentru Tasks</label>
                         <textarea name="<?php echo $fn('ai_instructions'); ?>" class="form-control" rows="3"><?php echo esc_textarea($data['ai_instructions'] ?? ''); ?></textarea>
@@ -1982,3 +1972,5 @@ public static function tasks_management_placeholder_callback()
 }
 
 Auto_Ai_News_Poster_Settings::init();
+
+
