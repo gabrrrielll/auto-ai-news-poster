@@ -649,34 +649,45 @@
     background-color: var(--primary-color);
 }
 
-/* Main Navigation Tabs */
+/* Main Navigation Tabs - fiecare 1/3, 100% total, responsive până la 350px */
 .mode-tabs-container {
+    width: 100%;
+    max-width: 100%;
     margin-bottom: 25px;
     border-bottom: 2px solid var(--border-color);
+    overflow-x: hidden;
 }
 
 .mode-tabs {
     display: flex;
+    width: 100%;
     list-style: none;
     margin: 0;
     padding: 0;
-    gap: 10px;
+    gap: clamp(2px, 1.5vw, 10px);
+    box-sizing: border-box;
 }
 
 .mode-tab {
-    padding: 12px 25px;
+    flex: 1 1 0%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: clamp(6px, 1.2vw, 12px) clamp(6px, 2.5vw, 25px);
     cursor: pointer;
-    font-size: 1.05rem;
+    font-size: clamp(0.7rem, 2.2vw, 1.05rem);
     font-weight: 600;
     color: var(--text-secondary);
     border-bottom: 3px solid transparent;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: clamp(4px, 1vw, 8px);
     border-radius: 8px 8px 0 0;
     position: relative;
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .mode-tab:hover {
@@ -691,7 +702,8 @@
 }
 
 .mode-tab .tab-icon {
-    font-size: 1.2rem;
+    font-size: clamp(0.85rem, 2.5vw, 1.2rem);
+    flex-shrink: 0;
 }
 
 .mode-tab.active::after {

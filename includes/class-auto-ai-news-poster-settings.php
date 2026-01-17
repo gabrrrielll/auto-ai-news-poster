@@ -17,7 +17,7 @@ class Auto_Ai_News_Poster_Settings
         add_action('wp_ajax_refresh_openai_models', [self::class, 'ajax_refresh_openai_models']);
         add_action('wp_ajax_refresh_gemini_models', [self::class, 'ajax_refresh_gemini_models']);
         add_action('wp_ajax_refresh_deepseek_models', [self::class, 'ajax_refresh_deepseek_models']);
-        
+
         // Site Analyzer AJAX
         add_action('wp_ajax_auto_ai_scan_site', [self::class, 'ajax_scan_site']);
         add_action('wp_ajax_auto_ai_import_selected', [self::class, 'ajax_import_selected']);
@@ -386,43 +386,43 @@ class Auto_Ai_News_Poster_Settings
             </div>
         </div>
     <?php
-}
+    }
 
-// Callback pentru placeholder-ul de Taskuri
-public static function tasks_management_placeholder_callback()
-{
-    $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
-    $generation_mode = $options['generation_mode'] ?? 'parse_link';
-    $tasks_config = $options['tasks_config'] ?? [];
-    $task_lists = $options['task_lists'] ?? [];
-    
-    // Helper data for dropdowns
-    $users = get_users(['fields' => ['ID', 'display_name']]);
-    $categories = get_categories(['hide_empty' => false]);
-    
-    // Current Tasks AI Config
-    $current_provider = $tasks_config['api_provider'] ?? 'openai';
-    $openai_key = $tasks_config['chatgpt_api_key'] ?? '';
-    $openai_model = $tasks_config['ai_model'] ?? 'gpt-4o-mini';
-    $gemini_key = $tasks_config['gemini_api_key'] ?? '';
-    $gemini_model = $tasks_config['gemini_model'] ?? '';
-    $deepseek_key = $tasks_config['deepseek_api_key'] ?? '';
-    $deepseek_model = $tasks_config['deepseek_model'] ?? '';
-    
-    // Cron & Control
-    $cron_hours = $tasks_config['cron_interval_hours'] ?? 0;
-    $cron_minutes = $tasks_config['cron_interval_minutes'] ?? 30;
-    $gen_image = $tasks_config['generate_image'] ?? 'no';
-    $gen_tags = $tasks_config['generate_tags'] ?? 'yes';
-    
-    ?>
+    // Callback pentru placeholder-ul de Taskuri
+    public static function tasks_management_placeholder_callback()
+    {
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $generation_mode = $options['generation_mode'] ?? 'parse_link';
+        $tasks_config = $options['tasks_config'] ?? [];
+        $task_lists = $options['task_lists'] ?? [];
+
+        // Helper data for dropdowns
+        $users = get_users(['fields' => ['ID', 'display_name']]);
+        $categories = get_categories(['hide_empty' => false]);
+
+        // Current Tasks AI Config
+        $current_provider = $tasks_config['api_provider'] ?? 'openai';
+        $openai_key = $tasks_config['chatgpt_api_key'] ?? '';
+        $openai_model = $tasks_config['ai_model'] ?? 'gpt-4o-mini';
+        $gemini_key = $tasks_config['gemini_api_key'] ?? '';
+        $gemini_model = $tasks_config['gemini_model'] ?? '';
+        $deepseek_key = $tasks_config['deepseek_api_key'] ?? '';
+        $deepseek_model = $tasks_config['deepseek_model'] ?? '';
+
+        // Cron & Control
+        $cron_hours = $tasks_config['cron_interval_hours'] ?? 0;
+        $cron_minutes = $tasks_config['cron_interval_minutes'] ?? 30;
+        $gen_image = $tasks_config['generate_image'] ?? 'no';
+        $gen_tags = $tasks_config['generate_tags'] ?? 'yes';
+
+        ?>
     <div class="settings-group settings-group-tasks <?php echo ($generation_mode === 'tasks') ? 'active' : ''; ?>">
         
         <div class="form-grid" style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px;">
-            <?php 
-                // Only global AI API configuration - all other settings are now per-task-list
-                self::render_ai_config_component('tasks');
-            ?>
+            <?php
+                    // Only global AI API configuration - all other settings are now per-task-list
+                    self::render_ai_config_component('tasks');
+        ?>
         </div>
 
         <!-- 3. Dynamic Task Lists -->
@@ -438,11 +438,11 @@ public static function tasks_management_placeholder_callback()
             </div>
             <div class="settings-card-content">
                 <div id="task-lists-container">
-                    <?php 
-                    if (!empty($task_lists)) :
-                        foreach ($task_lists as $index => $list) : 
-                            $list_id = $list['id'] ?? uniqid();
-                            ?>
+                    <?php
+                if (!empty($task_lists)) :
+                    foreach ($task_lists as $index => $list) :
+                        $list_id = $list['id'] ?? uniqid();
+                        ?>
                             <div class="task-list-item settings-card" style="background: #fcfcfc; border: 1px solid #eee; margin-bottom: 20px; box-shadow: none;" data-id="<?php echo esc_attr($list_id); ?>">
                                 <div class="settings-card-header" style="background: rgba(0,0,0,0.02); padding: 10px 15px;">
                                     <input type="text" name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][name]" value="<?php echo esc_attr($list['name'] ?? 'Listă fără nume'); ?>" class="form-control" style="font-weight: 600; border:none; background:transparent; padding:0;" placeholder="Nume Listă (ex: Știri Sport)">
@@ -558,8 +558,8 @@ public static function tasks_management_placeholder_callback()
                                     </div>
                                 </div>
                             </div>
-                        <?php endforeach; 
-                    else : ?>
+                        <?php endforeach;
+                else : ?>
                         <div class="no-task-lists alert alert-light" style="text-align: center; border: 1px dashed #ccc; padding: 40px;">
                             Nu ai nicio listă de taskuri creată. Apasă butonul de mai sus pentru a începe.
                         </div>
@@ -688,7 +688,7 @@ public static function tasks_management_placeholder_callback()
         </div>
     </script>
     <?php
-}
+    }
 
     // Callback pentru campul Mod de publicare
     public static function mode_callback()
@@ -959,10 +959,10 @@ public static function tasks_management_placeholder_callback()
     {
         $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $bulk_links = $options['bulk_custom_source_urls'] ?? '';
-        
+
         // Safety: If legacy data is an array, convert back to string
         if (is_array($bulk_links)) {
-            $urls = array_map(function($item) { return $item['url']; }, $bulk_links);
+            $urls = array_map(function ($item) { return $item['url']; }, $bulk_links);
             $bulk_links = implode("\n", $urls);
         }
         ?>
@@ -988,7 +988,7 @@ public static function tasks_management_placeholder_callback()
     {
         $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $scan_links = $options['scanning_source_urls'] ?? [];
-        
+
         // Migration: if scanning_source_urls is empty but bulk_custom_source_urls contains an array, move it
         if (empty($scan_links) && isset($options['bulk_custom_source_urls']) && is_array($options['bulk_custom_source_urls'])) {
             $scan_links = $options['bulk_custom_source_urls'];
@@ -1331,7 +1331,7 @@ public static function tasks_management_placeholder_callback()
 
         // Filtrează doar modelele Gemini relevante (exclude Imagen și alte modele non-text)
         $filtered_models = self::filter_gemini_models($data['models']);
-        
+
         error_log('AUTO AI NEWS POSTER - Gemini Models Filtered Count: ' . count($filtered_models));
         error_log('AUTO AI NEWS POSTER - Gemini Filtered Names: ' . print_r(array_column($filtered_models, 'name'), true));
 
@@ -1350,13 +1350,13 @@ public static function tasks_management_placeholder_callback()
             $model_name = $model['name'] ?? ''; // e.g., models/gemini-1.5-flash
             $display_name = $model['displayName'] ?? $model_name;
             $description = $model['description'] ?? '';
-            
+
             // Construct a readable label
             $label = $display_name;
             if ($model_name !== $display_name) {
-                $label .= " ({$model_name})"; 
+                $label .= " ({$model_name})";
             }
-            
+
             // Use the full model name as key (including models/ prefix)
             $models_array[$model_name] = $label;
         }
@@ -1370,7 +1370,7 @@ public static function tasks_management_placeholder_callback()
         return array_filter($models, function ($model) {
             $name = $model['name'] ?? '';
             // Păstrăm tot ce începe cu "models/", dar excludem embeddings, aqa și imagen
-            return strpos($name, 'models/') === 0 && 
+            return strpos($name, 'models/') === 0 &&
                    strpos($name, 'embedding') === false &&
                    strpos($name, 'aqa') === false &&
                    strpos($name, 'imagen') === false;
@@ -1382,28 +1382,28 @@ public static function tasks_management_placeholder_callback()
     {
         // Extragem numele modelului din formatul "models/gemini-1.5-pro" sau "gemini-1.5-pro"
         $clean_id = str_replace('models/', '', $model_id);
-        
+
         $descriptions = [
             // Gemini 2.0 Series
             'gemini-2.0-flash-exp' => 'Gemini 2.0 Flash (Experimental) - Cel mai nou model experimental',
             'models/gemini-2.0-flash-exp' => 'Gemini 2.0 Flash (Experimental) - Cel mai nou model experimental',
-            
+
             // Gemini 1.5 Series (Latest)
             'gemini-1.5-pro-latest' => 'Gemini 1.5 Pro (Latest) - Versiunea cea mai recentă',
             'models/gemini-1.5-pro-latest' => 'Gemini 1.5 Pro (Latest) - Versiunea cea mai recentă',
             'gemini-1.5-flash-latest' => 'Gemini 1.5 Flash (Latest) - Versiunea cea mai recentă, rapidă',
             'models/gemini-1.5-flash-latest' => 'Gemini 1.5 Flash (Latest) - Versiunea cea mai recentă, rapidă',
-            
+
             // Gemini 1.5 Series (Stable)
             'gemini-1.5-pro' => 'Gemini 1.5 Pro - Model avansat pentru task-uri complexe',
             'models/gemini-1.5-pro' => 'Gemini 1.5 Pro - Model avansat pentru task-uri complexe',
             'gemini-1.5-flash' => 'Gemini 1.5 Flash - Model rapid și eficient',
             'models/gemini-1.5-flash' => 'Gemini 1.5 Flash - Model rapid și eficient',
-            
+
             // Gemini 1.0 Series
             'gemini-1.0-pro' => 'Gemini 1.0 Pro - Model clasic, performanță stabilă',
             'models/gemini-1.0-pro' => 'Gemini 1.0 Pro - Model clasic, performanță stabilă',
-            
+
             // Experimental
             'gemini-exp-1206' => 'Gemini Experimental (1206) - Model experimental',
             'models/gemini-exp-1206' => 'Gemini Experimental (1206) - Model experimental',
@@ -1634,62 +1634,61 @@ public static function tasks_management_placeholder_callback()
             $sanitized[$checkbox_field] = 'no';
         }
 
-                // Actualizăm doar câmpurile din input
-                if (is_array($input)) {
-                    foreach ($input as $key => $value) {
-                        // Pentru checkbox-uri, setăm 'yes' dacă sunt bifate
-                        if (in_array($key, $checkbox_fields)) {
-                            $sanitized[$key] = ($value === 'yes') ? 'yes' : 'no';
-                        }
-                        // Pentru câmpurile de tip <select>, salvăm valoarea selectată
-                        elseif (in_array($key, $select_fields)) {
-                            $sanitized[$key] = sanitize_text_field($value);
-                        }
-                        // Tasks Configuration (Nested Array)
-                        elseif ($key === 'tasks_config') {
-                            if (is_array($value)) {
-                                foreach ($value as $t_key => $t_val) {
-                                    if ($t_key === 'ai_instructions') {
-                                        $sanitized[$key][$t_key] = esc_textarea($t_val);
-                                    } else {
-                                        $sanitized[$key][$t_key] = sanitize_text_field($t_val);
-                                    }
-                                }
+        // Actualizăm doar câmpurile din input
+        if (is_array($input)) {
+            foreach ($input as $key => $value) {
+                // Pentru checkbox-uri, setăm 'yes' dacă sunt bifate
+                if (in_array($key, $checkbox_fields)) {
+                    $sanitized[$key] = ($value === 'yes') ? 'yes' : 'no';
+                }
+                // Pentru câmpurile de tip <select>, salvăm valoarea selectată
+                elseif (in_array($key, $select_fields)) {
+                    $sanitized[$key] = sanitize_text_field($value);
+                }
+                // Tasks Configuration (Nested Array)
+                elseif ($key === 'tasks_config') {
+                    if (is_array($value)) {
+                        foreach ($value as $t_key => $t_val) {
+                            if ($t_key === 'ai_instructions') {
+                                $sanitized[$key][$t_key] = esc_textarea($t_val);
+                            } else {
+                                $sanitized[$key][$t_key] = sanitize_text_field($t_val);
                             }
                         }
-                        // Task Lists (Array of Items) - with individual settings
-                        elseif ($key === 'task_lists') {
-                            $sanitized[$key] = [];
-                            if (is_array($value)) {
-                                foreach ($value as $list_item) {
-                                    $sanitized[$key][] = [
-                                        // Existing fields
-                                        'id'       => sanitize_text_field($list_item['id'] ?? ''),
-                                        'name'     => sanitize_text_field($list_item['name'] ?? ''),
-                                        'titles'   => esc_textarea($list_item['titles'] ?? ''),
-                                        'author'   => intval($list_item['author'] ?? 1),
-                                        'category' => intval($list_item['category'] ?? 0),
-                                        
-                                        // NEW INDIVIDUAL SETTINGS
-                                        'cron_interval_hours'   => intval($list_item['cron_interval_hours'] ?? 0),
-                                        'cron_interval_minutes' => intval($list_item['cron_interval_minutes'] ?? 30),
-                                        'generate_tags'         => ($list_item['generate_tags'] ?? 'yes') === 'yes' ? 'yes' : 'no',
-                                        'generate_image'        => ($list_item['generate_image'] ?? 'no') === 'yes' ? 'yes' : 'no',
-                                        'extract_image_from_source' => ($list_item['extract_image_from_source'] ?? 'yes') === 'yes' ? 'yes' : 'no',
-                                        'article_length_option' => sanitize_text_field($list_item['article_length_option'] ?? 'same_as_source'),
-                                        'min_length'            => intval($list_item['min_length'] ?? 0),
-                                        'max_length'            => intval($list_item['max_length'] ?? 0),
-                                        'post_status'           => in_array($list_item['post_status'] ?? 'draft', ['draft', 'publish']) ? $list_item['post_status'] : 'draft',
-                                        'ai_instructions'       => esc_textarea($list_item['ai_instructions'] ?? '')
-                                    ];
-                                }
-                            }
+                    }
+                }
+                // Task Lists (Array of Items) - with individual settings
+                elseif ($key === 'task_lists') {
+                    $sanitized[$key] = [];
+                    if (is_array($value)) {
+                        foreach ($value as $list_item) {
+                            $sanitized[$key][] = [
+                                // Existing fields
+                                'id'       => sanitize_text_field($list_item['id'] ?? ''),
+                                'name'     => sanitize_text_field($list_item['name'] ?? ''),
+                                'titles'   => esc_textarea($list_item['titles'] ?? ''),
+                                'author'   => intval($list_item['author'] ?? 1),
+                                'category' => intval($list_item['category'] ?? 0),
+
+                                // NEW INDIVIDUAL SETTINGS
+                                'cron_interval_hours'   => intval($list_item['cron_interval_hours'] ?? 0),
+                                'cron_interval_minutes' => intval($list_item['cron_interval_minutes'] ?? 30),
+                                'generate_tags'         => ($list_item['generate_tags'] ?? 'yes') === 'yes' ? 'yes' : 'no',
+                                'generate_image'        => ($list_item['generate_image'] ?? 'no') === 'yes' ? 'yes' : 'no',
+                                'extract_image_from_source' => ($list_item['extract_image_from_source'] ?? 'yes') === 'yes' ? 'yes' : 'no',
+                                'article_length_option' => sanitize_text_field($list_item['article_length_option'] ?? 'same_as_source'),
+                                'min_length'            => intval($list_item['min_length'] ?? 0),
+                                'max_length'            => intval($list_item['max_length'] ?? 0),
+                                'post_status'           => in_array($list_item['post_status'] ?? 'draft', ['draft', 'publish']) ? $list_item['post_status'] : 'draft',
+                                'ai_instructions'       => esc_textarea($list_item['ai_instructions'] ?? '')
+                            ];
                         }
-                        // Pentru textarea, folosim o sanitizare specifică
-                        elseif ($key === 'news_sources' || $key === 'parse_link_ai_instructions' || $key === 'ai_browsing_instructions' || $key === 'bulk_custom_source_urls') {
-                            $sanitized[$key] = esc_textarea($value);
-                        }
-                        elseif ($key === 'scanning_source_urls') {
+                    }
+                }
+                // Pentru textarea, folosim o sanitizare specifică
+                elseif ($key === 'news_sources' || $key === 'parse_link_ai_instructions' || $key === 'ai_browsing_instructions' || $key === 'bulk_custom_source_urls') {
+                    $sanitized[$key] = esc_textarea($value);
+                } elseif ($key === 'scanning_source_urls') {
                     $sanitized[$key] = [];
                     if (is_array($value)) {
                         foreach ($value as $item) {
@@ -1808,15 +1807,17 @@ public static function tasks_management_placeholder_callback()
         }
 
         // Increase timeout for multi-site scans
-        set_time_limit(180); 
+        set_time_limit(180);
 
         $all_candidates = [];
         include_once plugin_dir_path(__FILE__) . 'class-auto-ai-news-poster-scanner.php';
 
         foreach ($urls as $url) {
             $url = esc_url_raw(trim($url));
-            if (empty($url)) continue;
-            
+            if (empty($url)) {
+                continue;
+            }
+
             $site_candidates = Auto_Ai_News_Poster_Scanner::scan_url($url);
             if (!is_wp_error($site_candidates)) {
                 // Limit candidates per site to avoid massive aggregate lists (e.g. 30 per site)
@@ -1856,10 +1857,10 @@ public static function tasks_management_placeholder_callback()
 
         $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
         $bulk_links_string = isset($options['bulk_custom_source_urls']) ? $options['bulk_custom_source_urls'] : '';
-        
+
         // Ensure it's handled as string for the queue
         if (is_array($bulk_links_string)) {
-            $urls = array_map(function($item) { return $item['url']; }, $bulk_links_string);
+            $urls = array_map(function ($item) { return $item['url']; }, $bulk_links_string);
             $bulk_links_string = implode("\n", $urls);
         }
 
@@ -1925,7 +1926,7 @@ public static function tasks_management_placeholder_callback()
                         </div>
                         
                         <!-- Wrapper OpenAI -->
-                        <div class="provider-wrapper wrapper-openai" id="<?php echo $id_pfx; ?>wrapper-openai" style="display: <?php echo ($current_provider === 'openai' ? 'block' : 'none'); ?>;">
+                        <div class="provider-wrapper wrapper-openai" id="<?php echo $id_pfx; ?>wrapper-openai" style="display: <?php echo($current_provider === 'openai' ? 'block' : 'none'); ?>;">
                             <div class="form-group">
                                 <label class="control-label">Cheia API OpenAI</label>
                                 <input type="password" name="<?php echo $fn('chatgpt_api_key'); ?>"
@@ -1940,23 +1941,23 @@ public static function tasks_management_placeholder_callback()
                                         <optgroup label="🌟 Recomandate">
                                             <?php
                                             $recommended_models = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'];
-                                            foreach ($recommended_models as $model_id) {
-                                                if (isset($available_models[$model_id])) {
-                                                    $description = self::get_model_description($model_id);
-                                                    echo "<option value=\"{$model_id}\" " . selected($selected_model, $model_id, false) . ">{$description}</option>";
-                                                }
+                                        foreach ($recommended_models as $model_id) {
+                                            if (isset($available_models[$model_id])) {
+                                                $description = self::get_model_description($model_id);
+                                                echo "<option value=\"{$model_id}\" " . selected($selected_model, $model_id, false) . ">{$description}</option>";
                                             }
-                                            ?>
+                                        }
+                                        ?>
                                         </optgroup>
                                         <optgroup label="📊 Toate modelele">
                                             <?php
-                                            foreach ($available_models as $model_id => $model) {
-                                                if (!in_array($model_id, $recommended_models)) {
-                                                    $description = self::get_model_description($model_id);
-                                                    echo "<option value=\"{$model_id}\" " . selected($selected_model, $model_id, false) . ">{$description}</option>";
-                                                }
+                                        foreach ($available_models as $model_id => $model) {
+                                            if (!in_array($model_id, $recommended_models)) {
+                                                $description = self::get_model_description($model_id);
+                                                echo "<option value=\"{$model_id}\" " . selected($selected_model, $model_id, false) . ">{$description}</option>";
                                             }
-                                            ?>
+                                        }
+                                        ?>
                                         </optgroup>
                                     <?php else: ?>
                                         <option value="gpt-4o-mini">GPT-4o Mini (Default)</option>
@@ -1971,7 +1972,7 @@ public static function tasks_management_placeholder_callback()
                         </div>
 
                         <!-- Wrapper Gemini -->
-                        <div class="provider-wrapper wrapper-gemini" id="<?php echo $id_pfx; ?>wrapper-gemini" style="display: <?php echo ($current_provider === 'gemini' ? 'block' : 'none'); ?>;">
+                        <div class="provider-wrapper wrapper-gemini" id="<?php echo $id_pfx; ?>wrapper-gemini" style="display: <?php echo($current_provider === 'gemini' ? 'block' : 'none'); ?>;">
                             <div class="form-group">
                                 <label class="control-label">Cheia API Google Gemini</label>
                                 <input type="password" name="<?php echo $fn('gemini_api_key'); ?>"
@@ -1981,13 +1982,13 @@ public static function tasks_management_placeholder_callback()
                             <div class="form-group">
                                 <label class="control-label">Model Gemini</label>
                                 <select name="<?php echo $fn('gemini_model'); ?>" class="form-control model-select" id="<?php echo $id_pfx; ?>gemini_model">
-                                    <?php 
+                                    <?php
                                     $gemini_models = get_option('auto_ai_news_poster_gemini_models', ['gemini-1.5-pro' => 'Gemini 1.5 Pro', 'gemini-1.5-flash' => 'Gemini 1.5 Flash']);
-                                    $current_gemini_model = $data['gemini_model'] ?? 'gemini-1.5-pro';
-                                    foreach ($gemini_models as $gid => $gname) {
-                                        echo '<option value="' . esc_attr($gid) . '" ' . selected($current_gemini_model, $gid, false) . '>' . esc_html($gname) . '</option>';
-                                    }
-                                    ?>
+        $current_gemini_model = $data['gemini_model'] ?? 'gemini-1.5-pro';
+        foreach ($gemini_models as $gid => $gname) {
+            echo '<option value="' . esc_attr($gid) . '" ' . selected($current_gemini_model, $gid, false) . '>' . esc_html($gname) . '</option>';
+        }
+        ?>
                                 </select>
                                 <div class="form-description">
                                     <button type="button" class="btn btn-sm btn-outline-primary refresh-models-btn" data-provider="gemini">
@@ -1998,7 +1999,7 @@ public static function tasks_management_placeholder_callback()
                         </div>
 
                         <!-- Wrapper DeepSeek -->
-                        <div class="provider-wrapper wrapper-deepseek" id="<?php echo $id_pfx; ?>wrapper-deepseek" style="display: <?php echo ($current_provider === 'deepseek' ? 'block' : 'none'); ?>;">
+                        <div class="provider-wrapper wrapper-deepseek" id="<?php echo $id_pfx; ?>wrapper-deepseek" style="display: <?php echo($current_provider === 'deepseek' ? 'block' : 'none'); ?>;">
                             <div class="form-group">
                                 <label class="control-label">Cheia API DeepSeek</label>
                                 <input type="password" name="<?php echo $fn('deepseek_api_key'); ?>"
@@ -2008,13 +2009,13 @@ public static function tasks_management_placeholder_callback()
                             <div class="form-group">
                                 <label class="control-label">Model DeepSeek</label>
                                 <select name="<?php echo $fn('deepseek_model'); ?>" class="form-control model-select" id="<?php echo $id_pfx; ?>deepseek_model">
-                                    <?php 
-                                    $ds_models = get_option('auto_ai_news_poster_deepseek_models', ['deepseek-chat' => 'DeepSeek V3', 'deepseek-reasoner' => 'DeepSeek R1']);
-                                    $current_ds_model = $data['deepseek_model'] ?? 'deepseek-chat';
-                                    foreach ($ds_models as $did => $dname) {
-                                        echo '<option value="' . esc_attr($did) . '" ' . selected($current_ds_model, $did, false) . '>' . esc_html($dname) . '</option>';
-                                    }
-                                    ?>
+                                    <?php
+        $ds_models = get_option('auto_ai_news_poster_deepseek_models', ['deepseek-chat' => 'DeepSeek V3', 'deepseek-reasoner' => 'DeepSeek R1']);
+        $current_ds_model = $data['deepseek_model'] ?? 'deepseek-chat';
+        foreach ($ds_models as $did => $dname) {
+            echo '<option value="' . esc_attr($did) . '" ' . selected($current_ds_model, $did, false) . '>' . esc_html($dname) . '</option>';
+        }
+        ?>
                                 </select>
                                 <div class="form-description">
                                     <button type="button" class="btn btn-sm btn-outline-primary refresh-models-btn" data-provider="deepseek">
@@ -2110,7 +2111,7 @@ public static function tasks_management_placeholder_callback()
         $is_tasks = ($context === 'tasks');
         $data = $is_tasks ? ($options['tasks_config'] ?? []) : $options;
         $name_key = $is_tasks ? 'tasks_config' : '';
-        
+
         $selected_option = $data['article_length_option'] ?? 'same_as_source';
         $min_length = $data['min_length'] ?? '';
         $max_length = $data['max_length'] ?? '';
@@ -2156,5 +2157,3 @@ public static function tasks_management_placeholder_callback()
 }
 
 Auto_Ai_News_Poster_Settings::init();
-
-
