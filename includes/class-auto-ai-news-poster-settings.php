@@ -300,7 +300,7 @@ class Auto_Ai_News_Poster_Settings
         $extract_image_from_source = $options['extract_image_from_source'] ?? 'yes'; // Default: enabled
         $position = $options['source_photo_position'] ?? 'before';
         ?>
-        <div class="settings-group settings-group-parse_link settings-group-ai_browsing settings-group-tasks">
+        <div class="settings-group settings-group-parse_link settings-group-ai_browsing">
         <div class="settings-card">
             <div class="settings-card-header">
                 <div class="settings-card-icon">🖼️</div>
@@ -524,15 +524,12 @@ public static function tasks_management_placeholder_callback()
                                                         <label for="task_<?php echo $index; ?>_tags" style="font-size: 12px;">Generează etichete automate</label>
                                                     </div>
                                                     <div class="checkbox-modern" style="margin-bottom: 8px;">
-                                                        <input type="checkbox" id="task_<?php echo $index; ?>_images" name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][generate_image]" value="yes" <?php checked($list['generate_image'] ?? 'no', 'yes'); ?> />
-                                                        <label for="task_<?php echo $index; ?>_images" style="font-size: 12px;">Generează imagini AI</label>
+                                                        <input type="checkbox" id="task_<?php echo $index; ?>_extract_img" name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][extract_image_from_source]" value="yes" <?php checked($list['extract_image_from_source'] ?? 'yes', 'yes'); ?> />
+                                                        <label for="task_<?php echo $index; ?>_extract_img" style="font-size: 12px;">Extrage automat imaginea din articolul sursă (Parse Link, AI Browsing, Taskuri)</label>
                                                     </div>
-                                                    <div style="margin-top: 8px;">
-                                                        <label class="control-label" style="font-size: 12px; display: block; margin-bottom: 4px;">Folosire imagini:</label>
-                                                        <select name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][use_external_images]" class="form-control form-control-sm">
-                                                            <option value="external" <?php selected($list['use_external_images'] ?? 'external', 'external'); ?>>Folosește imagini externe</option>
-                                                            <option value="import" <?php selected($list['use_external_images'] ?? 'external', 'import'); ?>>Importă imagini în WordPress</option>
-                                                        </select>
+                                                    <div class="checkbox-modern">
+                                                        <input type="checkbox" id="task_<?php echo $index; ?>_images" name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][generate_image]" value="yes" <?php checked($list['generate_image'] ?? 'no', 'yes'); ?> />
+                                                        <label for="task_<?php echo $index; ?>_images" style="font-size: 12px;">Da, generează automat imaginea cu AI (dacă nu există)</label>
                                                     </div>
                                                 </div>
                                                 
@@ -655,15 +652,12 @@ public static function tasks_management_placeholder_callback()
                                     <label for="task_{{INDEX}}_tags" style="font-size: 12px;">Generează etichete automate</label>
                                 </div>
                                 <div class="checkbox-modern" style="margin-bottom: 8px;">
-                                    <input type="checkbox" id="task_{{INDEX}}_images" name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][generate_image]" value="yes" />
-                                    <label for="task_{{INDEX}}_images" style="font-size: 12px;">Generează imagini AI</label>
+                                    <input type="checkbox" id="task_{{INDEX}}_extract_img" name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][extract_image_from_source]" value="yes" checked />
+                                    <label for="task_{{INDEX}}_extract_img" style="font-size: 12px;">Extrage automat imaginea din articolul sursă (Parse Link, AI Browsing, Taskuri)</label>
                                 </div>
-                                <div style="margin-top: 8px;">
-                                    <label class="control-label" style="font-size: 12px; display: block; margin-bottom: 4px;">Folosire imagini:</label>
-                                    <select name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][use_external_images]" class="form-control form-control-sm">
-                                        <option value="external" selected>Folosește imagini externe</option>
-                                        <option value="import">Importă imagini în WordPress</option>
-                                    </select>
+                                <div class="checkbox-modern">
+                                    <input type="checkbox" id="task_{{INDEX}}_images" name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][generate_image]" value="yes" />
+                                    <label for="task_{{INDEX}}_images" style="font-size: 12px;">Da, generează automat imaginea cu AI (dacă nu există)</label>
                                 </div>
                             </div>
                             
@@ -1681,7 +1675,7 @@ public static function tasks_management_placeholder_callback()
                                         'cron_interval_minutes' => intval($list_item['cron_interval_minutes'] ?? 30),
                                         'generate_tags'         => ($list_item['generate_tags'] ?? 'yes') === 'yes' ? 'yes' : 'no',
                                         'generate_image'        => ($list_item['generate_image'] ?? 'no') === 'yes' ? 'yes' : 'no',
-                                        'use_external_images'   => in_array($list_item['use_external_images'] ?? 'external', ['external', 'import']) ? $list_item['use_external_images'] : 'external',
+                                        'extract_image_from_source' => ($list_item['extract_image_from_source'] ?? 'yes') === 'yes' ? 'yes' : 'no',
                                         'article_length_option' => sanitize_text_field($list_item['article_length_option'] ?? 'same_as_source'),
                                         'min_length'            => intval($list_item['min_length'] ?? 0),
                                         'max_length'            => intval($list_item['max_length'] ?? 0),

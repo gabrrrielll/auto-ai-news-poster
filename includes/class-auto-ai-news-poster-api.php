@@ -157,8 +157,8 @@ class Auto_Ai_News_Poster_Api
         update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
 
         // 7. Extract Image from source if enabled and source URL exists
-        // Note: Taskuri nu au de obicei URL sursă, dar verificăm pentru consistență
-        $extract_image_from_source = $options['extract_image_from_source'] ?? 'yes'; // Default: enabled
+        // Setare per listă: extract_image_from_source
+        $extract_image_from_source = $list['extract_image_from_source'] ?? 'yes'; // Default: enabled
         $extracted_image_url = null;
         
         // Dacă task-ul are un URL sursă (pentru viitor, dacă se adaugă această funcționalitate)
@@ -173,10 +173,7 @@ class Auto_Ai_News_Poster_Api
             }
         }
 
-        // Setăm imaginea extrasă din sursă (dacă există)
-        // Folosim setarea specifică pentru task sau setarea globală
-        $task_use_external_images = $list['use_external_images'] ?? $options['use_external_images'] ?? 'external';
-        
+        // Setăm imaginea extrasă din sursă (dacă există). Folosim setarea globală use_external_images.
         if (!empty($extracted_image_url) && !has_post_thumbnail($post_id)) {
             error_log('[TASKS] Setting extracted image from source: ' . $extracted_image_url);
             $image_result = Post_Manager::set_featured_image(
@@ -184,8 +181,7 @@ class Auto_Ai_News_Poster_Api
                 $extracted_image_url,
                 $article_data['title'] ?? $target_title,
                 $article_data['summary'] ?? '',
-                $source_url ?? '', // URL-ul sursă pentru extragerea numelui site-ului
-                $task_use_external_images // Override pentru use_external_images
+                $source_url ?? '' // URL-ul sursă pentru extragerea numelui site-ului
             );
 
             if (is_wp_error($image_result)) {
