@@ -289,7 +289,8 @@ class Auto_Ai_News_Poster_Prompts
     }
 
     /**
-     * Generează promptul pentru transformarea unui TITLU în articol (Mod Taskuri).
+     * Generează promptul pentru transformarea unui TITLU în articol EVERGREEN (Mod Taskuri).
+     * Articolele generate trebuie să fie detaliate, bine documentate și rezistente în timp.
      */
     public static function get_task_article_prompt($title, $category_name, $additional_instructions = '')
     {
@@ -305,28 +306,99 @@ class Auto_Ai_News_Poster_Prompts
             ? "Articolul trebuie să aibă între {$min_length} și {$max_length} de cuvinte."
             : "Articolul trebuie să fie detaliat, cuprinzător și bine structurat.";
 
-        $prompt = "Ești un jurnalist expert. Sarcina ta este să scrii un articol de știri complet bazat pe următorul titlu: \"{$title}\".\n\n";
+        $prompt = "Ești un jurnalist expert specializat în articole EVERGREEN (conținut rezistent în timp). Trebuie să scrii un articol complet, detaliat și bine documentat pe baza următorului titlu: \"{$title}\".\n\n";
         
-        $prompt .= "**REGULI IMPORTANTE:**\n";
-        $prompt .= "1. **Cercetare (Optional):** Dacă titlul se referă la un eveniment recent sau specific care necesită informații actuale, AI-ul are LIBERTATEA de a folosi funcția de web browsing pentru a găsi detalii veridice. Dacă subiectul este general, poți scrie folosind cunoștințele tale interne.\n";
-        $prompt .= "2. **Calitate:** Scrie în limba ROMÂNĂ, cu un ton jurnalistic profesionist, obiectiv și informativ.\n";
-        $prompt .= "3. **Structură:** Folosește formatare HTML (<p>, <h2>, <h3>). NU folosi titluri genervice ca \"Introducere\" sau \"Concluzie\".\n";
-        $prompt .= "4. **Lungime:** {$length_instruction}\n";
-        $prompt .= "5. **Categorie:** Articolul va face parte din categoria \"{$category_name}\".\n";
-        $prompt .= "6. **SEO:** Generează 1-3 etichete relevante și o meta descriere de max 160 caractere.\n";
+        $prompt .= "**═══════════════════════════════════════════════════════**\n";
+        $prompt .= "**CERINȚE OBLIGATORII DE DOCUMENTARE ȘI CERCETARE**\n";
+        $prompt .= "**═══════════════════════════════════════════════════════**\n\n";
+        
+        $prompt .= "1. **CERCETARE WEB OBLIGATORIE (MANDATORY WEB BROWSING):**\n";
+        $prompt .= "   - TREBUIE să folosești funcția de WEB BROWSING pentru a găsi informații actuale și verificate\n";
+        $prompt .= "   - Cercetează și consultă MINIMUM 3 SURSE DE ÎNCREDERE (site-uri oficiale, documentații, articole de referință)\n";
+        $prompt .= "   - Prioritizează: documentații oficiale, site-uri guvernamentale, publicații academice, platforme recunoscute în domeniu\n";
+        $prompt .= "   - Verifică și compară informațiile din surse multiple pentru acuratețe\n";
+        $prompt .= "   - NU inventa informații - folosește doar date veridice din surse verificate\n\n";
+        
+        $prompt .= "2. **ADĂUGARE LINKURI CĂTRE SURSE (MANDATORY SOURCE ATTRIBUTION):**\n";
+        $prompt .= "   - OBLIGATORIU: Include în articol linkuri HTML către TOATE sursele consultate\n";
+        $prompt .= "   - Format: <a href=\"URL_SURSA\">Nume_Sursa</a>\n";
+        $prompt .= "   - Plasează linkurile natural în context, acolo unde citeaza sau referă informația\n";
+        $prompt .= "   - Exemplu: \"Conform <a href=\"https://sursa.com\">documentației oficiale</a>, procesul...\"\n";
+        $prompt .= "   - Minimum 3 linkuri către surse diferite în articol\n\n";
+        
+        $prompt .= "3. **EXPLICAȚII DETALIATE ȘI PAȘI DETALIAȚI:**\n";
+        $prompt .= "   - Furnizează explicații COMPLETE și DETALIATE pentru fiecare concept\n";
+        $prompt .= "   - Dacă articolul include un proces/procedură, descrie TOȚI PAȘII necesari\n";
+        $prompt .= "   - Folosește liste numerotate sau bullet points pentru claritate\n";
+        $prompt .= "   - Include exemple practice unde este relevant\n";
+        $prompt .= "   - Explică \"de ce\" și \"cum\", nu doar \"ce\"\n\n";
+        
+        $prompt .= "**═══════════════════════════════════════════════════════**\n";
+        $prompt .= "**REGULI PENTRU CONȚINUT EVERGREEN (TIMELESS CONTENT)**\n";
+        $prompt .= "**═══════════════════════════════════════════════════════**\n\n";
+        
+        $prompt .= "4. **INTERZIS - REFERINȚE TEMPORALE:**\n";
+        $prompt .= "   - NU menționa NICIODATĂ anul, luna sau perioada curentă (ex: \"în 2023\", \"în 2024\", \"în 2026\", \"anul acesta\", \"luna aceasta\")\n";
+        $prompt .= "   - NU folosi expresii precum: \"recent\", \"în ultimul timp\", \"în prezent\", \"momentan\", \"în acest an\"\n";
+        $prompt .= "   - Scrie conținut care rămâne valabil și relevant independent de momentul citirii\n";
+        $prompt .= "   - Folosește formulări neutre temporal: \"de obicei\", \"în general\", \"conform metodologiei standard\"\n\n";
+        
+        $prompt .= "5. **STIL DE SCRIERE - EVERGREEN:**\n";
+        $prompt .= "   - Ton profesional, educațional și informativ\n";
+        $prompt .= "   - Focalizează pe informații fundamentale și proceduri standard\n";
+        $prompt .= "   - Evită tendințele temporare - concentrează pe principii și practici stabile\n";
+        $prompt .= "   - Articolul trebuie să fie util și relevant și peste 1-2 ani\n\n";
+        
+        $prompt .= "**═══════════════════════════════════════════════════════**\n";
+        $prompt .= "**CERINȚE TEHNICE ȘI DE FORMATARE**\n";
+        $prompt .= "**═══════════════════════════════════════════════════════**\n\n";
+        
+        $prompt .= "6. **LIMBA ȘI TON:**\n";
+        $prompt .= "   - Scrie EXCLUSIV în limba ROMÂNĂ\n";
+        $prompt .= "   - Ton jurnalistic profesionist, obiectiv și educațional\n";
+        $prompt .= "   - Vocabular accesibil dar precis tehnic\n\n";
+        
+        $prompt .= "7. **STRUCTURĂ HTML:**\n";
+        $prompt .= "   - Folosește formatare HTML corectă: <p>, <h2>, <h3>, <ul>, <ol>, <li>\n";
+        $prompt .= "   - NU folosi titluri generice precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"\n";
+        $prompt .= "   - Subtitluri descriptive și relevante (H2, H3)\n";
+        $prompt .= "   - Paragrafe bine structurate și logice\n\n";
+        
+        $prompt .= "8. **LUNGIME ȘI DETALIERE:**\n";
+        $prompt .= "   - {$length_instruction}\n";
+        $prompt .= "   - Prioritizează CALITATEA și PROFUNZIMEA informației față de cantitate\n";
+        $prompt .= "   - Fiecare secțiune trebuie să fie completă și utilă\n\n";
+        
+        $prompt .= "9. **SEO ȘI METADATA:**\n";
+        $prompt .= "   - Categorie de destinație: \"{$category_name}\"\n";
+        $prompt .= "   - Generează 1-3 etichete (tags) relevante și evergreen\n";
+        $prompt .= "   - Meta descriere de maximum 160 caractere, atrăgătoare și optimizată SEO\n\n";
         
         if (!empty($additional_instructions)) {
-            $prompt .= "7. **Instrucțiuni suplimentare:** {$additional_instructions}\n";
+            $prompt .= "10. **INSTRUCȚIUNI SUPLIMENTARE SPECIFICE:**\n";
+            $prompt .= "    {$additional_instructions}\n\n";
         }
-
-        $prompt .= "\n**Format de răspuns OBLIGATORIU (JSON):**\n";
+        
+        $prompt .= "**═══════════════════════════════════════════════════════**\n";
+        $prompt .= "**FORMAT DE RĂSPUNS - JSON OBLIGATORIU**\n";
+        $prompt .= "**═══════════════════════════════════════════════════════**\n\n";
+        
+        $prompt .= "Returnează EXCLUSIV un obiect JSON cu următoarea structură:\n\n";
         $prompt .= "{\n";
-        $prompt .= "  \"title\": \"Titlul final al articolului (poate fi cel original sau unul optimizat)\",\n";
-        $prompt .= "  \"content\": \"Conținutul HTML al articolului\",\n";
-        $prompt .= "  \"summary\": \"Meta descrierea SEO\",\n";
-        $prompt .= "  \"tags\": [\"tag1\", \"tag2\"],\n";
+        $prompt .= "  \"title\": \"Titlul final optimizat (fără referințe temporale)\",\n";
+        $prompt .= "  \"content\": \"Conținutul COMPLET în HTML, cu minimum 3 linkuri <a href=\\\"...\\\"> către surse, pași detaliați, explicații complete\",\n";
+        $prompt .= "  \"summary\": \"Meta descriere SEO (max 160 caractere, evergreen)\",\n";
+        $prompt .= "  \"tags\": [\"tag1_evergreen\", \"tag2_evergreen\", \"tag3_evergreen\"],\n";
         $prompt .= "  \"category\": \"{$category_name}\"\n";
-        $prompt .= "}\n";
+        $prompt .= "}\n\n";
+        
+        $prompt .= "**IMPORTANT:** Înainte de a răspunde, VERIFICĂ că:\n";
+        $prompt .= "✓ Ai folosit web browsing pentru cercetare\n";
+        $prompt .= "✓ Ai consultat minimum 3 surse credibile\n";
+        $prompt .= "✓ Ai inclus minimum 3 linkuri către surse în content\n";
+        $prompt .= "✓ Ai furnizat explicații detaliate și pași completi\n";
+        $prompt .= "✓ NU ai menționat niciun an, lună sau perioadă specifică\n";
+        $prompt .= "✓ Conținutul este evergreen și va rămâne relevant în timp\n";
 
         return $prompt;
     }
