@@ -746,13 +746,16 @@
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-/* Responsive styles for header */
-@media screen and (max-width: 782px) {
+/* Responsive styles - mobil (sub 768px) */
+@media screen and (max-width: 768px) {
+    /* 1. Eliminare padding lateral: header 100% lățime, până sus */
     .auto-ai-news-poster-admin {
-        padding: 8px;
+        padding: 0;
     }
 
     .auto-ai-news-poster-admin .wrap {
+        margin: 0;
+        max-width: 100%;
         border-radius: 0;
     }
 
@@ -811,5 +814,10 @@
 
     .api-instructions {
         padding: 12px;
+    }
+
+    /* 2. Lista taskuri: textarea un rând întreg, setările dedesubt */
+    .task-list-item .form-grid {
+        grid-template-columns: 1fr !important;
     }
 }
