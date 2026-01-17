@@ -235,9 +235,12 @@ class Auto_AI_News_Poster_Parser
              // Maybe return error here? No, let it return empty so logic elsewhere handles it or retries.
         }
 
-        // Extragem imaginea din sursă (dacă clasa există)
+        // Extragem imaginea din sursă (dacă clasa există și opțiunea este activată)
         $image_url = null;
-        if (class_exists('Auto_AI_News_Poster_Image_Extractor')) {
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $extract_image_from_source = $options['extract_image_from_source'] ?? 'yes'; // Default: enabled
+        
+        if (class_exists('Auto_AI_News_Poster_Image_Extractor') && $extract_image_from_source === 'yes') {
             $image_url = Auto_AI_News_Poster_Image_Extractor::extract_image_from_url($final_url, $body);
         }
 

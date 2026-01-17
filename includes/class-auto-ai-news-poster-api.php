@@ -156,10 +156,46 @@ class Auto_Ai_News_Poster_Api
         $options['task_lists'] = $task_lists;
         update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
 
-        // 7. Generate Image if enabled - use task-specific setting
+        // 7. Extract Image from source if enabled and source URL exists
+        // Note: Taskuri nu au de obicei URL sursă, dar verificăm pentru consistență
+        $extract_image_from_source = $options['extract_image_from_source'] ?? 'yes'; // Default: enabled
+        $extracted_image_url = null;
+        
+        // Dacă task-ul are un URL sursă (pentru viitor, dacă se adaugă această funcționalitate)
+        $source_url = $list['source_url'] ?? null;
+        if ($extract_image_from_source === 'yes' && !empty($source_url) && class_exists('Auto_AI_News_Poster_Image_Extractor')) {
+            if (filter_var($source_url, FILTER_VALIDATE_URL)) {
+                error_log('[TASKS] Extracting image from source URL: ' . $source_url);
+                $extracted_image_url = Auto_AI_News_Poster_Image_Extractor::extract_image_from_url($source_url);
+                if ($extracted_image_url) {
+                    error_log('[TASKS] Image extracted successfully: ' . $extracted_image_url);
+                }
+            }
+        }
+
+        // Setăm imaginea extrasă din sursă (dacă există)
+        if (!empty($extracted_image_url) && !has_post_thumbnail($post_id)) {
+            error_log('[TASKS] Setting extracted image from source: ' . $extracted_image_url);
+            $image_result = Post_Manager::set_featured_image(
+                $post_id,
+                $extracted_image_url,
+                $article_data['title'] ?? $target_title,
+                $article_data['summary'] ?? ''
+            );
+
+            if (is_wp_error($image_result)) {
+                error_log('[TASKS] Failed to set extracted image: ' . $image_result->get_error_message());
+            } else {
+                update_post_meta($post_id, '_external_image_source', 'Sursă externă');
+                error_log('[TASKS] Extracted image set successfully');
+            }
+        }
+
+        // 8. Generate Image if enabled and not already present (fallback) - use task-specific setting
         $gen_image = $list['generate_image'] ?? 'no';
-        if ($gen_image === 'yes') {
+        if ($gen_image === 'yes' && !has_post_thumbnail($post_id)) {
             $image_prompt = $article_data['summary'] ?? $article_data['title'];
+            error_log('[TASKS] No image from source, generating AI image instead');
             self::generate_image_for_article($post_id, $image_prompt);
         }
 
@@ -602,7 +638,9 @@ class Auto_Ai_News_Poster_Api
         }
 
         // --- Set Image from extracted source (priority) ---
-        if (!empty($extracted_image_url) && !has_post_thumbnail($new_post_id)) {
+        // Verificăm dacă extragerea imaginii din sursă este activată
+        $extract_image_from_source = $options['extract_image_from_source'] ?? 'yes'; // Default: enabled
+        if ($extract_image_from_source === 'yes' && !empty($extracted_image_url) && !has_post_thumbnail($new_post_id)) {
             error_log($log_prefix . ' Setting extracted image from source: ' . $extracted_image_url);
             $image_result = Post_Manager::set_featured_image(
                 $new_post_id, 
@@ -618,6 +656,8 @@ class Auto_Ai_News_Poster_Api
                 update_post_meta($new_post_id, '_external_image_source', 'Sursă externă');
                 error_log($log_prefix . ' Extracted image set successfully');
             }
+        } elseif ($extract_image_from_source !== 'yes') {
+            error_log($log_prefix . ' Image extraction from source is disabled in settings');
         }
 
         // --- Generate Image if enabled and not already present (fallback) ---
@@ -759,9 +799,11 @@ class Auto_Ai_News_Poster_Api
             update_option(AUTO_AI_NEWS_POSTER_LAST_POST_TIME, time());
         }
 
-        // Extragem imaginea din sursă (dacă news_sources este un URL)
+        // Extragem imaginea din sursă (dacă news_sources este un URL și opțiunea este activată)
         $extracted_image_url = null;
-        if (!empty($news_sources) && class_exists('Auto_AI_News_Poster_Image_Extractor')) {
+        $extract_image_from_source = $options['extract_image_from_source'] ?? 'yes'; // Default: enabled
+        
+        if ($extract_image_from_source === 'yes' && !empty($news_sources) && class_exists('Auto_AI_News_Poster_Image_Extractor')) {
             // news_sources poate fi un URL sau multiple URL-uri separate de newline
             $urls = array_filter(array_map('trim', explode("\n", $news_sources)));
             if (!empty($urls)) {
@@ -775,6 +817,8 @@ class Auto_Ai_News_Poster_Api
                     }
                 }
             }
+        } elseif ($extract_image_from_source !== 'yes') {
+            error_log('[AI_BROWSING] Image extraction from source is disabled in settings');
         }
 
         // Setăm imaginea extrasă din sursă (prioritate)

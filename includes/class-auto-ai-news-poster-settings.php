@@ -297,9 +297,10 @@ class Auto_Ai_News_Poster_Settings
         // Retrieve values
         $use_external_images = $options['use_external_images'] ?? 'external';
         $generate_image = $options['generate_image'] ?? 'no';
+        $extract_image_from_source = $options['extract_image_from_source'] ?? 'yes'; // Default: enabled
         $position = $options['source_photo_position'] ?? 'before';
         ?>
-        <div class="settings-group settings-group-parse_link settings-group-ai_browsing">
+        <div class="settings-group settings-group-parse_link settings-group-ai_browsing settings-group-tasks">
         <div class="settings-card">
             <div class="settings-card-header">
                 <div class="settings-card-icon">🖼️</div>
@@ -315,15 +316,25 @@ class Auto_Ai_News_Poster_Settings
                     </select>
                 </div>
 
-                <!-- 2. Generare Automată -->
+                <!-- 2. Extragere Imagine din Sursă -->
                 <div class="form-group" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
                     <div class="checkbox-modern">
-                        <input type="checkbox" name="auto_ai_news_poster_settings[generate_image]" value="yes" <?php checked($generate_image, 'yes'); ?> />
-                        <label>Da, generează automat imaginea (dacă nu există)</label>
+                        <input type="checkbox" name="auto_ai_news_poster_settings[extract_image_from_source]" value="yes" <?php checked($extract_image_from_source, 'yes'); ?> />
+                        <label>Extrage automat imaginea din articolul sursă (Parse Link, AI Browsing, Taskuri)</label>
+                        <p class="form-text text-muted" style="margin-top: 5px; font-size: 12px;">Dacă este activată, plugin-ul va încerca să extragă imaginea principală din sursa externă înainte de a genera una cu AI.</p>
                     </div>
                 </div>
 
-                <!-- 3. Poziție Sursă Foto -->
+                <!-- 3. Generare Automată -->
+                <div class="form-group" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
+                    <div class="checkbox-modern">
+                        <input type="checkbox" name="auto_ai_news_poster_settings[generate_image]" value="yes" <?php checked($generate_image, 'yes'); ?> />
+                        <label>Da, generează automat imaginea cu AI (dacă nu există)</label>
+                        <p class="form-text text-muted" style="margin-top: 5px; font-size: 12px;">Dacă nu se găsește imagine în sursă sau extragerea este dezactivată, se va genera o imagine cu AI.</p>
+                    </div>
+                </div>
+
+                <!-- 4. Poziție Sursă Foto -->
                 <div class="form-group">
                     <label class="control-label">Poziție afișare „Sursa foto”</label>
                     <div class="mode-switch">
@@ -1604,7 +1615,7 @@ public static function tasks_management_placeholder_callback()
         $sanitized = $existing_options;
 
         // Lista checkbox-urilor care trebuie să fie setate explicit
-        $checkbox_fields = ['auto_rotate_categories', 'generate_image',
+        $checkbox_fields = ['auto_rotate_categories', 'generate_image', 'extract_image_from_source',
                            'run_until_bulk_exhausted', 'generate_tags', 'use_openai', 'use_gemini', 'use_deepseek'];
 
         // Câmpurile de tip <select> care trebuie validate
