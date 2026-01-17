@@ -31,9 +31,9 @@ class Auto_Ai_News_Poster_Cron
             wp_schedule_event(time(), 'custom_interval', 'auto_ai_news_poster_cron_hook');
         }
 
-        // Tasks Cron (Separate)
+        // Tasks Cron: verificare la fiecare 2 min; fiecare listă are intervalul ei, liste epuizate sunt sărite
         if (!wp_next_scheduled('auto_ai_news_poster_tasks_cron_hook')) {
-            wp_schedule_event(time() + 60, 'hourly', 'auto_ai_news_poster_tasks_cron_hook');
+            wp_schedule_event(time() + 60, 'tasks_check_interval', 'auto_ai_news_poster_tasks_cron_hook');
         }
     }
 
@@ -53,20 +53,18 @@ class Auto_Ai_News_Poster_Cron
         // Obține setările pentru a verifica dacă modul automat este activat
         $settings = get_option('auto_ai_news_poster_settings', []);
         
-        // Reprogramează cronul principal cu noul interval doar dacă modul automat este activat
+        // Reprogramează cronul principal (Parse Link / AI Browsing) doar dacă Mod = Automat
         if (isset($settings['mode']) && $settings['mode'] === 'auto') {
             if (!wp_next_scheduled('auto_ai_news_poster_cron_hook')) {
                 $scheduled_time = time();
                 wp_schedule_event($scheduled_time, 'custom_interval', 'auto_ai_news_poster_cron_hook');
-                
-                // Resetează timpul ultimului articol pentru a permite publicarea imediată a primului articol
                 delete_option('auto_ai_news_poster_last_post_time');
             }
+        }
 
-            // Reprogramează cronul de TASKURI (independent)
-            if (!wp_next_scheduled('auto_ai_news_poster_tasks_cron_hook')) {
-                wp_schedule_event(time() + 120, 'hourly', 'auto_ai_news_poster_tasks_cron_hook');
-            }
+        // Taskuri: mereu programate (mod implicit Automat). Fiecare listă rulează după intervalul ei; când s-a epuizat, e sărită.
+        if (!wp_next_scheduled('auto_ai_news_poster_tasks_cron_hook')) {
+            wp_schedule_event(time() + 60, 'tasks_check_interval', 'auto_ai_news_poster_tasks_cron_hook');
         }
     }
 
@@ -168,16 +166,12 @@ class Auto_Ai_News_Poster_Cron
     }
 
     /**
-     * Cron Job separat pentru Taskuri - cu scheduling individual per listă
+     * Cron pentru Taskuri: rulează mereu automat (independent de Mod Manual/Automat).
+     * Fiecare listă folosește intervalul ei (Ore Cron / Minute Cron); când titlurile se epuizează, lista e sărită.
      */
     public static function tasks_worker()
     {
         $settings = get_option('auto_ai_news_poster_settings', []);
-        
-        // Verificăm dacă modul automat este pornit
-        if (!isset($settings['mode']) || $settings['mode'] !== 'auto') {
-            return;
-        }
 
         // Lock mechanism pentru taskuri
         $lock_key = 'auto_ai_news_poster_tasks_lock';
@@ -310,6 +304,12 @@ class Auto_Ai_News_Poster_Cron
         $schedules['tasks_custom_interval'] = [
             'interval' => $t_interval,
             'display' => "Tasks: Once every $t_hours hours and $t_minutes minutes",
+        ];
+
+        // Verificare la fiecare 2 min ca worker-ul să poată respecta intervale mici per listă (ex. 2 min)
+        $schedules['tasks_check_interval'] = [
+            'interval' => 120,
+            'display' => 'Tasks: la fiecare 2 minute (verificare)',
         ];
 
         return $schedules;
