@@ -339,7 +339,15 @@ class Auto_Ai_News_Poster_Api
                 return;
             } else {
                 // Default to 'parse_link' behavior
-                $extracted_content = Auto_AI_News_Poster_Parser::extract_content_from_url($source_link);
+                $extracted_result = Auto_AI_News_Poster_Parser::extract_content_from_url($source_link);
+                // Handle both array (new format) and string (backward compatibility)
+                if (is_array($extracted_result)) {
+                    $extracted_content = $extracted_result['content'] ?? '';
+                    $extracted_image_url = $extracted_result['image_url'] ?? null;
+                } else {
+                    $extracted_content = $extracted_result;
+                    $extracted_image_url = null;
+                }
             }
 
         } else {
@@ -385,7 +393,15 @@ class Auto_Ai_News_Poster_Api
                 return;
             } else {
                 error_log($log_prefix . ' Extracting content from URL: ' . $source_link);
-                $extracted_content = Auto_AI_News_Poster_Parser::extract_content_from_url($source_link);
+                $extracted_result = Auto_AI_News_Poster_Parser::extract_content_from_url($source_link);
+                // Handle both array (new format) and string (backward compatibility)
+                if (is_array($extracted_result)) {
+                    $extracted_content = $extracted_result['content'] ?? '';
+                    $extracted_image_url = $extracted_result['image_url'] ?? null;
+                } else {
+                    $extracted_content = $extracted_result;
+                    $extracted_image_url = null;
+                }
             }
         }
 
@@ -393,9 +409,16 @@ class Auto_Ai_News_Poster_Api
         // If 'ai_browsing' was selected, the function would have returned already.
 
 
+        // Initialize extracted_image_url if not set (for backward compatibility)
+        if (!isset($extracted_image_url)) {
+            $extracted_image_url = null;
+        }
+
         // --- Validate extracted content ---
-        if (is_wp_error($extracted_content) || empty(trim($extracted_content))) {
-            $error_message = is_wp_error($extracted_content) ? $extracted_content->get_error_message() : 'Extracted content is empty.';
+        // Handle case where extracted_content might be an array (shouldn't happen, but safety check)
+        $content_to_validate = is_array($extracted_content) ? ($extracted_content['content'] ?? '') : $extracted_content;
+        if (is_wp_error($extracted_content) || is_wp_error($content_to_validate) || empty(trim($content_to_validate))) {
+            $error_message = is_wp_error($extracted_content) ? $extracted_content->get_error_message() : (is_wp_error($content_to_validate) ? $content_to_validate->get_error_message() : 'Extracted content is empty.');
             
             error_log($log_prefix . ' Failed to extract content from: ' . $source_link . ' - Error: ' . $error_message);
 
@@ -409,7 +432,12 @@ class Auto_Ai_News_Poster_Api
             return;
         }
         
-        error_log($log_prefix . ' Content extracted successfully from: ' . $source_link . ' (Length: ' . strlen($extracted_content) . ' chars)');
+        error_log($log_prefix . ' Content extracted successfully from: ' . $source_link . ' (Length: ' . strlen($content_to_validate) . ' chars)');
+        if ($extracted_image_url) {
+            error_log($log_prefix . ' Image extracted successfully: ' . $extracted_image_url);
+        } else {
+            error_log($log_prefix . ' No image found in source');
+        }
 
         // --- Validate extracted content for suspicious patterns ---
         $suspicious_patterns = [
@@ -418,7 +446,7 @@ class Auto_Ai_News_Poster_Api
 
         $is_suspicious_content = false;
         foreach ($suspicious_patterns as $pattern) {
-            if (stripos($extracted_content, $pattern) !== false) {
+            if (stripos($content_to_validate, $pattern) !== false) {
                 $is_suspicious_content = true;
                 break;
             }
@@ -442,7 +470,8 @@ class Auto_Ai_News_Poster_Api
 
         // --- Call OpenAI API ---
         error_log($log_prefix . ' Calling AI API for: ' . $source_link);
-        $prompt = generate_custom_source_prompt($extracted_content, $additional_instructions, $source_link);
+        // Use the validated content (should be string at this point)
+        $prompt = generate_custom_source_prompt($content_to_validate, $additional_instructions, $source_link);
         $response = call_ai_api($prompt);
 
         if (is_wp_error($response)) {
@@ -572,10 +601,30 @@ class Auto_Ai_News_Poster_Api
             error_log($log_prefix . ' Article published successfully! Post ID: ' . $new_post_id . ', Link: ' . $source_link . ', Time: ' . date('Y-m-d H:i:s', $post_time));
         }
 
-        // --- Generate Image if enabled and not already present ---
+        // --- Set Image from extracted source (priority) ---
+        if (!empty($extracted_image_url) && !has_post_thumbnail($new_post_id)) {
+            error_log($log_prefix . ' Setting extracted image from source: ' . $extracted_image_url);
+            $image_result = Post_Manager::set_featured_image(
+                $new_post_id, 
+                $extracted_image_url, 
+                $article_data['title'], 
+                $article_data['summary'] ?? ''
+            );
+            
+            if (is_wp_error($image_result)) {
+                error_log($log_prefix . ' Failed to set extracted image: ' . $image_result->get_error_message());
+            } else {
+                // Setăm sursa imaginii ca fiind sursa externă
+                update_post_meta($new_post_id, '_external_image_source', 'Sursă externă');
+                error_log($log_prefix . ' Extracted image set successfully');
+            }
+        }
+
+        // --- Generate Image if enabled and not already present (fallback) ---
         if (isset($options['generate_image']) && $options['generate_image'] === 'yes' && !has_post_thumbnail($new_post_id)) {
             $prompt_for_dalle = !empty($post_data['post_excerpt']) ? $post_data['post_excerpt'] : wp_trim_words($post_data['post_content'], 100, '...');
             if (!empty($prompt_for_dalle)) {
+                error_log($log_prefix . ' No image from source, generating AI image instead');
                 self::generate_image_for_article($new_post_id, $prompt_for_dalle);
             }
         }
@@ -710,9 +759,46 @@ class Auto_Ai_News_Poster_Api
             update_option(AUTO_AI_NEWS_POSTER_LAST_POST_TIME, time());
         }
 
-        // Generăm imaginea dacă este activată opțiunea și nu există deja una
+        // Extragem imaginea din sursă (dacă news_sources este un URL)
+        $extracted_image_url = null;
+        if (!empty($news_sources) && class_exists('Auto_AI_News_Poster_Image_Extractor')) {
+            // news_sources poate fi un URL sau multiple URL-uri separate de newline
+            $urls = array_filter(array_map('trim', explode("\n", $news_sources)));
+            if (!empty($urls)) {
+                // Încercăm să extragem imaginea din primul URL
+                $first_url = $urls[0];
+                if (filter_var($first_url, FILTER_VALIDATE_URL)) {
+                    error_log('[AI_BROWSING] Extracting image from source URL: ' . $first_url);
+                    $extracted_image_url = Auto_AI_News_Poster_Image_Extractor::extract_image_from_url($first_url);
+                    if ($extracted_image_url) {
+                        error_log('[AI_BROWSING] Image extracted successfully: ' . $extracted_image_url);
+                    }
+                }
+            }
+        }
+
+        // Setăm imaginea extrasă din sursă (prioritate)
+        if (!empty($extracted_image_url) && !has_post_thumbnail($new_post_id)) {
+            error_log('[AI_BROWSING] Setting extracted image from source: ' . $extracted_image_url);
+            $image_result = Post_Manager::set_featured_image(
+                $new_post_id,
+                $extracted_image_url,
+                $article_data['titlu'],
+                $article_data['meta_descriere'] ?? ''
+            );
+
+            if (is_wp_error($image_result)) {
+                error_log('[AI_BROWSING] Failed to set extracted image: ' . $image_result->get_error_message());
+            } else {
+                update_post_meta($new_post_id, '_external_image_source', 'Sursă externă');
+                error_log('[AI_BROWSING] Extracted image set successfully');
+            }
+        }
+
+        // Generăm imaginea dacă este activată opțiunea și nu există deja una (fallback)
         $prompt_for_dalle_browsing = !empty($article_data['meta_descriere']) ? $article_data['meta_descriere'] : wp_trim_words($article_data['continut'], 100, '...');
         if (!empty($prompt_for_dalle_browsing) && isset($options['generate_image']) && $options['generate_image'] === 'yes' && !has_post_thumbnail($new_post_id)) {
+            error_log('[AI_BROWSING] No image from source, generating AI image instead');
             self::generate_image_for_article($new_post_id, $prompt_for_dalle_browsing);
         }
     }

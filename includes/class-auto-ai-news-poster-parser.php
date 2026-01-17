@@ -12,7 +12,8 @@ class Auto_AI_News_Poster_Parser
      * Extracts the main article content from a given URL.
      *
      * @param string $url The URL to fetch and parse.
-     * @return string|WP_Error The extracted text content or a WP_Error on failure.
+     * @return string|array|WP_Error The extracted text content (string for backward compatibility), 
+     *                              or array with 'content' and 'image_url' keys, or a WP_Error on failure.
      */
     public static function extract_content_from_url($url)
     {
@@ -234,6 +235,22 @@ class Auto_AI_News_Poster_Parser
              // Maybe return error here? No, let it return empty so logic elsewhere handles it or retries.
         }
 
+        // Extragem imaginea din sursă (dacă clasa există)
+        $image_url = null;
+        if (class_exists('Auto_AI_News_Poster_Image_Extractor')) {
+            $image_url = Auto_AI_News_Poster_Image_Extractor::extract_image_from_url($final_url, $body);
+        }
+
+        // Returnăm array cu content și image_url pentru compatibilitate cu codul nou
+        // Dar păstrăm și compatibilitatea cu codul vechi care se așteaptă la string
+        if ($image_url !== null) {
+            return [
+                'content' => $article_content,
+                'image_url' => $image_url
+            ];
+        }
+
+        // Pentru backward compatibility, returnăm doar string dacă nu avem imagine
         return $article_content;
     }
 
