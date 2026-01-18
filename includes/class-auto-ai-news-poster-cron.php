@@ -8,16 +8,16 @@ class Auto_Ai_News_Poster_Cron
         register_activation_hook(__FILE__, [self::class, 'activate']);
         // Dezactivare cron la dezactivarea pluginului
         register_deactivation_hook(__FILE__, [self::class, 'deactivate']);
-        
+
         // Acțiune cron principală (Parsare/Browsing)
         add_action('auto_ai_news_poster_cron_hook', [self::class, 'auto_post']);
-        
+
         // Acțiune cron separată pentru TASKURI
         add_action('auto_ai_news_poster_tasks_cron_hook', [self::class, 'tasks_worker']);
-        
+
         // Resetează cron job-urile atunci când se actualizează setările
         add_action('update_option_auto_ai_news_poster_settings', [self::class, 'reset_cron']);
-        
+
         // Adaugă un nou interval de cron bazat pe setările utilizatorului
         add_filter('cron_schedules', [self::class, 'custom_cron_interval']);
     }
@@ -52,7 +52,7 @@ class Auto_Ai_News_Poster_Cron
 
         // Obține setările pentru a verifica dacă modul automat este activat
         $settings = get_option('auto_ai_news_poster_settings', []);
-        
+
         // Reprogramează cronul principal (Parse Link / AI Browsing) doar dacă Mod = Automat
         if (isset($settings['mode']) && $settings['mode'] === 'auto') {
             if (!wp_next_scheduled('auto_ai_news_poster_cron_hook')) {
@@ -73,16 +73,16 @@ class Auto_Ai_News_Poster_Cron
         // Verifică dacă există deja o procesare în curs (lock mechanism)
         $lock_key = 'auto_ai_news_poster_processing_lock';
         $lock_timeout = 300; // 5 minute timeout pentru lock
-        
+
         // Verifică dacă există un lock activ
         $lock_time = get_transient($lock_key);
         if ($lock_time !== false) {
             return; // Oprește execuția dacă există deja o procesare în curs
         }
-        
+
         // Setează lock-ul pentru a preveni procesarea simultană
         set_transient($lock_key, time(), $lock_timeout);
-        
+
         try {
             $settings = get_option('auto_ai_news_poster_settings');
             $generation_mode = $settings['generation_mode'] ?? 'parse_link'; // Mod implicit: parse_link
@@ -91,21 +91,21 @@ class Auto_Ai_News_Poster_Cron
                 // Verifică dacă a trecut suficient timp de la ultimul articol publicat
                 $last_post_time = get_option('auto_ai_news_poster_last_post_time', 0);
                 $current_time = time();
-                
+
                 // Calculează intervalul necesar
                 $hours = isset($settings['cron_interval_hours']) ? (int)$settings['cron_interval_hours'] : 1;
                 $minutes = isset($settings['cron_interval_minutes']) ? (int)$settings['cron_interval_minutes'] : 0;
                 $required_interval = ($hours * 3600) + ($minutes * 60);
-                
+
                 // Asigură-te că intervalul este cel puțin 1 minut
                 if ($required_interval < 60) {
                     $required_interval = 60;
                 }
-                
+
                 // Verifică dacă a trecut suficient timp
                 // Adăugăm o toleranță de 2 minute (120s) pentru a compensa timpul de execuție al AI-ului.
-                // WP-Cron programează următoarea rulare de la START-ul celei curente, dar last_post_time 
-                // se actualizează la FINAL. Fără toleranță, următoarea rulare ar fi refuzată de acest IF, 
+                // WP-Cron programează următoarea rulare de la START-ul celei curente, dar last_post_time
+                // se actualizează la FINAL. Fără toleranță, următoarea rulare ar fi refuzată de acest IF,
                 // dublând efectiv intervalul.
                 $time_since_last_post = $current_time - $last_post_time;
                 $tolerance = 120; // 2 minute buffer
@@ -113,7 +113,7 @@ class Auto_Ai_News_Poster_Cron
                     delete_transient($lock_key); // Eliberează lock-ul
                     return; // Oprește execuția dacă nu a trecut suficient timp
                 }
-                
+
                 if ($generation_mode === 'parse_link') {
                     // Verificăm dacă opțiunea "Rulează automat doar până la epuizarea listei de linkuri" este activată
                     $run_until_bulk_exhausted = $settings['run_until_bulk_exhausted'] === 'yes';
@@ -135,7 +135,7 @@ class Auto_Ai_News_Poster_Cron
 
                             // Actualizăm transient-ul pentru refresh automat
                             set_transient('auto_ai_news_poster_last_bulk_check', 0, 300);
-                            
+
                             delete_transient($lock_key); // Eliberează lock-ul
                             return; // Oprim execuția
                         }
