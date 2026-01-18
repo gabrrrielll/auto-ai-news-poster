@@ -41,7 +41,7 @@
     color: white;
     padding: 30px;
     position: sticky;
-    top: 32px;
+    top:0;
     /* WordPress admin bar height */
     z-index: 1000;
     overflow: hidden;
@@ -749,8 +749,9 @@
 /* Responsive styles - mobil (sub 768px) */
 @media screen and (max-width: 768px) {
     /* 1. Eliminare padding lateral: header 100% lățime, până sus */
-    .auto-ai-news-poster-admin {
+    .auto-ai-news-poster-admin, #wpcontent {
         padding: 0;
+        margin: 0;
     }
 
     .auto-ai-news-poster-admin .wrap {
@@ -784,7 +785,8 @@
     }
 
     .auto-ai-news-poster-header p {
-        font-size: 1rem;
+        /* font-size: 1rem; */
+        display: none;
     }
 
     .btn-save-header {

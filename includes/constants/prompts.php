@@ -69,7 +69,7 @@ class Auto_Ai_News_Poster_Prompts
         
         $prompt .= "1. **NU menționa niciodată** 'textul furnizat', 'articolul sursă', 'materialul analizat' sau orice expresie similară. Articolul trebuie să fie independent și să nu facă referire la sursa ta de informație.\n";
         $prompt .= "2. **Reformulează** cu propriile tale cuvinte informațiile din textul furnizat, integrându-le natural în noul articol. **NU copia și lipi (copy-paste) fragmente din textul sursă.**\n";
-        $prompt .= "3. Scrie un articol obiectiv, bine structurat, cu un titlu captivant, un conținut informativ și o listă de etichete (tags) relevante. **Păstrează toate faptele, detaliile, numele, numerele și listele (ex: liste de filme, produse, evenimente) EXACT așa cum apar în textul sursă. Nu omite și nu adăuga elemente noi în liste.** {$length_instruction}\n";
+        $prompt .= "3. Scrie un articol obiectiv, bine structurat, cu un titlu captivant, un conținut informativ și o listă de etichete (tags) relevante. **ATENȚIE: Etichetele NU trebuie să conțină underscores (_)! Folosește spații naturale între cuvinte.** **Păstrează toate faptele, detaliile, numele, numerele și listele (ex: liste de filme, produse, evenimente) EXACT așa cum apar în textul sursă. Nu omite și nu adăuga elemente noi în liste.** {$length_instruction}\n";
         $prompt .= "   **REGULĂ STRICTĂ LINKURI:** Limitează numărul de linkuri din conținut la maximum 3. Include DOAR linkuri care fac referință directă la sursele citate sau la informații esențiale din text. **Formatează obligatoriu linkurile în HTML** folosind tag-uri <a href=\"URL\">Text Link</a>. **EVITĂ COMPLET** linkurile comerciale, publicitare, linkurile de afiliere sau recomandările de produse care nu sunt parte integrantă din știrea editorială.\n";
         $prompt .= "4. Articolul trebuie să fie o reformulare fidelă a textului sursă, nu un sumar sau un comentariu personal. Menține tonul și perspectiva originală.\n";
         $prompt .= "5. **ATENȚIE la conținutul non-articolistic:** Identifică și ignoră blocurile de text care reprezintă liste de servicii, recomandări de produse, reclame, secțiuni de navigare, subsoluri, anteturi sau orice alt conținut care nu face parte direct din articolul principal. Nu le reproduce în textul generat, chiar dacă apar în textul sursă.\n";
@@ -104,11 +104,12 @@ class Auto_Ai_News_Poster_Prompts
         $prompt .= "  \"title\": \"Titlul articolului generat de tine\",\n";
         $prompt .= "  \"content\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie. Include MAXIMUM 3 linkuri relevante către surse, DOAR în format HTML <a href=\\\"URL\\\">Text Link</a>, evitându-le pe cele comerciale.\",\n";
         $prompt .= "  \"summary\": \"O meta descriere de maximum 160 de caractere, optimizată SEO.\",\n";
-        $prompt .= "  \"tags\": [\"intre_1_si_3_etichete_relevante\"],\n";
+        $prompt .= "  \"tags\": [\"tag1\", \"tag2\", \"tag3\"],\n";
         $prompt .= "  \"category\": \"Numele categoriei selectate din lista de categorii existente\",\n";
         $prompt .= "  \"sources\": [\"URL-ul complet al stirii citite\"],\n";
         $prompt .= "  \"source_titles\": [\"Titlul exact al articolului parsat si citit\"]\n";
-        $prompt .= "}\n";
+        $prompt .= "}\n\n";
+        $prompt .= "⚠️ IMPORTANT: Etichetele (tags) NU trebuie să conțină underscores (_)! Folosește spații naturale (ex: \"cod CAEN\", nu \"cod_CAEN\").\n";
 
         // Adăugăm instrucțiuni suplimentare, dacă există (pentru apelurile manuale unde se poate adăuga text extra)
         if (!empty($additional_instructions)) {
@@ -264,7 +265,7 @@ class Auto_Ai_News_Poster_Prompts
         2. **Verificarea unicității:** Asigură-te că subiectul ales NU este similar cu niciunul dintre titlurile deja publicate. Dacă este, alege alt subiect din browsing.
         3. **Scrierea articolului:** {$final_instructions} {$length_instruction}
         4. **Generare titlu:** Creează un titlu concis și atractiv pentru articol.
-        5. **Generare etichete:** Generează între 1 și 3 etichete relevante (cuvinte_cheie) pentru articol. Fiecare cuvânt trebuie să înceapă cu majusculă.
+        5. **Generare etichete:** Generează între 1 și 3 etichete relevante (cuvinte_cheie) pentru articol. **ATENȚIE: NU folosi underscores (_) în etichete! Folosește spații naturale între cuvinte.** Fiecare cuvânt trebuie să înceapă cu majusculă.
         6. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol.
 
         **IMPORTANT - Formatarea articolului:**
@@ -281,7 +282,7 @@ class Auto_Ai_News_Poster_Prompts
           \"continut\": \"Conținutul complet al articolului, formatat în HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly. NU folosi titluri explicite precum Introducere/Dezvoltare/Concluzie. Include MAXIMUM 3 linkuri către sursele citate, formatate OBLIGATORIU în HTML (<a href=\\\"URL\\\">Text Link</a>), evitând linkurile comerciale.\",
           \"imagine_prompt\": \"Descrierea detaliată pentru imaginea reprezentativă.\",
           \"meta_descriere\": \"O meta descriere de maximum 160 de caractere, optimizată SEO.\",
-          \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]
+          \"cuvinte_cheie\": [\"cuvânt1\", \"cuvânt2\", \"cuvânt3\"]
         }
 
         **PASUL 1:** Începe prin a folosi web browsing pentru a căuta pe site-urile specificate și găsi știri recente din categoria {$category_name}.
@@ -294,16 +295,23 @@ class Auto_Ai_News_Poster_Prompts
      */
     public static function get_task_article_prompt($title, $category_name, $additional_instructions = '', $article_length_settings = [])
     {
-        // Use provided article length settings or defaults
+        // Pentru TASKURI: asigură limite stricte de cuvinte (defaults 800-1200 dacă nu sunt setate)
         $article_length_option = $article_length_settings['article_length_option'] ?? 'same_as_source';
-        $min_length = $article_length_settings['min_length'] ?? 800;
-        $max_length = $article_length_settings['max_length'] ?? 1200;
+        $min_length = intval($article_length_settings['min_length'] ?? 0);
+        $max_length = intval($article_length_settings['max_length'] ?? 0);
 
-        $length_instruction = ($article_length_option === 'set_limits' && $min_length && $max_length) 
-            ? "Articolul trebuie să aibă între {$min_length} și {$max_length} de cuvinte."
-            : "Articolul trebuie să fie detaliat, cuprinzător și bine structurat.";
+        // Pentru taskuri, 'same_as_source' nu are sens; folosim limite stricte cu defaults
+        if ($article_length_option === 'same_as_source' || $min_length === 0 || $max_length === 0) {
+            $min_length = 800;
+            $max_length = 1200;
+        }
 
-        $prompt = "Ești un jurnalist expert specializat în articole EVERGREEN (conținut rezistent în timp). Trebuie să scrii un articol complet, detaliat și bine documentat pe baza următorului titlu: \"{$title}\".\n\n";
+        // ÎNTOTDEAUNA specifică limita exactă de cuvinte pentru taskuri
+        $length_instruction = "Articolul TREBUIE SĂ AIBĂ OBLIGATORIU între {$min_length} și {$max_length} de cuvinte. Respectă strict această limită!";
+
+        $prompt = "Ești un jurnalist expert specializat în articole EVERGREEN (conținut rezistent în timp). Trebuie să scrii un articol COMPLET, DETALIAT, BINE DOCUMENTAT și CUPRINZĂTOR pe baza următorului titlu: \"{$title}\".\n\n";
+        
+        $prompt .= "🔴 **CERINȚĂ CRITICĂ DE LUNGIME:** {$length_instruction} NU scrie articole scurte/sumare/superficiale! 🔴\n\n";
         
         $prompt .= "**═══════════════════════════════════════════════════════**\n";
         $prompt .= "**CERINȚE OBLIGATORII DE DOCUMENTARE ȘI CERCETARE**\n";
@@ -361,14 +369,20 @@ class Auto_Ai_News_Poster_Prompts
         $prompt .= "   - Subtitluri descriptive și relevante (H2, H3)\n";
         $prompt .= "   - Paragrafe bine structurate și logice\n\n";
         
-        $prompt .= "8. **LUNGIME ȘI DETALIERE:**\n";
-        $prompt .= "   - {$length_instruction}\n";
-        $prompt .= "   - Prioritizează CALITATEA și PROFUNZIMEA informației față de cantitate\n";
-        $prompt .= "   - Fiecare secțiune trebuie să fie completă și utilă\n\n";
+        $prompt .= "8. **LUNGIME ȘI DETALIERE (OBLIGATORIU - CRUCIAL):**\n";
+        $prompt .= "   - ⚠️ LIMITA DE CUVINTE: {$length_instruction}\n";
+        $prompt .= "   - ⚠️ ACEST ARTICOL TREBUIE SĂ FIE DETALIAT, NU SUMAR! Scrie un articol COMPLET și CUPRINZĂTOR!\n";
+        $prompt .= "   - NU scrie articole scurte/sumare/superficiale - articolul trebuie să acopere tema ÎN PROFUNZIME\n";
+        $prompt .= "   - Prioritizează CALITATEA, PROFUNZIMEA și DETALIUL informației\n";
+        $prompt .= "   - Fiecare secțiune trebuie să fie COMPLETĂ, UTILĂ și bine dezvoltată\n";
+        $prompt .= "   - Include exemple practice, cazuri concrete, explicații pas-cu-pas unde e relevant\n\n";
         
         $prompt .= "9. **SEO ȘI METADATA:**\n";
         $prompt .= "   - Categorie de destinație: \"{$category_name}\"\n";
         $prompt .= "   - Generează 1-3 etichete (tags) relevante și evergreen\n";
+        $prompt .= "   - ⚠️ ETICHETELE NU TREBUIE SĂ CONȚINĂ UNDERSCORES (_)! Folosește spații naturale între cuvinte.\n";
+        $prompt .= "   - Exemplu CORECT: \"cod CAEN\", \"datorii fiscale\", \"obligații fiscale\"\n";
+        $prompt .= "   - Exemplu GREȘIT: \"cod_CAEN\", \"datorii_fiscale\", \"obligații_fiscale\"\n";
         $prompt .= "   - Meta descriere de maximum 160 caractere, atrăgătoare și optimizată SEO\n\n";
         
         if (!empty($additional_instructions)) {
@@ -383,26 +397,28 @@ class Auto_Ai_News_Poster_Prompts
         $prompt .= "Returnează EXCLUSIV un obiect JSON cu următoarea structură:\n\n";
         $prompt .= "{\n";
         $prompt .= "  \"title\": \"Titlul final optimizat (fără referințe temporale)\",\n";
-        $prompt .= "  \"content\": \"Conținutul COMPLET în HTML, cu minimum 3 linkuri <a href=\\\"...\\\"> către surse, pași detaliați, explicații complete\",\n";
+        $prompt .= "  \"content\": \"Conținutul COMPLET și DETALIAT în HTML ({$min_length}-{$max_length} cuvinte!), cu minimum 3 linkuri <a href=\\\"...\\\"> către surse, pași detaliați, explicații complete și exemple practice\",\n";
         $prompt .= "  \"summary\": \"Meta descriere SEO (max 160 caractere, evergreen)\",\n";
-        $prompt .= "  \"tags\": [\"tag1_evergreen\", \"tag2_evergreen\", \"tag3_evergreen\"],\n";
+        $prompt .= "  \"tags\": [\"etichetă relevantă\", \"alt tag util\", \"tag evergreen\"],\n";
         $prompt .= "  \"category\": \"{$category_name}\"\n";
         $prompt .= "}\n\n";
         
-        $prompt .= "**IMPORTANT:** Înainte de a răspunde, VERIFICĂ că:\n";
-        $prompt .= "✓ Ai folosit web browsing pentru cercetare\n";
+        $prompt .= "**⚠️ VERIFICARE FINALĂ OBLIGATORIE - ÎNAINTE DE A RĂSPUNDE:**\n";
+        $prompt .= "✓ Ai folosit web browsing pentru cercetare (MANDATORY)\n";
         $prompt .= "✓ Ai consultat minimum 3 surse credibile\n";
         $prompt .= "✓ Ai inclus minimum 3 linkuri către surse în content\n";
-        $prompt .= "✓ Ai furnizat explicații detaliate și pași completi\n";
+        $prompt .= "✓ Ai furnizat explicații DETALIATE și pași COMPLETI (nu superficial!)\n";
+        $prompt .= "✓ Articolul are OBLIGATORIU între {$min_length} și {$max_length} de cuvinte\n";
+        $prompt .= "✓ Etichetele (tags) NU conțin underscores (_), ci doar spații naturale\n";
         $prompt .= "✓ NU ai menționat niciun an, lună sau perioadă specifică\n";
-        $prompt .= "✓ Conținutul este evergreen și va rămâne relevant în timp\n";
+        $prompt .= "✓ Conținutul este evergreen, COMPLET, DETALIAT și va rămâne relevant în timp\n";
 
         return $prompt;
     }
 
     public static function get_retry_browsing_prompt($category_name)
     {
-        return "Scrie un articol de știri ca un jurnalist profesionist. \r\n\r\nCategoria: {$category_name}\r\n\r\nCerințe:\r\n- Titlu atractiv și descriptiv\r\n- Conținut fluent și natural, fără secțiuni marcate explicit\r\n- NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"\r\n- Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly\r\n- Generează între 1 și 3 etichete relevante (cuvinte_cheie)\r\n- Limbă română\r\n- Stil jurnalistic obiectiv și informativ\r\n\r\nReturnează DOAR acest JSON:\r\n{\r\n  \"titlu\": \"Titlul articolului\",\r\n  \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",\r\n  \"meta_descriere\": \"Meta descriere SEO\",\r\n  \"cuvinte_cheie\": [\"intre_1_si_3_etichete_relevante\"]\r\n}";
+        return "Scrie un articol de știri ca un jurnalist profesionist. \r\n\r\nCategoria: {$category_name}\r\n\r\nCerințe:\r\n- Titlu atractiv și descriptiv\r\n- Conținut fluent și natural, fără secțiuni marcate explicit\r\n- NU folosi titluri precum \"Introducere\", \"Dezvoltare\", \"Concluzie\"\r\n- Formatare HTML cu tag-uri <p>, <h2>, <h3> pentru structură SEO-friendly\r\n- Generează între 1 și 3 etichete relevante (cuvinte_cheie) - ⚠️ FĂRĂ underscores (_)! Folosește spații naturale.\r\n- Limbă română\r\n- Stil jurnalistic obiectiv și informativ\r\n\r\nReturnează DOAR acest JSON:\r\n{\r\n  \"titlu\": \"Titlul articolului\",\r\n  \"continut\": \"Conținutul complet al articolului formatat în HTML, fără titluri explicite precum Introducere/Dezvoltare/Concluzie\",\r\n  \"meta_descriere\": \"Meta descriere SEO\",\r\n  \"cuvinte_cheie\": [\"tag1\", \"tag2\", \"tag3\"]\r\n}";
     }
 
     public static function get_dalle_abstraction_system_message()
