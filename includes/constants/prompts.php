@@ -295,15 +295,15 @@ class Auto_Ai_News_Poster_Prompts
      */
     public static function get_task_article_prompt($title, $category_name, $additional_instructions = '', $article_length_settings = [])
     {
-        // Pentru TASKURI: asigură limite stricte de cuvinte (defaults 800-1200 dacă nu sunt setate)
+        // Pentru TASKURI: asigură limite stricte de cuvinte (defaults 1500-2000 dacă nu sunt setate)
         $article_length_option = $article_length_settings['article_length_option'] ?? 'same_as_source';
         $min_length = intval($article_length_settings['min_length'] ?? 0);
         $max_length = intval($article_length_settings['max_length'] ?? 0);
 
         // Pentru taskuri, 'same_as_source' nu are sens; folosim limite stricte cu defaults
         if ($article_length_option === 'same_as_source' || $min_length === 0 || $max_length === 0) {
-            $min_length = 800;
-            $max_length = 1200;
+            $min_length = 1500;
+            $max_length = 2000;
         }
 
         // ÎNTOTDEAUNA specifică limita exactă de cuvinte pentru taskuri

@@ -750,8 +750,8 @@
 @media screen and (max-width: 768px) {
     /* 1. Eliminare padding lateral: header 100% lățime, până sus */
     .auto-ai-news-poster-admin, #wpcontent {
-        padding: 0;
-        margin: 0;
+        padding: 0!important;
+        margin: 0!important;
     }
 
     .auto-ai-news-poster-admin .wrap {
@@ -761,8 +761,7 @@
     }
 
     .auto-ai-news-poster-header {
-        top: 46px;
-        /* WordPress admin bar height on mobile */
+        top: 0;
         padding: 16px;
     }
 
