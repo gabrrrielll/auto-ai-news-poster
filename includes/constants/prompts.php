@@ -477,4 +477,78 @@ IMPORTANT - Formatul promptului:
 
         return $system_content;
     }
+
+    /**
+     * Generează promptul pentru rescrierea unui articol folosind DOAR ideile existente.
+     * 
+     * @param string $current_title Titlul articolului curent.
+     * @param string $current_content Conținutul articolului curent.
+     * @param string $word_count_instruction Instrucțiuni despre numărul de cuvinte.
+     * @return string Promptul complet.
+     */
+    public static function get_rewrite_same_ideas_prompt($current_title, $current_content, $word_count_instruction = '')
+    {
+        $prompt = "Ești un editor de conținut profesionist. Rescrieți articolul următor folosind STRICT DOAR ideile și informațiile deja existente în el. Nu adăuga informații noi sau cercetare externă.
+
+Titlu actual: {$current_title}
+
+Conținut actual:
+{$current_content}
+
+Instrucțiuni:
+1. Rescrie articolul complet, păstrând toate ideile și informațiile existente
+2. Folosește un stil de scriere fresh și natural, evitând formulări identice cu originalul
+3. Păstrează acuratețea și contextul oricăror citate sau referințe din original
+4. {$word_count_instruction}
+5. Menține tonul folosit in articolul original
+6. Nu inventa sau adăuga informații care nu sunt în articolul original
+
+Returnează răspunsul DOAR în format JSON cu următoarea structură (fără markdown, fără ```json):
+{
+  \"title\": \"Titlul rescris (poate fi similar sau îmbunătățit)\",
+  \"content\": \"Conținutul complet rescris în HTML (cu paragrafe <p>, liste, etc.)\",
+  \"summary\": \"Un rezumat scurt de 1-2 propoziții\",
+  \"tags\": [\"tag1\", \"tag2\", \"tag3\"]
+}";
+
+        return $prompt;
+    }
+
+    /**
+     * Generează promptul pentru îmbogățirea unui articol cu informații noi via browsing.
+     * 
+     * @param string $current_title Titlul articolului curent.
+     * @param string $current_content Conținutul articolului curent.
+     * @param string $word_count_instruction Instrucțiuni despre numărul de cuvinte.
+     * @return string Promptul complet.
+     */
+    public static function get_rewrite_enrich_prompt($current_title, $current_content, $word_count_instruction = '')
+    {
+        $prompt = "Ești un jurnalist profesionist. Îmbogățește articolul următor cu informații noi și actualizate găsite prin cercetare pe internet.
+
+Titlu actual: {$current_title}
+
+Conținut actual:
+{$current_content}
+
+Instrucțiuni:
+1. Folosește AI browsing pentru a găsi informații noi și relevante legate de subiectul articolului
+2. Integrează aceste informații noi în mod natural în articol
+3. Păstrează ideile și informațiile de bază din articolul original
+4. Adaugă context, statistici, citate sau detalii actualizate unde este relevant
+5. {$word_count_instruction}
+6. Asigură-te că toate informațiile noi sunt corecte și verificabile
+7. Menține tonul profesional inspirat din cel al articolului original
+8. Citează sursele pentru informațiile noi adăugate (ca link-uri în text)
+
+Returnează răspunsul DOAR în format JSON cu următoarea structură (fără markdown, fără ```json):
+{
+  \"title\": \"Titlul îmbogățit\",
+  \"content\": \"Conținutul complet îmbogățit în HTML (cu paragrafe <p>, liste, link-uri către surse, etc.)\",
+  \"summary\": \"Un rezumat scurt de 1-2 propoziții\",
+  \"tags\": [\"tag1\", \"tag2\", \"tag3\"]
+}";
+
+        return $prompt;
+    }
 }

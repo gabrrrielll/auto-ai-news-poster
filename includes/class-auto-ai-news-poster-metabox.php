@@ -10,6 +10,9 @@ class Auto_Ai_News_Poster_Metabox
         // Adăugăm metabox-ul pentru URL-ul imaginii externe
         add_action('add_meta_boxes', [self::class, 'add_external_image_metabox']);
 
+        // Adăugăm metabox-ul pentru rescriere articol
+        add_action('add_meta_boxes', [self::class, 'add_rewrite_metabox']);
+
         // Aplicăm editorul TinyMCE pe câmpul implicit de rezumat al WordPress
         add_action('admin_init', [self::class, 'customize_excerpt_editor']);
 
@@ -271,6 +274,90 @@ class Auto_Ai_News_Poster_Metabox
             update_post_meta($post_id, '_external_image_source_position', $pos);
         }
     }
+
+    /**
+     * Add the rewrite metabox - only on edit screens (not new post)
+     */
+    public static function add_rewrite_metabox()
+    {
+        global $post;
+        
+        // Only show on edit screens where post ID exists
+        if (!$post || !$post->ID || $post->ID <= 0) {
+            return;
+        }
+
+        add_meta_box(
+            'auto_ai_news_poster_rewrite_metabox',
+            '🔄 Rescrie Articol',
+            [self::class, 'render_rewrite_metabox'],
+            'post',
+            'side',
+            'default'
+        );
+    }
+
+    /**
+     * Render the rewrite metabox
+     */
+    public static function render_rewrite_metabox($post)
+    {
+        wp_nonce_field('auto_ai_rewrite_metabox', 'auto_ai_rewrite_nonce');
+        ?>
+        <div class="rewrite-metabox-container">
+            <!-- Rewrite Mode Selection -->
+            <div class="rewrite-option-group">
+                <span class="rewrite-option-label">Mod Rescriere</span>
+                <div class="rewrite-switch-container">
+                    <label class="rewrite-switch-option active" data-mode="same_ideas">
+                        <input type="radio" name="rewrite_mode" value="same_ideas" checked>
+                        <span>Folosește aceleași idei</span>
+                    </label>
+                    <label class="rewrite-switch-option" data-mode="enrich">
+                        <input type="radio" name="rewrite_mode" value="enrich">
+                        <span>Îmbogățește articolul</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Size Mode Selection -->
+            <div class="rewrite-option-group">
+                <span class="rewrite-option-label">Dimensiune Articol</span>
+                <div class="rewrite-switch-container">
+                    <label class="rewrite-switch-option active" data-mode="original">
+                        <input type="radio" name="size_mode" value="original" checked>
+                        <span>Dimensiunea originală</span>
+                    </label>
+                    <label class="rewrite-switch-option" data-mode="custom">
+                        <input type="radio" name="size_mode" value="custom">
+                        <span>Setează limite</span>
+                    </label>
+                </div>
+
+                <!-- Word Limits (disabled by default) -->
+                <div class="rewrite-word-limits disabled" id="rewrite-word-limits">
+                    <div class="rewrite-word-input-group">
+                        <label for="rewrite_min_words">Minim cuvinte:</label>
+                        <input type="number" id="rewrite_min_words" name="rewrite_min_words" min="100" step="50" value="500" disabled>
+                    </div>
+                    <div class="rewrite-word-input-group">
+                        <label for="rewrite_max_words">Maxim cuvinte:</label>
+                        <input type="number" id="rewrite_max_words" name="rewrite_max_words" min="100" step="50" value="1000" disabled>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rewrite Button -->
+            <button type="button" class="rewrite-action-button" id="rewrite-article-btn">
+                🔄 Rescrie acum
+            </button>
+
+            <!-- Status Message -->
+            <div class="rewrite-status" id="rewrite-status"></div>
+        </div>
+        <?php
+    }
+
 
 }
 

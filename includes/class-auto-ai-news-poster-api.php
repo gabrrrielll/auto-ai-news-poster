@@ -19,6 +19,9 @@ class Auto_Ai_News_Poster_Api
         
         // Task List Management
         add_action('wp_ajax_auto_ai_run_task_list_item', [self::class, 'ajax_run_task_list_item']);
+        
+        // Article Rewriting
+        add_action('wp_ajax_rewrite_existing_article', [self::class, 'rewrite_existing_article']);
     }
 
     /**
@@ -1646,6 +1649,147 @@ class Auto_Ai_News_Poster_Api
         } else {
             error_log('CRON PROCESS: Link already exists in bulk list, skipping re-add: ' . $link . ' (Reason: ' . $reason . ')');
         }
+    }
+
+    /**
+     * AJAX handler to rewrite an existing article
+     */
+    public static function rewrite_existing_article()
+    {
+        // Verify nonce
+        check_ajax_referer('auto_ai_rewrite_metabox', 'nonce');
+
+        // Get parameters
+        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+        $rewrite_mode = isset($_POST['rewrite_mode']) ? sanitize_text_field($_POST['rewrite_mode']) : 'same_ideas';
+        $size_mode = isset($_POST['size_mode']) ? sanitize_text_field($_POST['size_mode']) : 'original';
+        $min_words = isset($_POST['min_words']) ? intval($_POST['min_words']) : 0;
+        $max_words = isset($_POST['max_words']) ? intval($_POST['max_words']) : 0;
+
+        // Validate post ID
+        if (!$post_id || !get_post($post_id)) {
+            wp_send_json_error(['message' => 'Invalid post ID']);
+            return;
+        }
+
+        // Check permissions
+        if (!current_user_can('edit_post', $post_id)) {
+            wp_send_json_error(['message' => 'Nu aveți permisiunea de a edita acest articol']);
+            return;
+        }
+
+        // Get current post
+        $post = get_post($post_id);
+        $current_title = $post->post_title;
+        $current_content = $post->post_content;
+        $current_excerpt = $post->post_excerpt;
+
+        // Get options
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        
+        // Determine AI configuration
+        $tasks_config = $options['tasks_config'] ?? [];
+        $provider = $tasks_config['api_provider'] ?? 'openai';
+        $ai_args = [
+            'provider' => $provider,
+            'api_key'  => ($provider === 'openai') ? ($tasks_config['chatgpt_api_key'] ?? '') : (($provider === 'gemini') ? ($tasks_config['gemini_api_key'] ?? '') : ($tasks_config['deepseek_api_key'] ?? '')),
+            'model'    => ($provider === 'openai') ? ($tasks_config['ai_model'] ?? 'gpt-4o-mini') : (($provider === 'gemini') ? ($tasks_config['gemini_model'] ?? 'gemini-1.5-flash') : ($tasks_config['deepseek_model'] ?? 'deepseek-chat')),
+        ];
+
+        if (empty($ai_args['api_key'])) {
+            wp_send_json_error(['message' => 'API key not configured']);
+            return;
+        }
+
+        error_log('[REWRITE] Starting article rewrite. Post ID: ' . $post_id . ', Mode: ' . $rewrite_mode . ', Size: ' . $size_mode);
+
+        // Build word count instruction
+        $word_count_instruction = '';
+        if ($size_mode === 'original') {
+            $current_word_count = str_word_count(strip_tags($current_content));
+            if ($rewrite_mode === 'same_ideas') {
+                $word_count_instruction = "Articolul rescris trebuie să aibă aproximativ {$current_word_count} cuvinte (±10%), păstrând dimensiunea originală.";
+            } else {
+                $word_count_instruction = "Articolul îmbogățit trebuie să aibă aproximativ {$current_word_count} cuvinte (±20%).";
+            }
+        } else if ($size_mode === 'custom' && $min_words > 0 && $max_words > 0) {
+            if ($rewrite_mode === 'same_ideas') {
+                $word_count_instruction = "Articolul rescris trebuie să aibă între {$min_words} și {$max_words} cuvinte.";
+            } else {
+                $word_count_instruction = "Articolul îmbogățit trebuie să aibă între {$min_words} și {$max_words} cuvinte.";
+            }
+        }
+
+        // Build prompt based on mode using dedicated prompts class
+        if ($rewrite_mode === 'same_ideas') {
+            $prompt = Auto_Ai_News_Poster_Prompts::get_rewrite_same_ideas_prompt($current_title, $current_content, $word_count_instruction);
+        } else {
+            $prompt = Auto_Ai_News_Poster_Prompts::get_rewrite_enrich_prompt($current_title, $current_content, $word_count_instruction);
+        }
+
+        // Call AI API
+        error_log('[REWRITE] Calling AI API with prompt...');
+        $response = call_ai_api($prompt, $ai_args);
+
+        if (is_wp_error($response)) {
+            error_log('[REWRITE] AI API error: ' . $response->get_error_message());
+            wp_send_json_error(['message' => 'Eroare la apelul API: ' . $response->get_error_message()]);
+            return;
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $decoded = json_decode($body, true);
+        
+        // Extract AI response based on provider
+        $ai_content_json = null;
+        if ($provider === 'openai' || $provider === 'deepseek') {
+            $ai_content_json = $decoded['choices'][0]['message']['content'] ?? null;
+        } else if ($provider === 'gemini') {
+            $ai_content_json = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? null;
+        }
+
+        if (empty($ai_content_json)) {
+            error_log('[REWRITE] Empty AI response');
+            wp_send_json_error(['message' => 'Răspunsul AI este gol sau invalid']);
+            return;
+        }
+
+        // Parse JSON response
+        $article_data = json_decode($ai_content_json, true);
+        
+        // Try to extract JSON from markdown if needed
+        if (!$article_data || empty($article_data['content'])) {
+            if (preg_match('/```json\s*(.*?)\s*```/s', $ai_content_json, $matches)) {
+                $article_data = json_decode($matches[1], true);
+            }
+        }
+
+        if (!$article_data || empty($article_data['content']) || empty($article_data['title'])) {
+            error_log('[REWRITE] Failed to parse AI JSON response');
+            wp_send_json_error(['message' => 'Nu am putut procesa răspunsul AI. Vă rugăm încercați din nou.']);
+            return;
+        }
+
+        error_log('[REWRITE] Successfully parsed AI response');
+
+        // Use Post_Manager to update the article (instead of duplicating logic)
+        $result = Post_Manager::rewrite_article($post_id, $article_data);
+
+        if (is_wp_error($result)) {
+            error_log('[REWRITE] Failed to update post: ' . $result->get_error_message());
+            wp_send_json_error(['message' => 'Eroare la salvarea articolului: ' . $result->get_error_message()]);
+            return;
+        }
+
+        // Track rewrite mode
+        update_post_meta($post_id, '_last_rewrite_mode', $rewrite_mode);
+
+        error_log('[REWRITE] Article successfully rewritten. Post ID: ' . $post_id);
+
+        wp_send_json_success([
+            'message' => 'Articol rescris cu succes! Pagina se va reîncărca...',
+            'post_id' => $post_id
+        ]);
     }
 
 }

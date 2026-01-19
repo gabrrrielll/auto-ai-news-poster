@@ -153,6 +153,49 @@ class Post_Manager
         }
     }
 
+    /**
+     * Rewrite an existing article with new content from AI
+     * 
+     * @param int $post_id ID of post to rewrite
+     * @param array $article_data Array with 'title', 'content', 'summary', 'tags'
+     * @return bool|WP_Error True on success, WP_Error on failure
+     */
+    public static function rewrite_article($post_id, $article_data)
+    {
+        // Validate post exists
+        if (!get_post($post_id)) {
+            return new WP_Error('post_not_found', 'Post ID not found: ' . $post_id);
+        }
+
+        // Validate required fields
+        if (empty($article_data['title']) || empty($article_data['content'])) {
+            return new WP_Error('invalid_data', 'Title and content are required');
+        }
+
+        // Update post
+        $updated_post = [
+            'ID' => $post_id,
+            'post_title' => $article_data['title'],
+            'post_content' => wp_kses_post($article_data['content']),
+            'post_excerpt' => isset($article_data['summary']) ? wp_kses_post($article_data['summary']) : ''
+        ];
+
+        $result = wp_update_post($updated_post, true);
+
+        if (is_wp_error($result)) {
+            return $result;
+        }
+
+        // Update tags if provided
+        if (!empty($article_data['tags']) && is_array($article_data['tags'])) {
+            self::set_post_tags($post_id, $article_data['tags']);
+        }
+
+        // Add metadata to track rewrite
+        update_post_meta($post_id, '_last_rewrite_date', current_time('mysql'));
+        
+        return true;
+    }
 
 
 
