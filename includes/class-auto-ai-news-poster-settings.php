@@ -207,6 +207,14 @@ class Auto_Ai_News_Poster_Settings
             'auto_ai_news_poster_main_section'
         );
 
+        add_settings_field(
+            'parse_link_tone',
+            'Ton articol (Parsare Link)',
+            [self::class, 'parse_link_tone_callback'],
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
+            'auto_ai_news_poster_main_section'
+        );
+
         // 1. Scanning Sources (New Dynamic Table)
         add_settings_field(
             'scanning_source_urls',
@@ -258,6 +266,14 @@ class Auto_Ai_News_Poster_Settings
             'Instrucțiuni AI (AI Browsing)',
             [self::class, 'ai_browsing_instructions_callback'],
             'auto_ai_news_poster_settings_page',
+            'auto_ai_news_poster_main_section'
+        );
+
+        add_settings_field(
+            'ai_browsing_tone',
+            'Ton articol (Generare AI)',
+            [self::class, 'ai_browsing_tone_callback'],
+            AUTO_AI_NEWS_POSTER_SETTINGS_PAGE,
             'auto_ai_news_poster_main_section'
         );
 
@@ -399,6 +415,8 @@ class Auto_Ai_News_Poster_Settings
         // Helper data for dropdowns
         $users = get_users(['fields' => ['ID', 'display_name']]);
         $categories = get_categories(['hide_empty' => false]);
+        $tone_options = function_exists('auto_ai_news_poster_get_tone_options') ? auto_ai_news_poster_get_tone_options() : ['jurnalistic' => 'Jurnalistic (standard)'];
+        $default_task_tone = function_exists('auto_ai_news_poster_get_default_tone') ? auto_ai_news_poster_get_default_tone('tasks', $options) : 'jurnalistic';
 
         // Current Tasks AI Config
         $current_provider = $tasks_config['api_provider'] ?? 'openai';
@@ -442,6 +460,10 @@ class Auto_Ai_News_Poster_Settings
                 if (!empty($task_lists)) :
                     foreach ($task_lists as $index => $list) :
                         $list_id = $list['id'] ?? uniqid();
+                        $list_tone = function_exists('auto_ai_news_poster_sanitize_tone') ? auto_ai_news_poster_sanitize_tone($list['tone'] ?? '') : '';
+                        if (empty($list_tone)) {
+                            $list_tone = $default_task_tone;
+                        }
                         ?>
                             <div class="task-list-item settings-card" style="background: #fcfcfc; border: 1px solid #eee; margin-bottom: 20px; box-shadow: none;" data-id="<?php echo esc_attr($list_id); ?>">
                                 <div class="settings-card-header" style="background: rgba(0,0,0,0.02); padding: 10px 15px;">
@@ -515,6 +537,18 @@ class Auto_Ai_News_Poster_Settings
                                                         <label class="control-label" style="font-size: 12px;">Max Cuvinte</label>
                                                         <input type="number" name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][max_length]" class="form-control form-control-sm" value="<?php echo esc_attr($list['max_length'] ?? ''); ?>" placeholder="ex: 1000">
                                                     </div>
+                                                </div>
+
+                                                <!-- Tone -->
+                                                <div class="form-group" style="margin-bottom: 12px;">
+                                                    <label class="control-label" style="font-size: 12px;">Ton articol</label>
+                                                    <select name="auto_ai_news_poster_settings[task_lists][<?php echo $index; ?>][tone]" class="form-control form-control-sm">
+                                                        <?php foreach ($tone_options as $tone_key => $tone_label) : ?>
+                                                            <option value="<?php echo esc_attr($tone_key); ?>" <?php selected($list_tone, $tone_key); ?>>
+                                                                <?php echo esc_html($tone_label); ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
                                                 </div>
                                                 
                                                 <!-- Tags & Images -->
@@ -643,6 +677,18 @@ class Auto_Ai_News_Poster_Settings
                                     <label class="control-label" style="font-size: 12px;">Max Cuvinte</label>
                                     <input type="number" name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][max_length]" class="form-control form-control-sm" value="" placeholder="ex: 1000">
                                 </div>
+                            </div>
+
+                            <!-- Tone -->
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label class="control-label" style="font-size: 12px;">Ton articol</label>
+                                <select name="auto_ai_news_poster_settings[task_lists][{{INDEX}}][tone]" class="form-control form-control-sm">
+                                    <?php foreach ($tone_options as $tone_key => $tone_label) : ?>
+                                        <option value="<?php echo esc_attr($tone_key); ?>" <?php echo ($tone_key === 'jurnalistic') ? 'selected' : ''; ?>>
+                                            <?php echo esc_html($tone_label); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
                             
                             <!-- Tags & Images -->
@@ -884,6 +930,41 @@ class Auto_Ai_News_Poster_Settings
         <?php
     }
 
+    // Callback pentru selectarea tonului - Mod Parsare Link
+    public static function parse_link_tone_callback()
+    {
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $selected_tone = function_exists('auto_ai_news_poster_sanitize_tone') ? auto_ai_news_poster_sanitize_tone($options['parse_link_tone'] ?? '') : '';
+        $default_tone = function_exists('auto_ai_news_poster_get_default_tone') ? auto_ai_news_poster_get_default_tone('parse_link', $options) : 'jurnalistic';
+        if (empty($selected_tone)) {
+            $selected_tone = $default_tone;
+        }
+        $tone_options = function_exists('auto_ai_news_poster_get_tone_options') ? auto_ai_news_poster_get_tone_options() : ['jurnalistic' => 'Jurnalistic (standard)'];
+        ?>
+        <div class="settings-group settings-group-parse_link">
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">🎙️</div>
+                    <h3 class="settings-card-title">Ton articol (Parsare Link)</h3>
+                </div>
+                <div class="settings-card-content">
+                    <div class="form-group">
+                        <label class="control-label">Ton pentru articolele generate din linkuri</label>
+                        <select name="auto_ai_news_poster_settings[parse_link_tone]" class="form-control">
+                            <?php foreach ($tone_options as $tone_key => $tone_label) : ?>
+                                <option value="<?php echo esc_attr($tone_key); ?>" <?php selected($selected_tone, $tone_key); ?>>
+                                    <?php echo esc_html($tone_label); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-text text-muted">Se aplică la generarea articolelor din linkuri (manual sau automat).</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
     // Callback pentru instrucțiunile AI (textarea) - Mod AI Browsing
     public static function ai_browsing_instructions_callback()
     {
@@ -902,6 +983,41 @@ class Auto_Ai_News_Poster_Settings
                         <textarea name="auto_ai_news_poster_settings[ai_browsing_instructions]" class="form-control" rows="6"
                                   placeholder="Introdu instrucțiunile suplimentare pentru AI"><?php echo esc_textarea($instructions); ?></textarea>
                         <small class="form-text text-muted">Aceste instrucțiuni sunt adăugate la promptul complex de generare, în secțiunea "Sarcina ta".</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    // Callback pentru selectarea tonului - Mod AI Browsing
+    public static function ai_browsing_tone_callback()
+    {
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $selected_tone = function_exists('auto_ai_news_poster_sanitize_tone') ? auto_ai_news_poster_sanitize_tone($options['ai_browsing_tone'] ?? '') : '';
+        $default_tone = function_exists('auto_ai_news_poster_get_default_tone') ? auto_ai_news_poster_get_default_tone('ai_browsing', $options) : 'jurnalistic';
+        if (empty($selected_tone)) {
+            $selected_tone = $default_tone;
+        }
+        $tone_options = function_exists('auto_ai_news_poster_get_tone_options') ? auto_ai_news_poster_get_tone_options() : ['jurnalistic' => 'Jurnalistic (standard)'];
+        ?>
+        <div class="settings-group settings-group-ai_browsing">
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <div class="settings-card-icon">🎙️</div>
+                    <h3 class="settings-card-title">Ton articol (Generare AI)</h3>
+                </div>
+                <div class="settings-card-content">
+                    <div class="form-group">
+                        <label class="control-label">Ton pentru articolele generate prin AI Browsing</label>
+                        <select name="auto_ai_news_poster_settings[ai_browsing_tone]" class="form-control">
+                            <?php foreach ($tone_options as $tone_key => $tone_label) : ?>
+                                <option value="<?php echo esc_attr($tone_key); ?>" <?php selected($selected_tone, $tone_key); ?>>
+                                    <?php echo esc_html($tone_label); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-text text-muted">Se aplică la generarea articolelor când AI-ul caută știri noi.</small>
                     </div>
                 </div>
             </div>
@@ -1641,6 +1757,14 @@ class Auto_Ai_News_Poster_Settings
                 if (in_array($key, $checkbox_fields)) {
                     $sanitized[$key] = ($value === 'yes') ? 'yes' : 'no';
                 }
+                // Tonuri globale (select)
+                elseif (in_array($key, ['parse_link_tone', 'ai_browsing_tone'], true)) {
+                    $mode = ($key === 'parse_link_tone') ? 'parse_link' : 'ai_browsing';
+                    $tone_value = function_exists('auto_ai_news_poster_sanitize_tone') ? auto_ai_news_poster_sanitize_tone($value) : sanitize_text_field($value);
+                    $sanitized[$key] = !empty($tone_value)
+                        ? $tone_value
+                        : (function_exists('auto_ai_news_poster_get_default_tone') ? auto_ai_news_poster_get_default_tone($mode, $existing_options) : 'jurnalistic');
+                }
                 // Pentru câmpurile de tip <select>, salvăm valoarea selectată
                 elseif (in_array($key, $select_fields)) {
                     $sanitized[$key] = sanitize_text_field($value);
@@ -1669,6 +1793,7 @@ class Auto_Ai_News_Poster_Settings
                                 'titles'   => esc_textarea($list_item['titles'] ?? ''),
                                 'author'   => intval($list_item['author'] ?? 1),
                                 'category' => intval($list_item['category'] ?? 0),
+                                'tone'     => (function_exists('auto_ai_news_poster_sanitize_tone') ? auto_ai_news_poster_sanitize_tone($list_item['tone'] ?? '') : sanitize_text_field($list_item['tone'] ?? '')) ?: (function_exists('auto_ai_news_poster_get_default_tone') ? auto_ai_news_poster_get_default_tone('tasks', $existing_options) : 'jurnalistic'),
 
                                 // NEW INDIVIDUAL SETTINGS
                                 'cron_interval_hours'   => intval($list_item['cron_interval_hours'] ?? 0),

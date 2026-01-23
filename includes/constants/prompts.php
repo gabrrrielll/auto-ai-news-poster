@@ -2,6 +2,15 @@
 
 class Auto_Ai_News_Poster_Prompts
 {
+    private static function get_tone_instruction($tone): string
+    {
+        if (function_exists('auto_ai_news_poster_get_tone_instruction')) {
+            return auto_ai_news_poster_get_tone_instruction($tone);
+        }
+
+        return '';
+    }
+
     /**
      * Generează promptul pentru analizarea unui text sursă și crearea unui articol nou.
      *
@@ -10,9 +19,10 @@ class Auto_Ai_News_Poster_Prompts
      * @param string $source_link Linkul sursă (opțional).
      * @return string Promptul complet.
      */
-    public static function get_custom_source_prompt($article_text_content, $additional_instructions = '', $source_link = '')
+    public static function get_custom_source_prompt($article_text_content, $additional_instructions = '', $source_link = '', $tone = '')
     {
         $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $tone_instruction = self::get_tone_instruction($tone);
 
         // Obținem setările de lungime a articolului
         $article_length_option = $options['article_length_option'] ?? 'same_as_source';
@@ -71,7 +81,7 @@ class Auto_Ai_News_Poster_Prompts
         $prompt .= "2. **Reformulează** cu propriile tale cuvinte informațiile din textul furnizat, integrându-le natural în noul articol. **NU copia și lipi (copy-paste) fragmente din textul sursă.**\n";
         $prompt .= "3. Scrie un articol obiectiv, bine structurat, cu un titlu captivant, un conținut informativ și o listă de etichete (tags) relevante. **ATENȚIE: Etichetele NU trebuie să conțină underscores (_)! Folosește spații naturale între cuvinte.** **Păstrează toate faptele, detaliile, numele, numerele și listele (ex: liste de filme, produse, evenimente) EXACT așa cum apar în textul sursă. Nu omite și nu adăuga elemente noi în liste.** {$length_instruction}\n";
         $prompt .= "   **REGULĂ STRICTĂ LINKURI:** Limitează numărul de linkuri din conținut la maximum 3. Include DOAR linkuri care fac referință directă la sursele citate sau la informații esențiale din text. **Formatează obligatoriu linkurile în HTML** folosind tag-uri <a href=\"URL\">Text Link</a>. **EVITĂ COMPLET** linkurile comerciale, publicitare, linkurile de afiliere sau recomandările de produse care nu sunt parte integrantă din știrea editorială.\n";
-        $prompt .= "4. Articolul trebuie să fie o reformulare fidelă a textului sursă, nu un sumar sau un comentariu personal. Menține tonul și perspectiva originală.\n";
+        $prompt .= "4. Articolul trebuie să fie o reformulare fidelă a textului sursă, nu un sumar sau un comentariu personal. Menține perspectiva originală.\n";
         $prompt .= "5. **ATENȚIE la conținutul non-articolistic:** Identifică și ignoră blocurile de text care reprezintă liste de servicii, recomandări de produse, reclame, secțiuni de navigare, subsoluri, anteturi sau orice alt conținut care nu face parte direct din articolul principal. Nu le reproduce în textul generat, chiar dacă apar în textul sursă.\n";
         $prompt .= "6. **EXCLUDE TOT CE E NON-EDITORIAL:** Ignoră complet orice text care arată ca tabele de comparație, liste de prețuri, specificații tehnice listate, matrice de planuri, comparații side-by-side, și orice alt format care nu este text editorial continuu. Dacă vezi linii de tipul: \"Brightspeed\", \"Spectrum\", \"T-Mobile Home Internet\", \"Verizon Fios\" cu prețuri și specificații - IGNORĂ TOTUL. Nu menționa deloc astfel de liste sau tabele.\n";
         $prompt .= "7. **EXCLUDE RECLAMELE:** Dacă textul sursă conține reclame sau promovări de produse/servicii, NU le include în articol. Focalizează-te doar pe conținutul editorial/news, nu pe secțiuni comerciale.\n";
@@ -85,6 +95,10 @@ class Auto_Ai_News_Poster_Prompts
         // Dacă există instrucțiuni suplimentare, le adăugăm acum
         if (!empty($parse_link_instructions)) {
             $prompt .= "\n**Instrucțiuni suplimentare:** {$parse_link_instructions}\n";
+        }
+
+        if (!empty($tone_instruction)) {
+            $prompt .= "\n**TON CERUT:** {$tone_instruction}\n";
         }
 
         $prompt .= "\n**IMPORTANT - Formatarea articolului:**\n";
@@ -139,8 +153,9 @@ class Auto_Ai_News_Poster_Prompts
      * @param string $tags Etichete (nefolosit momentan direct in string, dar păstrat pentru compatibilitate).
      * @return string Promptul complet.
      */
-    public static function get_browsing_prompt($sources, $additional_instructions, $tags)
+    public static function get_browsing_prompt($sources, $additional_instructions, $tags, $tone = '')
     {
+        $tone_instruction = self::get_tone_instruction($tone);
         // Listă de etichete existente
         $existing_tags = get_tags(['hide_empty' => false]);
         $existing_tag_names = [];
@@ -222,6 +237,9 @@ class Auto_Ai_News_Poster_Prompts
         $prompt .= "DIMENSIUNE OBLIGATORIE: Articolul trebuie să aibă exact $length_instruction. Nu mai mult, nu mai puțin. Numără cuvintele și respectă această cerință.\n";
         $prompt .= "ATENȚIE: Nu adăuga informații care nu sunt în sursele de știri! Dacă sursele menționează o listă specifică (ex: filme, persoane, evenimente), copiază EXACT aceeași listă, nu o modifica sau nu adăuga alte elemente.\n";
         $prompt .= $additional_instructions !== '' ? "\n Instrucțiuni suplimentare: " . $additional_instructions : '';
+        if (!empty($tone_instruction)) {
+            $prompt .= "\n TON CERUT: " . $tone_instruction;
+        }
 
         // Verificăm dacă trebuie să generăm etichete
         $generate_tags_option = $options['generate_tags'] ?? 'yes';
@@ -245,8 +263,9 @@ class Auto_Ai_News_Poster_Prompts
         return 'You are a precise news article generator. NEVER invent information. Use ONLY the exact information provided in sources. If sources mention specific lists (movies, people, events), copy them EXACTLY without modification. Always respect the required word count.';
     }
 
-    public static function get_ai_browsing_prompt($news_sources, $category_name, $latest_titles_str, $final_instructions, $length_instruction)
+    public static function get_ai_browsing_prompt($news_sources, $category_name, $latest_titles_str, $final_instructions, $length_instruction, $tone = '')
     {
+        $tone_instruction = self::get_tone_instruction($tone);
         return "
         **Rol:** Ești un redactor de știri expert în domeniul **{$category_name}**, specializat în găsirea celor mai recente și relevante subiecte.
 
@@ -264,6 +283,7 @@ class Auto_Ai_News_Poster_Prompts
         1. **Cercetare:** Folosește web browsing pentru a accesa și citi articole din sursele specificate. Caută subiecte foarte recente (din ultimele 24-48 de ore), importante și relevante pentru categoria **{$category_name}**.
         2. **Verificarea unicității:** Asigură-te că subiectul ales NU este similar cu niciunul dintre titlurile deja publicate. Dacă este, alege alt subiect din browsing.
         3. **Scrierea articolului:** {$final_instructions} {$length_instruction}
+        " . (!empty($tone_instruction) ? "\n        3.1 **Ton:** {$tone_instruction}" : "") . "
         4. **Generare titlu:** Creează un titlu concis și atractiv pentru articol.
         5. **Generare etichete:** Generează între 1 și 3 etichete relevante (cuvinte_cheie) pentru articol. **ATENȚIE: NU folosi underscores (_) în etichete! Folosește spații naturale între cuvinte.** Fiecare cuvânt trebuie să înceapă cu majusculă.
         6. **Generare prompt pentru imagine:** Propune o descriere detaliată (un prompt) pentru o imagine reprezentativă pentru acest articol.
@@ -293,8 +313,9 @@ class Auto_Ai_News_Poster_Prompts
      * Generează promptul pentru transformarea unui TITLU în articol EVERGREEN (Mod Taskuri).
      * Articolele generate trebuie să fie detaliate, bine documentate și rezistente în timp.
      */
-    public static function get_task_article_prompt($title, $category_name, $additional_instructions = '', $article_length_settings = [])
+    public static function get_task_article_prompt($title, $category_name, $additional_instructions = '', $article_length_settings = [], $tone = '')
     {
+        $tone_instruction = self::get_tone_instruction($tone);
         // Pentru TASKURI: asigură limite stricte de cuvinte (defaults 1500-2000 dacă nu sunt setate)
         $article_length_option = $article_length_settings['article_length_option'] ?? 'same_as_source';
         $min_length = intval($article_length_settings['min_length'] ?? 0);
@@ -349,7 +370,7 @@ class Auto_Ai_News_Poster_Prompts
         $prompt .= "   - Folosește formulări neutre temporal: \"de obicei\", \"în general\", \"conform metodologiei standard\"\n\n";
         
         $prompt .= "5. **STIL DE SCRIERE - EVERGREEN:**\n";
-        $prompt .= "   - Ton profesional, educațional și informativ\n";
+        $prompt .= "   - " . (!empty($tone_instruction) ? $tone_instruction : 'Ton profesional, educațional și informativ') . "\n";
         $prompt .= "   - Focalizează pe informații fundamentale și proceduri standard\n";
         $prompt .= "   - Evită tendințele temporare - concentrează pe principii și practici stabile\n";
         $prompt .= "   - Articolul trebuie să fie util și relevant și peste 1-2 ani\n\n";
@@ -360,7 +381,7 @@ class Auto_Ai_News_Poster_Prompts
         
         $prompt .= "6. **LIMBA ȘI TON:**\n";
         $prompt .= "   - Scrie EXCLUSIV în limba ROMÂNĂ\n";
-        $prompt .= "   - Ton jurnalistic profesionist, obiectiv și educațional\n";
+        $prompt .= "   - " . (!empty($tone_instruction) ? $tone_instruction : 'Ton jurnalistic profesionist, obiectiv și educațional') . "\n";
         $prompt .= "   - Vocabular accesibil dar precis tehnic\n\n";
         
         $prompt .= "7. **STRUCTURĂ HTML:**\n";
@@ -486,8 +507,10 @@ IMPORTANT - Formatul promptului:
      * @param string $word_count_instruction Instrucțiuni despre numărul de cuvinte.
      * @return string Promptul complet.
      */
-    public static function get_rewrite_same_ideas_prompt($current_title, $current_content, $word_count_instruction = '')
+    public static function get_rewrite_same_ideas_prompt($current_title, $current_content, $word_count_instruction = '', $tone = '')
     {
+        $tone_instruction = self::get_tone_instruction($tone);
+        $tone_line = !empty($tone_instruction) ? $tone_instruction : 'Menține tonul folosit in articolul original';
         $prompt = "Ești un editor de conținut profesionist. Rescrieți articolul următor folosind STRICT DOAR ideile și informațiile deja existente în el. Nu adăuga informații noi sau cercetare externă.
 
 Titlu actual: {$current_title}
@@ -500,7 +523,7 @@ Instrucțiuni:
 2. Folosește un stil de scriere fresh și natural, evitând formulări identice cu originalul
 3. Păstrează acuratețea și contextul oricăror citate sau referințe din original
 4. {$word_count_instruction}
-5. Menține tonul folosit in articolul original
+5. {$tone_line}
 6. Nu inventa sau adăuga informații care nu sunt în articolul original
 
 Returnează răspunsul DOAR în format JSON cu următoarea structură (fără markdown, fără ```json):
@@ -522,8 +545,10 @@ Returnează răspunsul DOAR în format JSON cu următoarea structură (fără ma
      * @param string $word_count_instruction Instrucțiuni despre numărul de cuvinte.
      * @return string Promptul complet.
      */
-    public static function get_rewrite_enrich_prompt($current_title, $current_content, $word_count_instruction = '')
+    public static function get_rewrite_enrich_prompt($current_title, $current_content, $word_count_instruction = '', $tone = '')
     {
+        $tone_instruction = self::get_tone_instruction($tone);
+        $tone_line = !empty($tone_instruction) ? $tone_instruction : 'Menține tonul profesional inspirat din cel al articolului original';
         $prompt = "Ești un jurnalist profesionist. Îmbogățește articolul următor cu informații noi și actualizate găsite prin cercetare pe internet.
 
 Titlu actual: {$current_title}
@@ -538,7 +563,7 @@ Instrucțiuni:
 4. Adaugă context, statistici, citate sau detalii actualizate unde este relevant
 5. {$word_count_instruction}
 6. Asigură-te că toate informațiile noi sunt corecte și verificabile
-7. Menține tonul profesional inspirat din cel al articolului original
+7. {$tone_line}
 8. Citează sursele pentru informațiile noi adăugate (ca link-uri în text)
 
 Returnează răspunsul DOAR în format JSON cu următoarea structură (fără markdown, fără ```json):

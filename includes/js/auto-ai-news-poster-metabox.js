@@ -8,6 +8,7 @@ jQuery(document).ready(function ($) {
         const additionalInstructions = $('#additional-instructions').val();
         const customSourceUrl = $('#custom-source-url').val();
         const postID = $('#post_ID').val();
+        const tone = $('#ai-tone').val();
         const button = $(this);
 
         // Verificări de validare
@@ -25,6 +26,8 @@ jQuery(document).ready(function ($) {
             post_id: postID,
             instructions: additionalInstructions,
             custom_source_url: customSourceUrl,
+            generation_mode_metabox: autoAiNewsPosterAjax.get_generation_mode(),
+            tone: tone,
             security: autoAiNewsPosterAjax.get_article_nonce
         };
 
@@ -152,6 +155,7 @@ jQuery(document).ready(function ($) {
         const minWords = $('#rewrite_min_words').val();
         const maxWords = $('#rewrite_max_words').val();
         const postId = $('#post_ID').val();
+        const rewriteTone = $('#rewrite-tone').val();
 
         if (!postId) {
             $status.removeClass('success processing').addClass('error')
@@ -190,7 +194,8 @@ jQuery(document).ready(function ($) {
                 rewrite_mode: rewriteMode,
                 size_mode: sizeMode,
                 min_words: minWords,
-                max_words: maxWords
+                max_words: maxWords,
+                tone: rewriteTone
             },
             success: function (response) {
                 if (response.success) {

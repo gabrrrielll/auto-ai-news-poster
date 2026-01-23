@@ -44,6 +44,14 @@ class Auto_Ai_News_Poster_Metabox
         if (empty($current_generation_mode)) {
             $current_generation_mode = 'parse_link'; // Default value
         }
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $stored_tone = get_post_meta($post->ID, '_ai_generation_tone', true);
+        $selected_tone = function_exists('auto_ai_news_poster_sanitize_tone') ? auto_ai_news_poster_sanitize_tone($stored_tone) : $stored_tone;
+        $default_tone = function_exists('auto_ai_news_poster_get_default_tone') ? auto_ai_news_poster_get_default_tone($current_generation_mode, $options) : 'jurnalistic';
+        if (empty($selected_tone)) {
+            $selected_tone = $default_tone;
+        }
+        $tone_options = function_exists('auto_ai_news_poster_get_tone_options') ? auto_ai_news_poster_get_tone_options() : ['jurnalistic' => 'Jurnalistic (standard)'];
 
         // Adăugăm nonce-ul pentru securitate
         wp_nonce_field('get_article_from_sources_nonce', 'get_article_from_sources_nonce');
@@ -72,6 +80,21 @@ class Auto_Ai_News_Poster_Metabox
                 </div>
                 <textarea id="additional-instructions" name="additional_instructions" class="metabox-textarea" 
                           placeholder="Introduceți instrucțiuni suplimentare pentru AI..."><?php echo esc_textarea($additional_instructions); ?></textarea>
+            </div>
+
+            <div class="metabox-section">
+                <div class="metabox-section-header">
+                    <span class="metabox-section-icon">🎙️</span>
+                    <h4 class="metabox-section-title">Ton articol</h4>
+                </div>
+                <select id="ai-tone" name="ai_tone" class="metabox-select">
+                    <?php foreach ($tone_options as $tone_key => $tone_label) : ?>
+                        <option value="<?php echo esc_attr($tone_key); ?>" <?php selected($selected_tone, $tone_key); ?>>
+                            <?php echo esc_html($tone_label); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="metabox-description">Tonul este folosit la generarea articolului (parsare link sau AI browsing).</p>
             </div>
             
             <div class="metabox-section">
@@ -243,6 +266,26 @@ class Auto_Ai_News_Poster_Metabox
             update_post_meta($post_id, '_additional_instructions', sanitize_textarea_field($_POST['additional_instructions']));
         }
 
+        // Salvăm tonul selectat pentru generare
+        if (isset($_POST['ai_tone'])) {
+            $tone = function_exists('auto_ai_news_poster_sanitize_tone') ? auto_ai_news_poster_sanitize_tone($_POST['ai_tone']) : sanitize_text_field($_POST['ai_tone']);
+            if (!empty($tone)) {
+                update_post_meta($post_id, '_ai_generation_tone', $tone);
+            } else {
+                delete_post_meta($post_id, '_ai_generation_tone');
+            }
+        }
+
+        // Salvăm tonul selectat pentru rescriere
+        if (isset($_POST['rewrite_tone'])) {
+            $tone = function_exists('auto_ai_news_poster_sanitize_tone') ? auto_ai_news_poster_sanitize_tone($_POST['rewrite_tone']) : sanitize_text_field($_POST['rewrite_tone']);
+            if (!empty($tone)) {
+                update_post_meta($post_id, '_ai_rewrite_tone', $tone);
+            } else {
+                delete_post_meta($post_id, '_ai_rewrite_tone');
+            }
+        }
+
         // Salvăm modul de generare selectat în metabox
         if (isset($_POST['generation_mode_metabox'])) {
             update_post_meta($post_id, '_generation_mode_metabox', sanitize_text_field($_POST['generation_mode_metabox']));
@@ -303,6 +346,14 @@ class Auto_Ai_News_Poster_Metabox
     public static function render_rewrite_metabox($post)
     {
         wp_nonce_field('auto_ai_rewrite_metabox', 'auto_ai_rewrite_nonce');
+        $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $stored_tone = get_post_meta($post->ID, '_ai_rewrite_tone', true);
+        $selected_tone = function_exists('auto_ai_news_poster_sanitize_tone') ? auto_ai_news_poster_sanitize_tone($stored_tone) : $stored_tone;
+        $default_tone = function_exists('auto_ai_news_poster_get_default_tone') ? auto_ai_news_poster_get_default_tone('parse_link', $options) : 'jurnalistic';
+        if (empty($selected_tone)) {
+            $selected_tone = $default_tone;
+        }
+        $tone_options = function_exists('auto_ai_news_poster_get_tone_options') ? auto_ai_news_poster_get_tone_options() : ['jurnalistic' => 'Jurnalistic (standard)'];
         ?>
         <div class="rewrite-metabox-container">
             <!-- Rewrite Mode Selection -->
@@ -345,6 +396,18 @@ class Auto_Ai_News_Poster_Metabox
                         <input type="number" id="rewrite_max_words" name="rewrite_max_words" min="100" step="50" value="1000" disabled>
                     </div>
                 </div>
+            </div>
+
+            <!-- Tone Selection -->
+            <div class="rewrite-option-group">
+                <span class="rewrite-option-label">Ton articol</span>
+                <select id="rewrite-tone" name="rewrite_tone" class="rewrite-select">
+                    <?php foreach ($tone_options as $tone_key => $tone_label) : ?>
+                        <option value="<?php echo esc_attr($tone_key); ?>" <?php selected($selected_tone, $tone_key); ?>>
+                            <?php echo esc_html($tone_label); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
 
             <!-- Rewrite Button -->

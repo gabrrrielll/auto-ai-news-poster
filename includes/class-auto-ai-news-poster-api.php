@@ -98,7 +98,8 @@ class Auto_Ai_News_Poster_Api
 
         // 4. Call AI with task-specific AI instructions and article length
         $ai_instructions = $list['ai_instructions'] ?? '';
-        $prompt = Auto_Ai_News_Poster_Prompts::get_task_article_prompt($target_title, $category_name, $ai_instructions, $article_length_settings);
+        $task_tone = auto_ai_news_poster_resolve_tone($list['tone'] ?? '', 'tasks', $options);
+        $prompt = Auto_Ai_News_Poster_Prompts::get_task_article_prompt($target_title, $category_name, $ai_instructions, $article_length_settings, $task_tone);
         $response = call_ai_api($prompt, $ai_args);
 
         if (is_wp_error($response)) {
@@ -153,6 +154,9 @@ class Auto_Ai_News_Poster_Api
 
         update_post_meta($post_id, '_generation_mode', 'tasks');
         update_post_meta($post_id, '_task_list_id', $list_id);
+        if (!empty($task_tone)) {
+            update_post_meta($post_id, '_ai_generation_tone', $task_tone);
+        }
 
         // 6. Update List (Remove processed title)
         $task_lists[$list_index]['titles'] = implode("\n", $titles);
@@ -357,6 +361,7 @@ class Auto_Ai_News_Poster_Api
         $is_bulk_processing = false;
         $additional_instructions = '';
         $log_prefix = $is_ajax_call ? 'MANUAL PROCESS:' : 'CRON PROCESS:';
+        $tone = '';
 
         // --- Determine the source of the article content ---
         if ($is_ajax_call) {
@@ -364,6 +369,8 @@ class Auto_Ai_News_Poster_Api
             check_ajax_referer('get_article_from_sources_nonce', 'security');
             $source_link = isset($_POST['custom_source_url']) ? esc_url_raw($_POST['custom_source_url']) : '';
             $additional_instructions = isset($_POST['instructions']) ? sanitize_text_field($_POST['instructions']) : '';
+            $requested_tone = isset($_POST['tone']) ? sanitize_text_field($_POST['tone']) : '';
+            $tone = auto_ai_news_poster_resolve_tone($requested_tone, $generation_mode, $options);
 
             if (empty($source_link)) {
                 wp_send_json_error(['message' => 'Please provide a source URL.']);
@@ -373,7 +380,7 @@ class Auto_Ai_News_Poster_Api
             // Handle generation based on selected mode from metabox
             if ($generation_mode === 'ai_browsing') {
                 // For manual AI browsing, we instruct the AI to browse the provided link
-                self::generate_article_with_browsing($source_link, null, null, $additional_instructions); // Pass additional instructions
+                self::generate_article_with_browsing($source_link, null, null, $additional_instructions, $tone); // Pass additional instructions
                 wp_send_json_success(['message' => 'Article generation via AI Browsing initiated!', 'post_id' => get_the_ID()]);
                 return;
             } else {
@@ -425,10 +432,11 @@ class Auto_Ai_News_Poster_Api
 
             // For CRON jobs, determine mode from settings. The parameter $generation_mode is from manual metabox.
             $cron_generation_mode = $options['generation_mode'] ?? 'parse_link';
+            $tone = auto_ai_news_poster_get_default_tone($cron_generation_mode, $options);
             if ($cron_generation_mode === 'ai_browsing') {
                 error_log($log_prefix . ' Using AI browsing mode for link: ' . $source_link);
                 // In CRON, generate_article_with_browsing will determine categories and titles
-                self::generate_article_with_browsing($source_link, null, null, $options['ai_browsing_instructions'] ?? '');
+                self::generate_article_with_browsing($source_link, null, null, $options['ai_browsing_instructions'] ?? '', $tone);
                 return;
             } else {
                 error_log($log_prefix . ' Extracting content from URL: ' . $source_link);
@@ -510,7 +518,7 @@ class Auto_Ai_News_Poster_Api
         // --- Call OpenAI API ---
         error_log($log_prefix . ' Calling AI API for: ' . $source_link);
         // Use the validated content (should be string at this point)
-        $prompt = generate_custom_source_prompt($content_to_validate, $additional_instructions, $source_link);
+        $prompt = generate_custom_source_prompt($content_to_validate, $additional_instructions, $source_link, $tone);
         $response = call_ai_api($prompt);
 
         if (is_wp_error($response)) {
@@ -632,6 +640,9 @@ class Auto_Ai_News_Poster_Api
         }
 
         update_post_meta($new_post_id, '_custom_source_url', $source_link);
+        if (!empty($tone)) {
+            update_post_meta($new_post_id, '_ai_generation_tone', $tone);
+        }
 
         // Actualizează timpul ultimului articol publicat pentru cron (doar pentru procesarea în masă)
         if ($is_bulk_processing && !$is_ajax_call) {
@@ -690,7 +701,7 @@ class Auto_Ai_News_Poster_Api
      * @param string $category_name Numele categoriei de interes.
      * @param array $latest_titles Lista cu titlurile ultimelor articole pentru a evita duplicarea.
      */
-    public static function generate_article_with_browsing($news_sources, $category_name, $latest_titles, $additional_instructions = '')
+    public static function generate_article_with_browsing($news_sources, $category_name, $latest_titles, $additional_instructions = '', $tone = '')
     {
         $options = get_option('auto_ai_news_poster_settings');
         $api_key = $options['chatgpt_api_key'];
@@ -700,7 +711,7 @@ class Auto_Ai_News_Poster_Api
         }
 
         // Construim promptul
-        $prompt = self::build_ai_browsing_prompt($news_sources, $category_name, $latest_titles, $additional_instructions);
+        $prompt = self::build_ai_browsing_prompt($news_sources, $category_name, $latest_titles, $additional_instructions, $tone);
 
         // Apelăm API-ul OpenAI cu tool calling pentru AI Browsing
         $response = self::call_openai_api_with_browsing($api_key, $prompt);
@@ -794,6 +805,9 @@ class Auto_Ai_News_Poster_Api
         $tags = $article_data['cuvinte_cheie'] ?? [];
         Post_Manager::set_post_tags($new_post_id, $tags);
         update_post_meta($new_post_id, '_generation_mode', 'ai_browsing');
+        if (!empty($tone)) {
+            update_post_meta($new_post_id, '_ai_generation_tone', $tone);
+        }
 
         // Actualizează timpul ultimului articol publicat pentru cron (doar pentru procesarea automată)
         // Verificăm dacă suntem în modul automat prin verificarea setărilor
@@ -858,7 +872,7 @@ class Auto_Ai_News_Poster_Api
     /**
      * Construiește promptul pentru modul AI Browsing.
      */
-    private static function build_ai_browsing_prompt($news_sources, $category_name, $latest_titles, $additional_instructions = '')
+    private static function build_ai_browsing_prompt($news_sources, $category_name, $latest_titles, $additional_instructions = '', $tone = '')
     {
         $options = get_option('auto_ai_news_poster_settings');
         $custom_instructions_from_settings = $options['ai_browsing_instructions'] ?? 'Scrie un articol de știre original, în limba română ca un jurnalist. Articolul trebuie să fie obiectiv, informativ și bine structurat (introducere, cuprins, încheiere).';
@@ -879,7 +893,7 @@ class Auto_Ai_News_Poster_Api
         // Prioritizăm instrucțiunile suplimentare din metabox, altfel folosim pe cele din setări
         $final_instructions = !empty($additional_instructions) ? $additional_instructions : $custom_instructions_from_settings;
 
-        return generate_ai_browsing_prompt($news_sources, $category_name, $latest_titles_str, $final_instructions, $length_instruction);
+        return generate_ai_browsing_prompt($news_sources, $category_name, $latest_titles_str, $final_instructions, $length_instruction, $tone);
     }
 
     /**
@@ -1665,6 +1679,7 @@ class Auto_Ai_News_Poster_Api
         $size_mode = isset($_POST['size_mode']) ? sanitize_text_field($_POST['size_mode']) : 'original';
         $min_words = isset($_POST['min_words']) ? intval($_POST['min_words']) : 0;
         $max_words = isset($_POST['max_words']) ? intval($_POST['max_words']) : 0;
+        $requested_tone = isset($_POST['tone']) ? sanitize_text_field($_POST['tone']) : '';
 
         // Validate post ID
         if (!$post_id || !get_post($post_id)) {
@@ -1686,6 +1701,7 @@ class Auto_Ai_News_Poster_Api
 
         // Get options
         $options = get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION);
+        $tone = auto_ai_news_poster_resolve_tone($requested_tone, 'parse_link', $options);
         
         // Determine AI configuration
         $tasks_config = $options['tasks_config'] ?? [];
@@ -1722,9 +1738,9 @@ class Auto_Ai_News_Poster_Api
 
         // Build prompt based on mode using dedicated prompts class
         if ($rewrite_mode === 'same_ideas') {
-            $prompt = Auto_Ai_News_Poster_Prompts::get_rewrite_same_ideas_prompt($current_title, $current_content, $word_count_instruction);
+            $prompt = Auto_Ai_News_Poster_Prompts::get_rewrite_same_ideas_prompt($current_title, $current_content, $word_count_instruction, $tone);
         } else {
-            $prompt = Auto_Ai_News_Poster_Prompts::get_rewrite_enrich_prompt($current_title, $current_content, $word_count_instruction);
+            $prompt = Auto_Ai_News_Poster_Prompts::get_rewrite_enrich_prompt($current_title, $current_content, $word_count_instruction, $tone);
         }
 
         // Call AI API
@@ -1783,6 +1799,9 @@ class Auto_Ai_News_Poster_Api
 
         // Track rewrite mode
         update_post_meta($post_id, '_last_rewrite_mode', $rewrite_mode);
+        if (!empty($tone)) {
+            update_post_meta($post_id, '_ai_rewrite_tone', $tone);
+        }
 
         error_log('[REWRITE] Article successfully rewritten. Post ID: ' . $post_id);
 
