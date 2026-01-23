@@ -421,7 +421,9 @@ class Auto_Ai_News_Poster_Prompts
         $prompt .= "  \"content\": \"Conținutul COMPLET și DETALIAT în HTML ({$min_length}-{$max_length} cuvinte!), cu minimum 3 linkuri <a href=\\\"...\\\"> către surse, pași detaliați, explicații complete și exemple practice\",\n";
         $prompt .= "  \"summary\": \"Meta descriere SEO (max 160 caractere, evergreen)\",\n";
         $prompt .= "  \"tags\": [\"etichetă relevantă\", \"alt tag util\", \"tag evergreen\"],\n";
-        $prompt .= "  \"category\": \"{$category_name}\"\n";
+        $prompt .= "  \"category\": \"{$category_name}\",\n";
+        $prompt .= "  \"image_url\": \"(OPȚIONAL) URL-ul unei imagini reprezentative găsite în timpul browsing-ului, dacă este relevantă și de calitate\",\n";
+        $prompt .= "  \"sources\": [\"URL_SURSA_1\", \"URL_SURSA_2\"]\n";
         $prompt .= "}\n\n";
         
         $prompt .= "**⚠️ VERIFICARE FINALĂ OBLIGATORIE - ÎNAINTE DE A RĂSPUNDE:**\n";

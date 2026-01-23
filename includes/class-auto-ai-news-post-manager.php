@@ -75,8 +75,10 @@ class Post_Manager
         
         // Extragem numele site-ului din URL-ul sursă pentru "Sursa foto"
         $site_name = 'Sursă externă'; // Default
-        if (!empty($source_url) && class_exists('Auto_AI_News_Poster_Image_Extractor')) {
-            $site_name = Auto_AI_News_Poster_Image_Extractor::get_site_name_from_url($source_url);
+        $url_to_extract_from = !empty($source_url) ? $source_url : $image_url;
+
+        if (!empty($url_to_extract_from) && class_exists('Auto_AI_News_Poster_Image_Extractor')) {
+            $site_name = Auto_AI_News_Poster_Image_Extractor::get_site_name_from_url($url_to_extract_from);
         }
 
         // Verificăm și includem fișierul necesar pentru media_sideload_image
@@ -140,7 +142,7 @@ class Post_Manager
 
             // Curățăm metadatele externe, deoarece imaginea a fost importată
             delete_post_meta($post_id, '_external_image_url');
-            delete_post_meta($post_id, '_external_image_source');
+            update_post_meta($post_id, '_external_image_source', $site_name);
 
 
         } else {

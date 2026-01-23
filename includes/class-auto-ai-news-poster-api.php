@@ -163,20 +163,28 @@ class Auto_Ai_News_Poster_Api
         $options['task_lists'] = $task_lists;
         update_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, $options);
 
-        // 7. Extract Image from source if enabled and source URL exists
-        // Setare per listă: extract_image_from_source
+        // 7. Determine Image and Source for attribution
         $extract_image_from_source = $list['extract_image_from_source'] ?? 'yes'; // Default: enabled
         $extracted_image_url = null;
         
-        // Dacă task-ul are un URL sursă (pentru viitor, dacă se adaugă această funcționalitate)
+        // Priority 1: AI found an image during browsing
+        if (!empty($article_data['image_url']) && filter_var($article_data['image_url'], FILTER_VALIDATE_URL)) {
+            $extracted_image_url = $article_data['image_url'];
+            error_log('[TASKS] Using image suggested by AI: ' . $extracted_image_url);
+        }
+
+        // Determine Source URL for attribution
         $source_url = $list['source_url'] ?? null;
-        if ($extract_image_from_source === 'yes' && !empty($source_url) && class_exists('Auto_AI_News_Poster_Image_Extractor')) {
+        if (empty($source_url) && !empty($article_data['sources']) && is_array($article_data['sources'])) {
+            $source_url = $article_data['sources'][0]; // Use the first source found by AI as attribution
+            error_log('[TASKS] Using AI source for attribution: ' . $source_url);
+        }
+
+        // Priority 2: Extract from provided source_url if AI didn't suggest an image
+        if (empty($extracted_image_url) && $extract_image_from_source === 'yes' && !empty($source_url) && class_exists('Auto_AI_News_Poster_Image_Extractor')) {
             if (filter_var($source_url, FILTER_VALIDATE_URL)) {
                 error_log('[TASKS] Extracting image from source URL: ' . $source_url);
                 $extracted_image_url = Auto_AI_News_Poster_Image_Extractor::extract_image_from_url($source_url);
-                if ($extracted_image_url) {
-                    error_log('[TASKS] Image extracted successfully: ' . $extracted_image_url);
-                }
             }
         }
 
