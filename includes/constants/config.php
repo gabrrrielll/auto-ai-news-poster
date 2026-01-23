@@ -8,15 +8,109 @@ const URL_API_OPENAI = URL_API_OPENAI_CHAT; // Backward compatibility alias
 const URL_API_IMAGE = URL_API_OPENAI_IMAGE;   // Backward compatibility alias
 const URL_API_DEEPSEEK = URL_API_DEEPSEEK_CHAT; // Backward compatibility alias
 
-function generate_custom_source_prompt($article_text_content, $additional_instructions = '', $source_link = '')
+function generate_custom_source_prompt($article_text_content, $additional_instructions = '', $source_link = '', $tone = '')
 {
-    return Auto_Ai_News_Poster_Prompts::get_custom_source_prompt($article_text_content, $additional_instructions, $source_link);
+    return Auto_Ai_News_Poster_Prompts::get_custom_source_prompt($article_text_content, $additional_instructions, $source_link, $tone);
 }
 
 
 function generate_prompt($sources, $additional_instructions, $tags): string
 {
     return Auto_Ai_News_Poster_Prompts::get_browsing_prompt($sources, $additional_instructions, $tags);
+}
+
+/**
+ * Tonuri disponibile pentru generare.
+ *
+ * @return array
+ */
+function auto_ai_news_poster_get_tone_options(): array
+{
+    return [
+        'jurnalistic' => 'Jurnalistic (standard)',
+        'profesional' => 'Profesional',
+        'uman' => 'Uman și natural',
+        'scriitor' => 'Scriitor / narativ',
+        'poetic' => 'Poetic',
+    ];
+}
+
+/**
+ * Normalizează și validează tonul selectat.
+ *
+ * @param string $tone
+ * @return string
+ */
+function auto_ai_news_poster_sanitize_tone($tone): string
+{
+    $tone = sanitize_text_field((string) $tone);
+    $options = auto_ai_news_poster_get_tone_options();
+    return array_key_exists($tone, $options) ? $tone : '';
+}
+
+/**
+ * Returnează tonul implicit în funcție de context.
+ *
+ * @param string $mode parse_link | ai_browsing | tasks
+ * @param array|null $options
+ * @return string
+ */
+function auto_ai_news_poster_get_default_tone($mode = '', $options = null): string
+{
+    $options = is_array($options) ? $options : get_option(AUTO_AI_NEWS_POSTER_SETTINGS_OPTION, []);
+    $tone = '';
+
+    if ($mode === 'parse_link') {
+        $tone = $options['parse_link_tone'] ?? '';
+    } elseif ($mode === 'ai_browsing') {
+        $tone = $options['ai_browsing_tone'] ?? '';
+    }
+
+    $tone = auto_ai_news_poster_sanitize_tone($tone);
+
+    return $tone ?: 'jurnalistic';
+}
+
+/**
+ * Resolvează tonul final (preferă selecția curentă).
+ *
+ * @param string $requested_tone
+ * @param string $mode
+ * @param array|null $options
+ * @return string
+ */
+function auto_ai_news_poster_resolve_tone($requested_tone = '', $mode = '', $options = null): string
+{
+    $tone = auto_ai_news_poster_sanitize_tone($requested_tone);
+    if (!empty($tone)) {
+        return $tone;
+    }
+
+    return auto_ai_news_poster_get_default_tone($mode, $options);
+}
+
+/**
+ * Instrucțiune de ton pentru prompt.
+ *
+ * @param string $tone
+ * @return string
+ */
+function auto_ai_news_poster_get_tone_instruction($tone): string
+{
+    $tone = auto_ai_news_poster_sanitize_tone($tone);
+    if (empty($tone)) {
+        return '';
+    }
+
+    $instructions = [
+        'jurnalistic' => 'Folosește un ton jurnalistic, obiectiv și informativ.',
+        'profesional' => 'Folosește un ton profesional, clar și sobru.',
+        'uman' => 'Folosește un ton uman și natural, empatic, dar obiectiv.',
+        'scriitor' => 'Folosește un ton de scriitor, narativ și expresiv, fără a altera faptele.',
+        'poetic' => 'Folosește un ton poetic și imagistic, păstrând acuratețea faptelor.',
+    ];
+
+    return $instructions[$tone] ?? '';
 }
 
 /**
@@ -902,9 +996,9 @@ function get_vertex_ai_access_token($service_account)
 // --- AI Prompts & Helper Functions ---
 
 
-function generate_ai_browsing_prompt($news_sources, $category_name, $latest_titles_str, $final_instructions, $length_instruction)
+function generate_ai_browsing_prompt($news_sources, $category_name, $latest_titles_str, $final_instructions, $length_instruction, $tone = '')
 {
-    return Auto_Ai_News_Poster_Prompts::get_ai_browsing_prompt($news_sources, $category_name, $latest_titles_str, $final_instructions, $length_instruction);
+    return Auto_Ai_News_Poster_Prompts::get_ai_browsing_prompt($news_sources, $category_name, $latest_titles_str, $final_instructions, $length_instruction, $tone);
 }
 
 function generate_retry_browsing_prompt($category_name)

@@ -428,6 +428,23 @@
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+.metabox-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+    transition: var(--transition);
+}
+
+.metabox-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
 .metabox-generate-btn {
     display: flex;
     align-items: center;
@@ -844,6 +861,22 @@
     margin-bottom: 10px;
     color: #23282d;
     font-size: 13px;
+}
+
+.rewrite-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+    background: #fff;
+    transition: border-color 0.2s ease;
+}
+
+.rewrite-select:focus {
+    outline: none;
+    border-color: #0073aa;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.15);
 }
 
 .rewrite-switch-container {
